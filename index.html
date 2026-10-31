@@ -28,7 +28,7 @@
   color-scheme:dark;
 }
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent;overflow-wrap:anywhere}   /* a word with no spaces still breaks instead of spilling */
 *{box-sizing:border-box}
 button,input,select,textarea{font:inherit;color:inherit}
 .app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden}
@@ -293,7 +293,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .paper .slain{font-size:15px;margin-top:10px;color:#5a3d26}
 
 /* the daily royal decree (the cosmetic tax receipt): sealed scroll that unrolls, her note, a random sign-off */
-.decree-ov{cursor:pointer;align-content:center}
+.decree-ov{cursor:pointer;align-content:safe center;overflow-y:auto;padding-block:30px 70px}   /* taller than a small phone: it scrolls instead of clipping */
 .decree{width:100%;max-width:330px;position:relative;filter:drop-shadow(8px 12px 0 rgba(0,0,0,.35))}
 .decree .rod{height:18px;margin:0 -14px;position:relative;z-index:2;background:linear-gradient(180deg,#a8723f 0 25%,#8a5a34 25% 55%,#6b4226 55% 80%,#4a2c18 80%);box-shadow:0 0 0 3px var(--line)}
 .decree .rod::before,.decree .rod::after{content:"";position:absolute;top:-5px;width:12px;height:28px;background:#c99a3a;box-shadow:0 0 0 3px var(--line),inset -3px -3px 0 #8a6420,inset 3px 3px 0 #f0cf6a}
@@ -318,6 +318,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .decree [style*="--d"]{animation:print .25s calc(1.5s + var(--d)*.3s) steps(2) both}
 @keyframes print{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .decree .note{font-family:"Caveat",cursive;font-weight:600;font-size:26px;line-height:1.05;color:#8f1c3a;margin:16px 0 0;transform:rotate(-3deg);transform-origin:left;animation:write 1s var(--nt) steps(10) both}
+.decree .note.long{font-size:21px}
 @keyframes write{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 .decree .mark{align-self:flex-end;margin:10px -4px 0 0;animation:slam .35s var(--mt) steps(3) both}
 @keyframes slam{from{transform:scale(2.4) rotate(var(--r));opacity:0}to{transform:rotate(var(--r));opacity:var(--o,1)}}
@@ -532,7 +533,20 @@ S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
 // saves from before the clock existed
 S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
 if (S.mob) S.mob.extra??=0;
-function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+const LIM={hero:14, vill:30, mob:30, quest:80, taunt:140, note:90, reward:40, desc:200, price:9999, coins:999};
+const clip=(v,n)=>typeof v==='string'?[...v].slice(0,n).join(''):v;   // by characters, so emoji never split
+const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
+function tidyText(){
+  S.heroName=clip(S.heroName,LIM.hero); S.villName=clip(S.villName,LIM.vill);
+  if (S.mob){ S.mob.name=clip(S.mob.name,LIM.mob); S.mob.note=clip(S.mob.note,LIM.note); S.mob.bounty=clampN(S.mob.bounty,0,LIM.coins); S.mob.gold=clampN(S.mob.gold,0,LIM.coins); }
+  (S.tasks||[]).forEach(t=>{ t.name=clip(t.name,LIM.quest); t.taunt=clip(t.taunt,LIM.taunt); });
+  Object.values(S.plans||{}).forEach(p=>{ p.name=clip(p.name,LIM.mob); p.note=clip(p.note,LIM.note); (p.quests||[]).forEach(q=>q.name=clip(q.name,LIM.quest)); });
+  (S.shop||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); r.price=clampN(r.price,1,LIM.price); });
+  (S.bag||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
+  if (S.loot){ S.loot.name=clip(S.loot.name,LIM.mob+20); S.loot.note=clip(S.loot.note,LIM.note); }
+}
+tidyText();
+function save(){ tidyText(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 
 /* =========================================================
    The clock: game days follow the phone's local time, so travel and daylight saving just work
@@ -711,7 +725,7 @@ function renderClassPick(m){
   }
   m.innerHTML=`<div class="stack">
     <div class="title-card"><canvas id="newcv" width="160" height="150" aria-label="Your new hero"></canvas><h1>What’s your name?</h1><p class="muted">${esc(S.villName)} wants to know who she’s up against.</p></div>
-    <form id="nameform" class="stack"><div class="namerow"><label class="f" style="flex:1">Hero name<input class="inp" id="hn" maxlength="14" autocomplete="off" value="${esc(nh.name)}"></label>
+    <form id="nameform" class="stack"><div class="namerow"><label class="f" style="flex:1">Hero name<input class="inp" id="hn" maxlength="${LIM.hero}" autocomplete="off" value="${esc(nh.name)}"></label>
       <button type="button" class="btn ghost dice" id="dice" aria-label="Random name"><img alt="" src="${url(DICE())}"></button></div>
       <button class="btn block" type="submit" id="np-go">Begin your quest</button></form>
     ${back}</div>`;
@@ -936,6 +950,12 @@ function onPoke(e){
 
 /* ---------- drawing helpers ---------- */
 function rect(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
+function fitText(t,maxW,size,min=8){
+  ctx.font=size+'px "Press Start 2P", monospace';
+  while (size>min && ctx.measureText(t).width>maxW){ size--; ctx.font=size+'px "Press Start 2P", monospace'; }
+  if (ctx.measureText(t).width>maxW){ const ch=[...t]; while(ch.length>1 && ctx.measureText(ch.join('')+'..').width>maxW) ch.pop(); t=ch.join('').trimEnd()+'..'; }
+  return {t,size};
+}
 function text(t,x,y,col,size=16,outline='#1a100a'){ ctx.font=size+'px "Press Start 2P", monospace'; ctx.textBaseline='top'; ctx.fillStyle=outline; for(const [dx,dy] of [[-3,0],[3,0],[0,-3],[0,3],[3,3]]) ctx.fillText(t,x+dx,y+dy); ctx.fillStyle=col; ctx.fillText(t,x,y); }
 function shadow(x,y,w){ ctx.fillStyle='rgba(30,40,20,.28)'; ctx.beginPath(); ctx.ellipse(x,y,w,w*0.28,0,0,Math.PI*2); ctx.fill(); }
 // the >.< face badge (or a happy ^o^ one, without the sweat drop)
@@ -1040,7 +1060,8 @@ function hpBar(now){
   rect(x-4,y-4,w+8,h+8,'#1a100a'); rect(x,y,w,h,'#5a2a20');
   if (f>0){ rect(x,y,Math.max(4,Math.round(w*f)),h,'#e04a3c'); rect(x,y,Math.max(4,Math.round(w*f)),7,'#ff8a7a'); }
   if (crowned()){ const cr=CROWN(); ctx.drawImage(cr, x+8, y+5, cr.width*4, cr.height*4); }
-  text(dailyName(S.mob), x+(crowned()?46:12), y+7, '#ffffff', 16);
+  const nx=x+(crowned()?46:12), nm=fitText(dailyName(S.mob), x+w-12-nx, 16);
+  text(nm.t, nx, y+7+Math.floor((16-nm.size)/2), '#ffffff', nm.size);
 }
 // completing a quest: a held wind-up cut, then a bigger impact cut than the idle POW
 function drawBigHit(now, spots, order){
@@ -1215,7 +1236,7 @@ function showReceipt(){
       ${tax>0?`<div class="ln tax"${d(2)}><span>Villainess tax</span><b><span>-${tax} ${V}</span></b></div>`:''}
       <div class="ln gap"${d(3)}><span>Gold gained</span><b><span>${L.gold} ${Gd}</span></b></div>
       <div class="ln paid"${d(4)}><span>Paid out</span><b><span>${L.bounty} ${V}</span><span>${L.gold} ${Gd}</span></b></div>
-      ${L.note?`<p class="note" style="--nt:${nt}s">${esc(L.note)}</p>`:''}
+      ${L.note?`<p class="note${[...L.note].length>45?' long':''}" style="--nt:${nt}s">${esc(L.note)}</p>`:''}
       <div class="mark ${mark}" style="--mt:${mt}s"${mark==='sign'?` aria-label="Signed, ${esc(S.villName)}"`:''}>${markHtml}</div>
     </div></div><div class="rod"></div></div>
     <p class="tapon" style="--tt:${tt}s">Tap anywhere to accept</p>`;
@@ -1608,35 +1629,35 @@ function renderVMobs(m){
       <div class="plate hex"><b>${esc(dailyName(mb))}</b>${plate}</div></div>
     <div class="below wrap"><div class="stack">
     <div><h2 style="color:var(--hex)">Today · ${esc(dayLabel(S.date))}</h2><p class="small muted">${about}</p>
-      ${st!=='rest'?`<label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="30" placeholder="${esc(mobName(mb)+(mb.group>1?' '+GROUP_NAMES[mb.b]:''))}" value="${esc(mb.name||'')}"></label>`:''}
+      ${st!=='rest'?`<label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="${LIM.mob}" placeholder="${esc(mobName(mb)+(mb.group>1?' '+GROUP_NAMES[mb.b]:''))}" value="${esc(mb.name||'')}"></label>`:''}
       ${alive?'<p class="small muted">The threshold locked when the mob spawned. Quests you add now make today’s kill easier, never harder.</p>':''}</div>
     ${alive||st==='coming'?`<div class="px vpanel">
       <div class="switch"><span>Day ends</span><b>${hm(Math.round((endAt-at(S.date,0))/60000))} · in ${dur(endAt-clock())}</b></div>
       <div class="f"><span>Grant extra time today${mb.extra?` (+${dur(mb.extra*60000)} so far)`:''}</span><div class="row3"><button class="btn ghost" data-ext="30">+30m</button><button class="btn ghost" data-ext="60">+1h</button><button class="btn ghost" data-ext="120">+2h</button></div></div>
       ${alive?`<div class="row2"><label class="f">Today’s bounty<input class="inp" id="td-bounty" type="number" min="0" max="999" value="${mb.bounty}"></label><label class="f">Today’s gold drop<input class="inp" id="td-gold" type="number" min="0" max="999" placeholder="Loot table" value="${mb.gold??''}"></label></div>`:''}
-      ${alive?`<label class="f">Note on today’s decree (optional)<textarea class="inp" id="td-note" maxlength="90" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(mb.note||'')}</textarea></label>`:''}
+      ${alive?`<label class="f">Note on today’s decree (optional)<textarea class="inp" id="td-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(mb.note||'')}</textarea></label>`:''}
       <button class="btn ghost block" id="td-rest">Give ${P.him} a free rest day</button>
       <p class="small muted">Extra time and rest days are gifts: they never cost ${P.him} an Inn token. Ending the day earlier needs ${P.his} OK (Rules tab).</p></div>`:''}
     <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in ${P.his} Quest Log. ${P.He} never sees how much damage it does.</p></div>
     <form class="px vpanel" id="mf" autocomplete="off">
-      <label class="f">Task<input class="inp" id="mf-name" maxlength="80" placeholder="e.g. Fold the laundry" value="${esc(d.name)}"></label>
+      <label class="f">Task<input class="inp" id="mf-name" maxlength="${LIM.quest}" placeholder="e.g. Fold the laundry" value="${esc(d.name)}"></label>
       <div class="row2"><label class="f">Damage (hidden)<input class="inp" id="mf-dmg" type="number" min="1" max="999" value="${d.dmg}"></label><label class="f">Repeats<select class="inp" id="mf-rep"><option value="once" ${d.repeat==='once'?'selected':''}>Today only</option><option value="daily" ${d.repeat==='daily'?'selected':''}>Every day</option></select></label></div>
-      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="140" placeholder="Shown when ${P.he} pokes the mob">${esc(d.taunt)}</textarea></label>
+      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="${LIM.taunt}" placeholder="Shown when ${P.he} pokes the mob">${esc(d.taunt)}</textarea></label>
       <button class="btn hex block" type="submit">Add to ${P.his} Quest Log</button></form>
     <div><h3>${P.His} quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.dmg} damage${share(t)} · ${t.repeat==='daily'?'daily':'once'} · ${t.hit?'landed':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}">X</button></div>`).join('')||'<div class="empty">No quests. At spawn I’ll fall back to the default list.</div>'}</div></div>
     <div><h2 style="color:var(--hex)">Plan ahead</h2><p class="muted small">Pick a day and set up its mob. A plan is used when that day’s mob spawns. Leave a box empty to use the default.</p></div>
     <div class="cal" id="cal">${days.map(x=>`<button type="button" data-d="${x}" aria-pressed="${x===pd}" aria-label="${esc(dayLabel(x,long))}${planned(S.plans[x])?', planned':''}"><span>${esc(dayLabel(x,{weekday:'short'}))}</span><b>${+x.slice(8)}</b>${planned(S.plans[x])?'<i></i>':''}</button>`).join('')}</div>
     <div class="px vpanel">
       <h3 style="margin:0">${esc(dayLabel(pd,long))}${pd===S.date?' (today)':pd===addDays(S.date,1)?' (tomorrow)':''}</h3>
-      <label class="f">Mob name (optional)<input class="inp" id="np-name" maxlength="30" placeholder="e.g. Laundry Golem" value="${esc(p.name||'')}"></label>
+      <label class="f">Mob name (optional)<input class="inp" id="np-name" maxlength="${LIM.mob}" placeholder="e.g. Laundry Golem" value="${esc(p.name||'')}"></label>
       <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
         <span class="small muted">The mob dies once ${P.he}’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
-      <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="90" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
+      <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
       <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div>
       <div class="f"><span>Extra quests that day (one-offs, added at spawn)</span>
         ${p.quests.length?`<div class="vlist">${p.quests.map((q,i)=>`<div class="vrow"><div class="t"><b>${esc(q.name)}</b><span class="small muted">${q.dmg} damage</span></div><button class="x" data-pq="${i}" aria-label="Remove ${esc(q.name)}">X</button></div>`).join('')}</div>`:''}
-        <div class="row2"><input class="inp" id="pq-name" maxlength="80" placeholder="e.g. Call grandma" aria-label="Planned quest" value="${esc(pq.name)}"><input class="inp" id="pq-dmg" type="number" min="1" max="999" aria-label="Damage (hidden)" value="${pq.dmg}"></div>
+        <div class="row2"><input class="inp" id="pq-name" maxlength="${LIM.quest}" placeholder="e.g. Call grandma" aria-label="Planned quest" value="${esc(pq.name)}"><input class="inp" id="pq-dmg" type="number" min="1" max="999" aria-label="Damage (hidden)" value="${pq.dmg}"></div>
         <button type="button" class="btn ghost block" id="pq-add">Add quest to ${esc(dayLabel(pd,{weekday:'short'}))}</button></div>
       ${planned(S.plans[pd])?'<button type="button" class="btn ghost block" id="np-clear">Clear this day’s plan</button>':''}</div></div></div>`;
   stageLoop($('#fieldcv'), drawField);
@@ -1682,8 +1703,8 @@ function renderVShop(m){
     :`
       <div><h2 style="color:var(--hex)">Stock the shop</h2><p class="muted small">Treats only. You set the price and write what ${P.he} gets.</p></div>
       <form class="px vpanel" id="sf" autocomplete="off">
-        <label class="f">Reward name<input class="inp" id="sf-name" maxlength="40" placeholder="e.g. Movie" value="${esc(d.name)}"></label>
-        <label class="f">Description<textarea class="inp" id="sf-desc" maxlength="200" placeholder="e.g. You get to pick a movie to watch for us tonight, 2 hours or shorter.">${esc(d.desc)}</textarea></label>
+        <label class="f">Reward name<input class="inp" id="sf-name" maxlength="${LIM.reward}" placeholder="e.g. Movie" value="${esc(d.name)}"></label>
+        <label class="f">Description<textarea class="inp" id="sf-desc" maxlength="${LIM.desc}" placeholder="e.g. You get to pick a movie to watch for us tonight, 2 hours or shorter.">${esc(d.desc)}</textarea></label>
         <label class="f">Price in V.coins<input class="inp" id="sf-price" type="number" min="1" max="9999" value="${d.price}"></label>
         <div class="f"><span>Icon</span><div class="pick" id="sf-pick">${ICON_KEYS.map(k=>`<button type="button" data-k="${k}" aria-label="${k}" aria-pressed="${d.icon===k}"><img alt="" src="${url(icon(k))}"></button>`).join('')}</div></div>
         <button class="btn hex block" type="submit">Add to shop</button></form>
@@ -1701,7 +1722,7 @@ function renderVShop(m){
   }
   const sync=()=>{ d.name=$('#sf-name').value; d.price=$('#sf-price').value; d.desc=$('#sf-desc').value; };
   $('#sf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.icon=b.dataset.k; rerender(); });
-  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:Math.max(1,parseInt(d.price,10)||1),icon:d.icon}); save(); ui.shopDraft={name:'',price:20,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
+  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:clampN(parseInt(d.price,10)||1,1,LIM.price),icon:d.icon}); save(); ui.shopDraft={name:'',price:20,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); rerender(); });
 }
 // her home tab: the lair, with deliveries and the scouting report
@@ -1774,7 +1795,7 @@ function renderVRules(m){
   const mine=endBy()==='vill', hisEnd=endBy()==='hero'&&!S.endProp.no, ex=20, gross=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex, spawnOpts=[...Array(19)].map((_,i)=>300+i*30), todOpts=[['auto','Match the phone clock'],['morning','Morning'],['day','Day'],['evening','Evening'],['night','Night']];
   m.classList.add('split');
   m.innerHTML=showcase(url(villSprite(false,true)), S.villName, `Tax ${Math.round(S.taxRate*100)}% · default threshold ${DEF.threshold}% · default bounty ${DEF.bounty} V.coins`, '<span class="st">RULES OF THE REALM</span>')+`<div class="below wrap"><div class="stack">
-    <div class="px vpanel"><label class="f">Your name<input class="inp" id="vr-name" maxlength="30" value="${esc(S.villName)}"></label>
+    <div class="px vpanel"><label class="f">Your name<input class="inp" id="vr-name" maxlength="${LIM.vill}" value="${esc(S.villName)}"></label>
       <div class="f"><div class="switch"><span>Cosmetic tax rate</span><span class="rateval" id="vr-rv">${Math.round(S.taxRate*100)}%</span></div><input type="range" id="vr-rate" min="0" max="50" step="5" value="${Math.round(S.taxRate*100)}" aria-label="Tax rate">
         <span class="small muted" id="vr-ex">${taxText(ex,gross)}</span></div>
       <label class="switch"><span>Show a juicy bounty<br><span class="small muted">Crown and glow when the bounty is above ${DEF.bounty} V.coins</span></span><input type="checkbox" id="vr-show" ${S.showValue?'checked':''}></label></div>
