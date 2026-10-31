@@ -247,6 +247,17 @@ details.cat .vlist{margin-top:6px}
 .tal b{font-family:var(--f-display);font-size:7px;line-height:1.5;margin-top:6px;color:var(--muted)}
 .tal[aria-pressed="true"] i{box-shadow:0 0 0 4px var(--gold),inset 0 3px 0 var(--wood-hi)}
 .tal[aria-pressed="true"] b{color:var(--gold)}
+.tal.got i{background:#4a3420}
+.tal.got i img{opacity:1;filter:none}
+.tal.got b{color:var(--ink)}
+.tal.max i{box-shadow:0 0 0 4px var(--line),0 0 0 7px var(--gold),inset 0 3px 0 var(--wood-hi)}
+.tal.shut{opacity:.55}
+.tal .pips{display:flex;gap:3px;justify-content:center}
+.tal .pips s{width:7px;height:7px;background:#1e140d;box-shadow:0 0 0 2px var(--line)}
+.tal .pips s.on{background:var(--gold)}
+.gate{position:relative;z-index:1;margin:-14px 0;background:var(--wood2);box-shadow:0 0 0 3px var(--line);padding:4px 6px 3px;font-family:var(--f-display);font-size:7px;color:var(--muted)}
+.gate.open{width:12px;height:12px;padding:0;background:var(--gold)}
+.show .boon{color:#7fd36a}
 
 /* forms */
 label.f,.f{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--muted)}
@@ -650,7 +661,7 @@ function freshState(){
     date:null, spawnMin:420, dayEnd:0, endProp:null, endFor:null, skew:0,
     inn:{per:3, used:{}, extra:{}}, req:null, rev:null, lost:null,   // req = his rest-day ask, rev = his revive ask
     shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
-    bag:[], gear:[], equip:{}, forge:{}
+    bag:[], gear:[], equip:{}, forge:{}, tal:{}
   };
 }
 // two separate saves, one per mode (solo / duo), plus the mode last played. KEY alone = a save that hasn't picked a mode yet
@@ -660,7 +671,7 @@ const readSave=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ 
 function upgrade(S){
   if (S.cls==='fighter') S.cls='warrior';   // old saves: Fighter became Warrior, Lancer was dropped
   if (S.cls && !CLASSES[S.cls]) S.cls=null;
-  S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{}; S.tally??={slain:0,fled:0,quests:0,kicks:0,rests:0};
+  S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{}; S.tal??={}; S.tally??={slain:0,fled:0,quests:0,kicks:0,rests:0};
   // saves from before the clock existed
   S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
   if (S.mob) S.mob.extra??=0;
@@ -821,7 +832,7 @@ function renderTabs(){
   const tabs = hero ? [['bag','Bag',ic('bag'),'side l1'],['shop','Shop',ic('coinbag'),''],['idle','Idle',ic('sword'),'idle'],['hero','Hero',ic('shield'),''],['talents','Talents',ic('star'),'side r2']]
     : [['mobs','Mobs',url(mobThumb({b:3,v:0})),'side l1'],['vshop','Shop',ic('coinbag'),''],['lair','Lair',url(CROWN()),'idle'],['spells','Spells',ic('orb'),''],['rules','Rules',ic('book'),'side r2']];
   const cur=hero?(ui.heroTab==='inn'?'idle':ui.heroTab):ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length, deliver=S.bag.filter(b=>b.used&&!b.delivered).length+(S.req&&!S.req.no?1:0)+(S.rev&&!S.rev.no?1:0)+(endBy()==='hero'&&!S.endProp.no?1:0);
-  n.innerHTML=tabs.map(([id,label,src,cls])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`; if(id==='lair'&&deliver) badge=`<span class="badge" style="background:var(--hex)">${deliver}</span>`;
+  n.innerHTML=tabs.map(([id,label,src,cls])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`; if(id==='talents'&&talPoints()) badge=`<span class="badge" style="background:var(--gold);color:var(--line)">${talPoints()}</span>`; if(id==='lair'&&deliver) badge=`<span class="badge" style="background:var(--hex)">${deliver}</span>`;
     if (cls==='idle') return `<button role="tab" class="idle" data-t="${id}" aria-selected="${cur===id}" aria-label="${label}"><span class="idle-orb"><i></i><b><img alt="" src="${src}">${label}</b></span>${badge}</button>`;
     return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${src}">${label}${badge}</button>`; }).join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const t=b.dataset.t; if(t==='shop'||t==='vshop') ui.shopRoom='shop'; if(hero) ui.heroTab=t; else ui.villTab=t; render(); $('#main').scrollTop=0; });
@@ -1115,7 +1126,7 @@ function updateKill(now, k){
   }
   if (k>=KO_COLLECT && !hit.collected){
     hit.collected=1; parts.forEach(p=>{ if(p.img){ p.home=1; p.life=40; } });
-    if (S.loot && S.loot.up){ floats.push({x:HERO_X-70,y:G-210,text:'LEVEL UP!',life:100,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
+    if (S.loot && S.loot.up){ floats.push({x:HERO_X-70,y:G-210,text:'LEVEL UP!',life:100,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'. New talent point!'); }
   }
 }
 // a quest finished after the kill: he runs over and boots the dazed mob, and gold spills out
@@ -1690,7 +1701,9 @@ const inStock=k=>S.stock.keys.includes(k);
 // the four kinds of boon gear gives: [key, what it does, icon]
 const BOONS=[['gold','gold when the daily mob falls','coinbag'],['exp','EXP when the daily mob falls','star'],['min','minutes before the day ends','scroll'],['kick','gold per bonus kick','chest']];
 const boonText=b=>BOONS.filter(([k])=>b[k]).map(([k,t])=>`+${b[k]} ${t}`).join(' · ');
-function heroBoons(){ const t={gold:0,exp:0,min:0,kick:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g) for(const b in g.boon) t[b]+=g.boon[b]; }); return t; }
+function heroBoons(){ const t={gold:0,exp:0,min:0,kick:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g) for(const b in g.boon) t[b]+=g.boon[b]; });
+  for (const k in S.tal) if (TAL[k]) for (const b in TAL[k].boon) t[b]+=TAL[k].boon[b]*S.tal[k];   // talents add the same kinds
+  return t; }
 // simple code-drawn gear icons until real gear art exists (sword, shield and book come from the icon sheet)
 function gearBase(slot){
   if (slot==='weapon'&&S.cls!=='archer'&&S.cls!=='mage') return icon('sword');
@@ -1733,8 +1746,9 @@ function renderHero(m){
       <div><div class="hrow"><h3>Equipment${fs?' · '+slotName(fs):''}</h3>${fs?'<button class="link" id="all">Show all</button>':''}</div>
         ${rack.length?`<div class="inv">${rack.map(k=>`<button data-g="${k}" style="--rc:${rarOf(k).c}" aria-pressed="${k===sel}" aria-label="${esc(gName(k))}, ${rarOf(k).n}${on(k)?' (equipped)':''}"><img alt="" src="${url(gearIcon(k))}">${on(k)?'<span class="tag">E</span>':''}</button>`).join('')}</div>`
         :`<div class="px empty">${fs?`Nothing for your ${slotName(fs).toLowerCase()} slot yet. The forge has some.`:'Your gear rack is empty.'}</div>`}</div>
-      <div><h3>Boons</h3><div class="vlist">${BOONS.map(([k,t,ic])=>{ const from=Object.values(S.equip).filter(g=>GEAR[g]&&GEAR[g].boon[k]);
-        return `<div class="vrow px${b[k]?'':' off'}"><img alt="" src="${url(icon(ic))}"><div class="t"><b>+${b[k]} ${t}</b><span class="small muted">${from.length?from.map(g=>`${esc(gName(g))} +${GEAR[g].boon[k]}`).join(', '):'No gear gives this yet'}</span></div></div>`; }).join('')}</div>
+      <div><h3>Boons</h3><div class="vlist">${BOONS.map(([k,t,ic])=>{ const from=Object.values(S.equip).filter(g=>GEAR[g]&&GEAR[g].boon[k]).map(g=>`${esc(gName(g))} +${GEAR[g].boon[k]}`)
+          .concat(Object.keys(S.tal).filter(x=>TAL[x]?.boon[k]&&S.tal[x]).map(x=>`${esc(TAL[x].n)} +${TAL[x].boon[k]*S.tal[x]}`));
+        return `<div class="vrow px${b[k]?'':' off'}"><img alt="" src="${url(icon(ic))}"><div class="t"><b>+${b[k]} ${t}</b><span class="small muted">${from.length?from.join(', '):'No gear or talent gives this yet'}</span></div></div>`; }).join('')}</div>
         <p class="small muted" style="margin:8px 0 0">Boons are small treats. They never add damage, and she still makes the rules.</p></div>
       <div><h3>Stats</h3><div class="px vpanel stats">
         ${ln('Level',`${S.level} · ${S.exp}/${expNeed(S.level)} EXP`)}${ln('Streak',`${S.streak} (best ${S.best})`)}
@@ -1761,24 +1775,44 @@ function drawHeroStage(x,now){
 }
 
 /* =========================================================
-   Talents (placeholder tree until talent points exist)
+   Talents
    ========================================================= */
-// one tree for every class; boons are small and never add damage
+// one tree for every class. 1 point per level after the first (S.tal = {key: rank}).
+// Boons are the same small kinds gear gives: never damage, the threshold, V.coins or her settings.
+// A row opens once enough points are spent in the rows above it (need).
 const TALENTS=[
-  [{k:'bounty',ic:'coinbag',n:'Bounty Hunter',d:'The daily mob drops a little extra gold when it falls.'}],
-  [{k:'owl',ic:'scroll',n:'Night Owl',d:'A few extra minutes before the day ends, for those late-night quests.'},{k:'lucky',ic:'potion',n:'Lucky Find',d:'Slightly better odds on the gold the mob drops.'}],
-  [{k:'pride',ic:'star',n:'Hero’s Pride',d:'A little extra EXP whenever the daily mob falls.'}]
+  {need:0, row:[{k:'bounty',ic:'coinbag',n:'Bounty Hunter',d:'The daily mob drops a little extra gold when it falls.',max:5,boon:{gold:1}}]},
+  {need:2, row:[{k:'owl',ic:'scroll',n:'Night Owl',d:'A few extra minutes before the day ends, for those late-night quests.',max:3,boon:{min:5}},
+                {k:'toes',ic:'chest',n:'Steel Toes',d:'Bonus kicks on a beaten mob shake loose a little more gold.',max:3,boon:{kick:1}}]},
+  {need:5, row:[{k:'pride',ic:'star',n:'Hero’s Pride',d:'A little extra EXP whenever the daily mob falls.',max:5,boon:{exp:3}},
+                {k:'stand',ic:'potion',n:'Last Stand',d:'Dig in your heels: more time before the day ends.',max:2,boon:{min:10}}]},
+  {need:10, row:[{k:'legend',ic:'trophy',n:'Legend of the Realm',d:'Bards sing of you. Mobs drop a bit more of everything when they fall.',max:1,boon:{gold:3,exp:5,kick:1}}]}
 ];
+const TAL={}; TALENTS.forEach((t,i)=>t.row.forEach(x=>TAL[x.k]={...x,tier:i}));
+const talRank=k=>S.tal[k]||0, talSpent=()=>Object.values(S.tal).reduce((a,n)=>a+n,0);
+const talPoints=()=>Math.max(0,S.level-1-talSpent());
+const talOpen=k=>talSpent()>=TALENTS[TAL[k].tier].need;
+const talBoon=(k,n)=>{ const o={}; for(const b in TAL[k].boon) o[b]=TAL[k].boon[b]*n; return o; };
 function showcase(img, title, desc, extra='', locked=false){
   return `<div class="stage show planks"><div class="pedestal${locked?' locked':''}"><img alt="" src="${img}"></div><div class="info"><h2>${esc(title)}</h2><p>${esc(desc)}</p>${extra}</div></div>`;
 }
 function renderTalents(m){
-  const all=TALENTS.flat(), t=all.find(x=>x.k===ui.talSel)||all[0];
+  const t=TAL[ui.talSel]||TAL.bounty, r=talRank(t.k), pts=talPoints(), open=talOpen(t.k), maxed=r>=t.max, spent=talSpent();
+  const now=r?`<span class="small boon">Now: ${boonText(talBoon(t.k,r))}</span>`:'';
+  const next=maxed?'':`<span class="small muted">${r?'Next':'Rank 1'}: ${boonText(talBoon(t.k,r+1))}</span>`;
+  const st=maxed?'MASTERED':!open?`LOCKED · SPEND ${TALENTS[t.tier].need} POINTS TO OPEN`:pts?'':'NO POINTS LEFT · LEVEL UP FOR MORE';
   m.classList.add('split');
-  m.innerHTML=showcase(url(icon(t.ic)), t.n, t.d, '<span class="st">LOCKED · NEEDS 1 TALENT POINT</span>', true)+`<div class="below wrap"><div class="stack">
-    <p class="hint">One tree for every class. Talent points: 0</p>
-    <div class="px tree">${TALENTS.map(tier=>`<div class="tier">${tier.map(x=>`<button class="tal" data-k="${x.k}" aria-pressed="${x===t}" aria-label="${esc(x.n)} (locked)"><i><img alt="" src="${url(icon(x.ic))}"></i><b>${esc(x.n)}</b></button>`).join('')}</div>`).join('')}</div></div></div>`;
-  m.querySelectorAll('.tal').forEach(b=>b.onclick=()=>{ ui.talSel=b.dataset.k; const sc=m.querySelector('.below').scrollTop; renderMain(); $('#main .below').scrollTop=sc; });
+  m.innerHTML=showcase(url(icon(t.ic)), t.n, t.d, `<span class="st">RANK ${r}/${t.max}</span>${now}${next}${st?`<span class="st">${st}</span>`:''}${!maxed&&open&&pts?'<button class="btn" id="learn">Learn</button>':''}`, !r)+`<div class="below wrap"><div class="stack">
+    <div class="hrow"><p class="hint" style="margin:0">One tree for every class. Talent points: <b style="color:var(--gold)">${pts}</b></p></div>
+    <div class="px tree">${TALENTS.map((tier,i)=>{ const lock=spent<tier.need;
+      return `${i?`<div class="gate${lock?'':' open'}">${lock?`${spent}/${tier.need} spent`:''}</div>`:''}<div class="tier">${tier.row.map(x=>{ const n=talRank(x.k);
+        return `<button class="tal${n?' got':''}${lock?' shut':''}${n>=x.max?' max':''}" data-k="${x.k}" aria-pressed="${x.k===t.k}" aria-label="${esc(x.n)}, rank ${n} of ${x.max}${lock?' (locked)':''}"><i><img alt="" src="${url(icon(x.ic))}"></i><b>${esc(x.n)}</b><span class="pips">${'<s class="on"></s>'.repeat(n)}${'<s></s>'.repeat(x.max-n)}</span></button>`; }).join('')}</div>`; }).join('')}</div>
+    <p class="small muted" style="margin:0">Earn 1 talent point every time you level up. Talents are small treats: they never add damage, and she still makes the rules.</p>
+    ${spent?'<button class="btn ghost" id="forget">Forget all talents (free)</button>':''}</div></div>`;
+  const keep=fn=>()=>{ const sc=m.querySelector('.below').scrollTop; fn(); renderMain(); $('#main .below').scrollTop=sc; };
+  m.querySelectorAll('.tal').forEach(b=>b.onclick=keep(()=>{ ui.talSel=b.dataset.k; }));
+  if ($('#learn')) $('#learn').onclick=keep(()=>{ S.tal[t.k]=r+1; save(); toast(`${t.n} rank ${r+1}: ${boonText(t.boon)}.`); });
+  if ($('#forget')) $('#forget').onclick=keep(()=>{ if(!confirm('Forget every talent and get all your points back?')) return; S.tal={}; save(); toast('Talents forgotten. Your points are back.'); });
 }
 
 /* =========================================================
@@ -2144,7 +2178,7 @@ function renderVRules(m){
       <button class="btn ghost block" id="pc-day">Jump to day ${S.day+1}’s spawn</button><button class="btn ghost block" id="pc-hour">Jump ahead 1 hour</button>
       <p class="small muted">Moves the game clock forward (it can’t go back, except with Reset). When a day ends with the mob alive, it flees and ${P.his} streak resets.</p>
       <label class="f">Time of day in scenes<select class="inp" id="pc-tod">${todOpts.map(([v,l])=>`<option value="${v}" ${S.tod===v?'selected':''}>${l}</option>`).join('')}</select></label>
-      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>${solo()?`<button class="btn ghost block" id="pc-quiz">Retake the solo questions</button>`:''}<button class="btn ghost block" id="pc-title">Back to the title screen (switch saves)</button>
+      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-lv">Give ${P.him} a level (test talents)</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>${solo()?`<button class="btn ghost block" id="pc-quiz">Retake the solo questions</button>`:''}<button class="btn ghost block" id="pc-title">Back to the title screen (switch saves)</button>
       <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?`Tap again to erase this ${solo()?'Single player':'Multiplayer'} save`:'Reset this save'}</button></div></div></div></div>`;
   $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); rerender(); };
   $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
@@ -2162,6 +2196,7 @@ function renderVRules(m){
   $('#pc-day').onclick=()=>jump(Math.max(spawnAt(addDays(S.date,1)),dayEndAt(S.date))+1000);
   $('#pc-hour').onclick=()=>jump(clock()+3600e3);
   $('#pc-gold').onclick=()=>{ S.gold+=50; S.vcoins+=50; save(); renderHud(); toast('50 gold and 50 V.coins granted. How generous.'); };
+  $('#pc-lv').onclick=()=>{ S.level++; save(); render(); toast(`Level ${S.level}. One more talent point for ${P.him}.`); };
   $('#pc-cls').onclick=()=>{ S.cls=null; S.sex=null; ui.newHero=null; save(); ui.role='hero'; render(); };
   if ($('#pc-quiz')) $('#pc-quiz').onclick=()=>{ ui.setup={...S.solo, step:0}; S.solo=null; save(); ui.role='hero'; render(); };
   $('#pc-title').onclick=()=>{ save(); ui.title=true; ui.setup=null; ui.role='hero'; render(); };
