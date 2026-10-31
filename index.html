@@ -891,7 +891,7 @@ function renderShop(m){
       <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?ARRIVE_LINES[ui.shopRoom]:lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
       <p class="hint">You have <b style="color:var(--gold)">${S.gold} gold</b>. ${forge?'Gear gives small boons, never extra damage.':'Tap a crate to look closer.'}</p>
       ${stock?`<div class="crates">${stock}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
-  const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now()-(arriving?2000:0); // no hop-in when coming from the other room
+  const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
   let li=0; cv.onclick=()=>{ li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
   $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); };
   const lp=now=>{ if(!shopCtx) return;
