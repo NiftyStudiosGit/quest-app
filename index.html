@@ -541,14 +541,19 @@ const KISS = () => strSprite('kiss2',["....rrrr....rrrr....","..rrRRRRr..rRRRRrr
    ========================================================= */
 const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
-const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own (and in solo mode)
-const LOOT=[6,8,8,10,10,12,12,15,18,25];   // default gold drop table: mostly modest, now and then a lucky big drop
-const KICK_LOOT=[2,3,3,4,5];           // gold per quest finished after the kill (never tied to the quest's hidden damage)
+/* Economy (Nov 1). Tuned with a year-long simulation of a hero who wins ~85% of days:
+   level 10 (talents) in ~3 weeks, level 50 in ~10 months; first Rare gear ~6 weeks, first Legendary ~6 months,
+   about 5 Legendary slots after a year. Bounty 20 V.coins a day ≈ a small treat every 1–2 days, a big one a month */
+const DEF={threshold:80, bounty:20};   // used whenever she doesn't set her own (and in solo mode)
+const LOOT=[10,12,12,14,14,15,16,18,20,25,30];   // default gold drop table (avg ~17): mostly steady, now and then a lucky big drop
+const KICK_LOOT=[3,4,4,5,5,6,8];       // gold per quest finished after the kill (never tied to the quest's hidden damage)
+const EXP_KILL=50;                     // EXP when the daily mob falls (before boons)
+const expNeed=lv=>30+lv*14;            // EXP for the next level: the first kill levels him up, level 49→50 takes ~10 kills
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
 const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', quests:[]});
 const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||p.quests.length>0);
 /* ---- Solo mode: the NPC Villainess runs his days. Her lists are also the fallback when a real Villainess sets nothing ---- */
-const SIZE_DMG=[0,5,10,18];   // hidden damage by quest size: 1 quick (~10 min), 2 half an hour, 3 big (an hour or more)
+const SIZE_DMG=[0,5,10,20];   // hidden damage by quest size: 1 quick (~10 min), 2 half an hour, 3 big (an hour or more)
 const GOALS={
   body:{n:'Health & fitness', ic:'apple'}, home:{n:'Home & chores', ic:'key'}, mind:{n:'Learning & reading', ic:'book'},
   calm:{n:'Rest & self-care', ic:'cocoa'}, work:{n:'Work & focus', ic:'scroll'}, people:{n:'Friends & family', ic:'heart'},
@@ -588,26 +593,30 @@ const NPC_POOL={
 };
 // his answers to her questions: how many quests a day, how many big ones, and how hard she pushes (the kill threshold)
 const TIME={short:{n:3, big:0, l:'About 15 minutes'}, some:{n:4, big:1, l:'30 to 60 minutes'}, lots:{n:5, big:2, l:'An hour or more'}};
-const PACE={gentle:{th:70, l:'Go easy on me'}, steady:{th:80, l:'Keep me honest'}, hard:{th:90, l:'Show no mercy'}};
+// with only 3–5 quests, 80% means every quest most days; gentle lets him skip any one, steady usually one small one
+const PACE={gentle:{th:55, l:'Go easy on me'}, steady:{th:65, l:'Keep me honest'}, hard:{th:90, l:'Show no mercy'}};
+// treat prices in days of bounty (20 a day): small 1–2 days, medium 3, a week, two weeks, a month
 const SOLO_TREATS=[
-  {name:'Fancy coffee', price:15, icon:'coffee', desc:'A café drink, the fancy kind, with whatever silly syrup you like.'},
-  {name:'Gaming hour', price:30, icon:'trophy', desc:'One hour of guilt-free gaming. No chores while the timer runs.'},
-  {name:'Sweet treat', price:20, icon:'cupcake', desc:'A cake, a pastry or an ice cream. Your call.'},
-  {name:'Movie night', price:35, icon:'orb', desc:'Pick any movie and watch it, snacks included.'},
-  {name:'Takeout dinner', price:60, icon:'meat', desc:'Order in from your favorite place. No cooking, no dishes.'},
-  {name:'Episode binge', price:15, icon:'star', desc:'One more episode, totally guilt-free.'},
-  {name:'Lazy morning', price:50, icon:'cocoa', desc:'Sleep in, then do nothing at all until noon.'},
-  {name:'New book', price:80, icon:'books', desc:'Buy one book you’ve had your eye on.'},
-  {name:'Little splurge', price:120, icon:'gem', desc:'Buy yourself something small you’ve wanted for a while.'},
-  {name:'Day trip', price:200, icon:'key', desc:'A day out somewhere fun: a museum, the beach, a new town.'}
+  {name:'Fancy coffee', price:30, icon:'coffee', desc:'A café drink, the fancy kind, with whatever silly syrup you like.'},
+  {name:'Gaming hour', price:50, icon:'trophy', desc:'One hour of guilt-free gaming. No chores while the timer runs.'},
+  {name:'Sweet treat', price:30, icon:'cupcake', desc:'A cake, a pastry or an ice cream. Your call.'},
+  {name:'Movie night', price:60, icon:'orb', desc:'Pick any movie and watch it, snacks included.'},
+  {name:'Takeout dinner', price:120, icon:'meat', desc:'Order in from your favorite place. No cooking, no dishes.'},
+  {name:'Episode binge', price:20, icon:'star', desc:'One more episode, totally guilt-free.'},
+  {name:'Lazy morning', price:100, icon:'cocoa', desc:'Sleep in, then do nothing at all until noon.'},
+  {name:'New book', price:160, icon:'books', desc:'Buy one book you’ve had your eye on.'},
+  {name:'Little splurge', price:300, icon:'gem', desc:'Buy yourself something small you’ve wanted for a while.'},
+  {name:'Day trip', price:500, icon:'key', desc:'A day out somewhere fun: a museum, the beach, a new town.'}
 ];
 const DUO_SHOP=[
-  {name:'Movie', price:20, icon:'orb', desc:'You get to pick a movie to watch for us tonight, 2 hours or shorter.'},
-  {name:'Bubble tea', price:25, icon:'cocoa', desc:'One bubble tea of your choice, any size, toppings included. I’ll go get it.'},
-  {name:'Back rub', price:40, icon:'heart', desc:'A 15-minute back rub, whenever you want it. No questions asked.'},
-  {name:'Gaming hour', price:35, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
-  {name:'Breakfast in bed', price:60, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
+  {name:'Movie', price:40, icon:'orb', desc:'You get to pick a movie to watch for us tonight, 2 hours or shorter.'},
+  {name:'Bubble tea', price:50, icon:'cocoa', desc:'One bubble tea of your choice, any size, toppings included. I’ll go get it.'},
+  {name:'Back rub', price:80, icon:'heart', desc:'A 15-minute back rub, whenever you want it. No questions asked.'},
+  {name:'Gaming hour', price:50, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
+  {name:'Breakfast in bed', price:140, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
 ];
+// the prices before the Nov 1 economy: saves still showing one of these get the new default
+const OLD_TREAT={'Fancy coffee':15,'Gaming hour':[30,35],'Sweet treat':20,'Movie night':35,'Takeout dinner':60,'Episode binge':15,'Lazy morning':50,'New book':80,'Little splurge':120,'Day trip':200,'Movie':20,'Bubble tea':25,'Back rub':40,'Breakfast in bed':60};
 const solo=()=>S.mode!=='duo';
 const POOL_ALL=Object.entries(NPC_POOL).flatMap(([g,l])=>l.map(e=>({name:e[0], size:e[1], taunt:e[2], habit:!!e[3], g})));
 const POOL_NAMES=new Set(POOL_ALL.map(e=>e.name));
@@ -661,7 +670,7 @@ function freshState(){
     date:null, spawnMin:420, dayEnd:0, endProp:null, endFor:null, skew:0,
     inn:{per:3, used:{}, extra:{}}, req:null, rev:null, lost:null,   // req = his rest-day ask, rev = his revive ask
     shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
-    bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2
+    bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2, econ:1
   };
 }
 // two separate saves, one per mode (solo / duo), plus the mode last played. KEY alone = a save that hasn't picked a mode yet
@@ -673,6 +682,10 @@ function upgrade(S){
   if (S.cls && !CLASSES[S.cls]) S.cls=null;
   S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{}; S.tally??={slain:0,fled:0,quests:0,kicks:0,rests:0};
   if (S.talV!==2){ S.tal={}; S.talV=2; }   // the level-10 tree replaced the first one: points spent there come back
+  if (!S.econ){ S.econ=1;   // Nov 1 economy: default treats she never repriced move to the new prices
+    const mine=S.mode==='duo'?DUO_SHOP:SOLO_TREATS;
+    (S.shop||[]).forEach(r=>{ const o=OLD_TREAT[r.name]; if(o==null||![].concat(o).includes(r.price)) return;
+      r.price=(mine.find(t=>t.name===r.name)||[...SOLO_TREATS,...DUO_SHOP].find(t=>t.name===r.name)).price; }); }
   // saves from before the clock existed
   S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
   if (S.mob) S.mob.extra??=0;
@@ -755,7 +768,7 @@ function landHit(task){
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
   S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++;
-  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30+heroBoons().exp)};
+  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(EXP_KILL+heroBoons().exp)};
   save(); return true;
 }
 function endDay(){
@@ -789,10 +802,9 @@ function tick(){
 let ui={role:'hero', heroTab:'idle', villTab:'lair', spellSel:'ambush', resetArm:false, justCleared:false, freshQuest:null,
   shopRoom:'shop', arrive:false, gearSel:null, slotSel:null, eqFx:0, talSel:'bounty', bagSel:null,
   planDate:null, pdraft:{name:'',dmg:10,taunt:''},
-  draft:{name:'',dmg:10,repeat:'once',taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
+  draft:{name:'',dmg:10,repeat:'once',taunt:''}, shopDraft:{name:'',price:40,icon:'heart',desc:''}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=s=>document.querySelector(s);
-const expNeed=lv=>40+lv*20;
 function getTod(){ if(S.tod&&S.tod!=='auto') return S.tod; const h=new Date(clock()).getHours(); return h>=5&&h<11?'morning':h>=11&&h<17?'day':h>=17&&h<21?'evening':'night'; }
 let toastT; function toast(msg){ document.querySelectorAll('.toast').forEach(t=>t.remove()); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; $('#app').appendChild(t); clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),2600); }
 
@@ -1624,59 +1636,59 @@ const rtag=k=>`<i class="rtag" style="color:${rarOf(k).c}">${rarOf(k).n}</i>`;
 // until matching art exists). Keys of older pieces never change, so saves keep their gear
 const GEAR={};
 [ // key, slot, rarity, price, boon, name, description
-  ['straw','head',0,15,{min:5},'Straw Hat','Keeps the sun off. Mostly.'],
-  ['cap','head',1,30,{gold:1},'Iron Cap','Dented, but it has character.'],
-  ['hat','head',2,90,{exp:5},'Feathered Hat','The feather does all the work. Mostly.'],
-  ['circlet','head',3,200,{gold:2,exp:5},'Silver Circlet','Makes every thought feel a little more heroic.'],
-  ['dragonhelm','head',4,400,{gold:2,exp:10,min:5},'Dragonbone Helm','A gift from a dragon who wanted a new look.'],
-  ['diadem','head',5,800,{gold:3,exp:10,min:10},'Sunfire Diadem','Glows at dawn. Great for early quests.'],
-  ['tunic','chest',0,15,{gold:1},'Patched Tunic','More patch than tunic at this point.'],
+  ['straw','head',0,15,{min:3},'Straw Hat','Keeps the sun off. Mostly.'],
+  ['cap','head',1,40,{gold:1},'Iron Cap','Dented, but it has character.'],
+  ['hat','head',2,90,{exp:3},'Feathered Hat','The feather does all the work. Mostly.'],
+  ['circlet','head',3,180,{gold:1,exp:3},'Silver Circlet','Makes every thought feel a little more heroic.'],
+  ['dragonhelm','head',4,360,{gold:1,exp:3,min:5},'Dragonbone Helm','A gift from a dragon who wanted a new look.'],
+  ['diadem','head',5,720,{gold:1,exp:4,min:5},'Sunfire Diadem','Glows at dawn. Great for early quests.'],
+  ['tunic','chest',0,15,{exp:2},'Patched Tunic','More patch than tunic at this point.'],
   ['vest','chest',1,40,{gold:1},'Leather Vest','Smells faintly of campfire. In a good way.'],
-  ['coat','chest',2,110,{gold:2,min:5},'Traveler’s Coat','A pocket for every occasion, and one more for snacks.'],
-  ['chain','chest',3,220,{gold:2,min:5,exp:5},'Chainmail Shirt','Jingles heroically when you walk.'],
-  ['phoenix','chest',4,420,{gold:3,exp:5,min:10},'Phoenix Mail','Warm in winter. Suspiciously warm in summer.'],
-  ['mantle','chest',5,850,{gold:4,exp:10,min:5},'Mantle of Dawn','Woven from the first light of a very good morning.'],
-  ['shorts','pants',0,12,{min:5},'Frayed Shorts','Breezy. Very breezy.'],
-  ['trousers','pants',1,30,{min:5},'Sturdy Trousers','Extra pockets for extra snacks.'],
-  ['leggings','pants',2,90,{min:10,exp:3},'Ranger Leggings','Quiet, comfy and suspiciously stain-proof.'],
-  ['greaves','pants',3,190,{min:10,exp:5},'Scaled Greaves','Each scale polished by hand. Yours, probably.'],
-  ['shadow','pants',4,380,{min:15,exp:5,gold:1},'Shadowstep Breeches','You could sneak past a mob. You won’t, but you could.'],
-  ['starlegs','pants',5,780,{min:20,exp:10},'Starlight Greaves','They twinkle when you sit down. Classy.'],
-  ['sandals','boots',0,12,{min:5},'Worn Sandals','Your toes say hello to everyone.'],
-  ['boots','boots',1,35,{min:10},'Swift Boots','You won’t run faster, but you’ll feel like you do.'],
-  ['wings','boots',2,120,{min:15},'Winged Boots','Tiny wings. Zero flight. Maximum style.'],
-  ['storm','boots',3,230,{min:15,kick:1},'Stormstriders','A tiny thunderclap follows every step.'],
-  ['league','boots',4,420,{min:20,kick:1,gold:1},'Seven-League Boots','Sadly they only go one league at a time.'],
-  ['comet','boots',5,820,{min:25,kick:2},'Comet Treads','They leave a sparkly trail. Mobs hate that.'],
+  ['coat','chest',2,95,{gold:1,min:5},'Traveler’s Coat','A pocket for every occasion, and one more for snacks.'],
+  ['chain','chest',3,180,{gold:2},'Chainmail Shirt','Jingles heroically when you walk.'],
+  ['phoenix','chest',4,370,{gold:2,exp:2},'Phoenix Mail','Warm in winter. Suspiciously warm in summer.'],
+  ['mantle','chest',5,740,{gold:2,exp:3},'Mantle of Dawn','Woven from the first light of a very good morning.'],
+  ['shorts','pants',0,12,{min:3},'Frayed Shorts','Breezy. Very breezy.'],
+  ['trousers','pants',1,35,{min:5},'Sturdy Trousers','Extra pockets for extra snacks.'],
+  ['leggings','pants',2,85,{min:5,exp:2},'Ranger Leggings','Quiet, comfy and suspiciously stain-proof.'],
+  ['greaves','pants',3,170,{min:8,exp:2},'Scaled Greaves','Each scale polished by hand. Yours, probably.'],
+  ['shadow','pants',4,340,{min:10,exp:2},'Shadowstep Breeches','You could sneak past a mob. You won’t, but you could.'],
+  ['starlegs','pants',5,680,{min:12,exp:2},'Starlight Greaves','They twinkle when you sit down. Classy.'],
+  ['sandals','boots',0,12,{min:3},'Worn Sandals','Your toes say hello to everyone.'],
+  ['boots','boots',1,35,{min:5},'Swift Boots','You won’t run faster, but you’ll feel like you do.'],
+  ['wings','boots',2,85,{min:8},'Winged Boots','Tiny wings. Zero flight. Maximum style.'],
+  ['storm','boots',3,180,{min:8,kick:1},'Stormstriders','A tiny thunderclap follows every step.'],
+  ['league','boots',4,350,{min:10,kick:1},'Seven-League Boots','Sadly they only go one league at a time.'],
+  ['comet','boots',5,700,{min:12,kick:1},'Comet Treads','They leave a sparkly trail. Mobs hate that.'],
   ['stick','weapon',0,15,{gold:1},{warrior:'Wooden Sword',archer:'Twig Bow',mage:'Broom Handle'},'Technically a weapon. Technically.'],
-  ['sword','weapon',1,50,{gold:2},{warrior:'Iron Sword',archer:'Yew Bow',mage:'Oak Staff'},
+  ['sword','weapon',1,45,{gold:1},{warrior:'Iron Sword',archer:'Yew Bow',mage:'Oak Staff'},
     {warrior:'Shiny and sharp. Mobs only fall to real quests, though.', archer:'Bendy in all the right places. Mobs only fall to real quests, though.', mage:'Knotted, humming, and a great walking stick.'}],
-  ['blade','weapon',2,150,{gold:2,kick:1},{warrior:'Knight’s Blade',archer:'Silverwood Bow',mage:'Crystal Staff'},
+  ['blade','weapon',2,100,{gold:1,kick:1},{warrior:'Knight’s Blade',archer:'Silverwood Bow',mage:'Crystal Staff'},
     {warrior:'So polished you can check your hair in it.', archer:'Sings a little note on every shot.', mage:'Glows when you’re about to finish a quest. Coincidence?'}],
-  ['runed','weapon',3,260,{gold:3,kick:1},{warrior:'Runed Broadsword',archer:'Hunter’s Longbow',mage:'Runed Scepter'},'Covered in runes nobody can read. Very impressive.'],
-  ['tempest','weapon',4,480,{gold:3,kick:2,exp:5},{warrior:'Dragonslayer',archer:'Windsong Bow',mage:'Staff of Storms'},'Crackles with power it isn’t allowed to use on mobs.'],
-  ['sunforged','weapon',5,950,{gold:4,kick:2,exp:10},{warrior:'Sunforged Greatsword',archer:'Starfall Bow',mage:'Archmage’s Staff'},'The stuff of legends. Mobs still only fall to real quests.'],
-  ['lid','offhand',0,12,{min:5},{warrior:'Pot Lid',archer:'Rag Quiver',mage:'Scribbled Notes'},
+  ['runed','weapon',3,190,{gold:1,exp:2,kick:1},{warrior:'Runed Broadsword',archer:'Hunter’s Longbow',mage:'Runed Scepter'},'Covered in runes nobody can read. Very impressive.'],
+  ['tempest','weapon',4,380,{gold:2,kick:1},{warrior:'Dragonslayer',archer:'Windsong Bow',mage:'Staff of Storms'},'Crackles with power it isn’t allowed to use on mobs.'],
+  ['sunforged','weapon',5,760,{gold:2,exp:2,kick:1},{warrior:'Sunforged Greatsword',archer:'Starfall Bow',mage:'Archmage’s Staff'},'The stuff of legends. Mobs still only fall to real quests.'],
+  ['lid','offhand',0,12,{min:3},{warrior:'Pot Lid',archer:'Rag Quiver',mage:'Scribbled Notes'},
     {warrior:'Borrowed from the kitchen. Please return it.', archer:'Holds three arrows if you squeeze.', mage:'Half spells, half shopping list.'}],
-  ['shield','offhand',1,40,{min:5},{warrior:'Oak Shield',archer:'Leather Quiver',mage:'Pocket Spellbook'},
+  ['shield','offhand',1,40,{exp:3},{warrior:'Oak Shield',archer:'Leather Quiver',mage:'Pocket Spellbook'},
     {warrior:'Sturdy oak with a lucky knot in the middle.', archer:'Holds twelve arrows and one emergency cookie.', mage:'Mostly blank pages. Mostly.'}],
-  ['kite','offhand',2,110,{min:5,kick:1},{warrior:'Kite Shield',archer:'Endless Quiver',mage:'Grand Grimoire'},
+  ['kite','offhand',2,90,{min:5,exp:2},{warrior:'Kite Shield',archer:'Endless Quiver',mage:'Grand Grimoire'},
     {warrior:'Tall, proud and only a little heavy.', archer:'It never runs out. Nobody knows why.', mage:'Every spell inside is about being on time.'}],
-  ['tower','offhand',3,210,{min:10,kick:1},{warrior:'Tower Shield',archer:'Hunter’s Quiver',mage:'Tome of Tides'},'Sturdy, reliable and a bit of a show-off.'],
-  ['lion','offhand',4,400,{min:10,kick:1,gold:2},{warrior:'Lion Aegis',archer:'Quiver of Gales',mage:'Codex of Stars'},'Roars softly whenever you finish a quest.'],
-  ['dawnshield','offhand',5,800,{min:15,kick:2,exp:5},{warrior:'Shield of Dawn',archer:'Starlight Quiver',mage:'Book of Ages'},'Older than the kingdom, and somehow still shiny.'],
+  ['tower','offhand',3,175,{min:5,exp:3},{warrior:'Tower Shield',archer:'Hunter’s Quiver',mage:'Tome of Tides'},'Sturdy, reliable and a bit of a show-off.'],
+  ['lion','offhand',4,350,{min:8,exp:3},{warrior:'Lion Aegis',archer:'Quiver of Gales',mage:'Codex of Stars'},'Roars softly whenever you finish a quest.'],
+  ['dawnshield','offhand',5,700,{min:10,exp:3},{warrior:'Shield of Dawn',archer:'Starlight Quiver',mage:'Book of Ages'},'Older than the kingdom, and somehow still shiny.'],
   ['twine','ring',0,15,{gold:1},'Twine Ring','Tied with love and a slightly wonky knot.'],
-  ['ring','ring',1,60,{gold:2},'Copper Ring','Turns your finger a little green. Worth it.'],
-  ['moon','ring',2,140,{gold:2,exp:5},'Moonstone Ring','Cool to the touch, warm to the ego.'],
-  ['ruby','ring',3,240,{gold:3,exp:5},'Ruby Band','Red, bold and a little dramatic. Like someone you know.'],
-  ['echo','ring',4,450,{gold:3,exp:5,kick:1},'Ring of Echoes','Every coin you earn clinks twice. Only one counts.'],
-  ['eternity','ring',5,880,{gold:4,exp:10,kick:1},'Band of Eternity','No beginning, no end, no refunds.'],
-  ['pebble','amulet',0,15,{exp:5},'Pebble Necklace','A very nice pebble. You found it yourself.'],
-  ['amulet','amulet',1,80,{gold:2,min:5},'Lucky Amulet','A pendant that hums when gold is near.'],
-  ['star','amulet',2,180,{gold:2,exp:5,kick:1},'Star Pendant','A fallen star on a string. Wishes not included.'],
-  ['locket','amulet',3,260,{gold:3,exp:5,kick:1},'Sapphire Locket','Holds a tiny portrait. Of you. Obviously.'],
-  ['grove','amulet',4,460,{gold:3,exp:10,kick:1},'Heart of the Grove','Smells like rain and fresh leaves.'],
-  ['dragoneye','amulet',5,900,{gold:4,exp:10,min:5,kick:1},'Dragon’s Eye','It blinks sometimes. Try not to think about it.']
+  ['ring','ring',1,45,{gold:1},'Copper Ring','Turns your finger a little green. Worth it.'],
+  ['moon','ring',2,95,{gold:1,exp:2},'Moonstone Ring','Cool to the touch, warm to the ego.'],
+  ['ruby','ring',3,185,{gold:1,exp:3},'Ruby Band','Red, bold and a little dramatic. Like someone you know.'],
+  ['echo','ring',4,370,{gold:2,exp:2},'Ring of Echoes','Every coin you earn clinks twice. Only one counts.'],
+  ['eternity','ring',5,740,{gold:2,exp:3},'Band of Eternity','No beginning, no end, no refunds.'],
+  ['pebble','amulet',0,15,{exp:2},'Pebble Necklace','A very nice pebble. You found it yourself.'],
+  ['amulet','amulet',1,45,{gold:1},'Lucky Amulet','A pendant that hums when gold is near.'],
+  ['star','amulet',2,95,{exp:4},'Star Pendant','A fallen star on a string. Wishes not included.'],
+  ['locket','amulet',3,185,{gold:1,exp:4},'Sapphire Locket','Holds a tiny portrait. Of you. Obviously.'],
+  ['grove','amulet',4,370,{gold:1,exp:5},'Heart of the Grove','Smells like rain and fresh leaves.'],
+  ['dragoneye','amulet',5,760,{gold:1,exp:6},'Dragon’s Eye','It blinks sometimes. Try not to think about it.']
 ].forEach(([k,slot,r,price,boon,n,d])=>GEAR[k]={slot,r,price,boon,n,d});
 const SLOT_ORDER=GEAR_SLOTS.map(s=>s[0]);
 const RARITY_SIZE=RARITY.map((_,r)=>Object.values(GEAR).filter(g=>g.r===r).length);   // pieces per rarity
@@ -1690,7 +1702,7 @@ const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price});
 // the forge doesn't sell everything at once: 8 pieces a week drawn from the whole catalog (any slot, owned pieces
 // included, no piece twice), weighted by rarity; new stock every Monday.
 // She can pull any piece or add any from the catalog whenever she likes (S.stock = {week, keys})
-const FORGE_ODDS=[30,30,20,12,6,2], FORGE_N=8;   // rarity weights, Uncommon to Legendary
+const FORGE_ODDS=[26,26,20,14,9,5], FORGE_N=8;   // rarity weights, Uncommon to Legendary
 const weekOf=date=>{ const [y,m,d]=date.split('-').map(Number); return addDays(date,-((new Date(y,m-1,d).getDay()+6)%7)); };
 function rollForge(){
   const keys=[], ks=Object.keys(GEAR), w=k=>FORGE_ODDS[GEAR[k].r]/RARITY_SIZE[GEAR[k].r];   // odds per rarity, shared by its pieces
@@ -1781,18 +1793,20 @@ function drawHeroStage(x,now){
 // one tree for every class (S.tal = {key: rank}). Owner: talents unlock at level 10, then 1 point every 2 levels,
 // and the tree is full at level 50 (21 points = 21 ranks).
 // Boons are the same small kinds gear gives: never damage, the threshold, V.coins or her settings.
+// Full tree: +6 gold, +15 EXP, +24 min, +6 kick gold; a full Legendary set: +8 gold, +23 EXP, +39 min, +2 kick gold
+// (on a base of ~17 gold, 50 EXP and ~5 per kick, so the endgame earns well under twice the start).
 // A row opens once enough points are spent in total (need); the capstone needs everything else.
 const TAL_LV=10;
 const TALENTS=[
   {need:0, row:[{k:'bounty',ic:'coinbag',n:'Bounty Hunter',d:'The daily mob drops a little extra gold when it falls.',max:3,boon:{gold:1}},
                 {k:'study',ic:'book',n:'Quick Study',d:'Every fight is a lesson. A little extra EXP when the mob falls.',max:3,boon:{exp:2}}]},
-  {need:3, row:[{k:'owl',ic:'scroll',n:'Night Owl',d:'A few extra minutes before the day ends, for those late-night quests.',max:3,boon:{min:5}},
+  {need:3, row:[{k:'owl',ic:'scroll',n:'Night Owl',d:'A few extra minutes before the day ends, for those late-night quests.',max:3,boon:{min:3}},
                 {k:'toes',ic:'chest',n:'Steel Toes',d:'Bonus kicks on a beaten mob shake loose a little more gold.',max:3,boon:{kick:1}}]},
-  {need:7, row:[{k:'pride',ic:'star',n:'Hero’s Pride',d:'Strut a little. More EXP whenever the daily mob falls.',max:2,boon:{exp:4}},
-                {k:'nose',ic:'gem',n:'Treasure Sense',d:'You can smell gold through a mob’s pockets.',max:2,boon:{gold:2}}]},
-  {need:12, row:[{k:'stand',ic:'potion',n:'Last Stand',d:'Dig in your heels: more time before the day ends.',max:2,boon:{min:10}},
+  {need:7, row:[{k:'pride',ic:'star',n:'Hero’s Pride',d:'Strut a little. More EXP whenever the daily mob falls.',max:2,boon:{exp:3}},
+                {k:'nose',ic:'gem',n:'Treasure Sense',d:'You can smell gold through a mob’s pockets.',max:2,boon:{gold:1}}]},
+  {need:12, row:[{k:'stand',ic:'potion',n:'Last Stand',d:'Dig in your heels: more time before the day ends.',max:2,boon:{min:5}},
                 {k:'boots',ic:'key',n:'Big Boots',d:'Bigger boots, bigger kicks, more gold rattling out.',max:2,boon:{kick:1}}]},
-  {need:20, row:[{k:'legend',ic:'trophy',n:'Legend of the Realm',d:'Bards sing of you. A bit more of everything.',max:1,boon:{gold:3,exp:5,kick:1}}]}
+  {need:20, row:[{k:'legend',ic:'trophy',n:'Legend of the Realm',d:'Bards sing of you. A bit more of everything.',max:1,boon:{gold:1,exp:3,min:5,kick:1}}]}
 ];
 const TAL={}; TALENTS.forEach((t,i)=>t.row.forEach(x=>TAL[x.k]={...x,tier:i}));
 const talRank=k=>S.tal[k]||0, talSpent=()=>Object.values(S.tal).reduce((a,n)=>a+n,0);
@@ -2005,7 +2019,7 @@ function renderVMobs(m){
     <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in ${P.his} Quest Log. ${P.He} never sees how much damage it does.</p></div>
     <form class="px vpanel" id="mf" autocomplete="off">
       <label class="f">Task<input class="inp" id="mf-name" maxlength="${LIM.quest}" placeholder="e.g. Fold the laundry" value="${esc(d.name)}"></label>
-      <div class="row2"><label class="f">Damage (hidden)<input class="inp" id="mf-dmg" type="number" min="1" max="999" value="${d.dmg}"></label><label class="f">Repeats<select class="inp" id="mf-rep"><option value="once" ${d.repeat==='once'?'selected':''}>Today only</option><option value="daily" ${d.repeat==='daily'?'selected':''}>Every day</option></select></label></div>
+      <div class="row2"><label class="f">Damage (hidden) <span class="small muted">quick 5 · half hour 10 · big 20</span><input class="inp" id="mf-dmg" type="number" min="1" max="999" value="${d.dmg}"></label><label class="f">Repeats<select class="inp" id="mf-rep"><option value="once" ${d.repeat==='once'?'selected':''}>Today only</option><option value="daily" ${d.repeat==='daily'?'selected':''}>Every day</option></select></label></div>
       <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="${LIM.taunt}" placeholder="Shown when ${P.he} pokes the mob">${esc(d.taunt)}</textarea></label>
       <button class="btn hex block" type="submit">Add to ${P.his} Quest Log</button></form>
     <div><h3>${P.His} quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.dmg} damage${share(t)} · ${t.repeat==='daily'?'daily':'once'} · ${t.hit?'landed':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}">X</button></div>`).join('')||'<div class="empty">No quests. At spawn I’ll fall back to the default list.</div>'}</div></div>
@@ -2094,7 +2108,7 @@ function renderVShop(m){
   }
   const sync=()=>{ d.name=$('#sf-name').value; d.price=$('#sf-price').value; d.desc=$('#sf-desc').value; };
   $('#sf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.icon=b.dataset.k; rerender(); });
-  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:clampN(parseInt(d.price,10)||1,1,LIM.price),icon:d.icon}); save(); ui.shopDraft={name:'',price:20,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
+  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:clampN(parseInt(d.price,10)||1,1,LIM.price),icon:d.icon}); save(); ui.shopDraft={name:'',price:40,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); rerender(); });
 }
 // her home tab: the lair, with deliveries and the scouting report
