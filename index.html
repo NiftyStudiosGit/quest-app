@@ -542,13 +542,14 @@ const KISS = () => strSprite('kiss2',["....rrrr....rrrr....","..rrRRRRr..rRRRRrr
 const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
 /* Economy (Nov 1). Tuned with a year-long simulation of a hero who wins ~85% of days:
-   level 10 (talents) in ~3 weeks, level 50 in ~10 months; first Rare gear ~6 weeks, first Legendary ~6 months,
+   level 10 (talents) in ~2 weeks, level 50 in ~9.5 months; first Rare gear ~6 weeks, first Legendary ~6 months,
    about 5 Legendary slots after a year. Bounty 20 V.coins a day ≈ a small treat every 1–2 days, a big one a month */
-const DEF={threshold:80, bounty:20};   // used whenever she doesn't set her own (and in solo mode)
+const DEF={threshold:75, bounty:20};   // used whenever she doesn't set her own (and in solo mode)
 const LOOT=[10,12,12,14,14,15,16,18,20,25,30];   // default gold drop table (avg ~17): mostly steady, now and then a lucky big drop
 const KICK_LOOT=[3,4,4,5,5,6,8];       // gold per quest finished after the kill (never tied to the quest's hidden damage)
 const EXP_KILL=50;                     // EXP when the daily mob falls (before boons)
-const expNeed=lv=>30+lv*14;            // EXP for the next level: the first kill levels him up, level 49→50 takes ~10 kills
+// EXP for the next level, gentle early (first kill levels him up, talents at level 10 in ~2 weeks), ~13 kills for 49→50
+const expNeed=lv=>Math.round((25+lv*7+lv*lv/5)/5)*5;
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
 const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', quests:[]});
 const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||p.quests.length>0);
