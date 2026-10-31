@@ -204,6 +204,13 @@ main.has-orb .below{padding-bottom:56px}
 .selbar .rtag{margin:4px 0}
 .selbar.gear{flex-wrap:wrap}
 .selbar.gear .btn{width:100%}
+/* her forge: this week's stock and the catalog */
+.vrow.wrap2{flex-wrap:wrap}
+.vrow.wrap2 .t{flex-basis:calc(100% - 42px)}
+.vrow.wrap2 .inp{margin-left:auto}
+details.cat{margin-bottom:10px}
+details.cat summary{font-family:var(--f-display);font-size:9px;cursor:pointer;padding:10px 4px;list-style-position:inside}
+details.cat .vlist{margin-top:6px}
 .rpip{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:10px;height:10px;box-shadow:0 0 0 2px var(--line)}
 .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .link{background:transparent;border:0;padding:0 0 10px;cursor:pointer;color:var(--gold);font-family:var(--f-display);font-size:7px}
@@ -760,6 +767,7 @@ function tick(){
   while (t>=dayEndAt(S.date) && n<400){ endDay(); n++; changed=true; }
   if (n>=400) startDay(dateOf(t));   // gone for over a year
   if (S.mob.state==='coming' && t>=spawnAt(S.date)){ spawnMob(); changed=true; }
+  if (!S.stock || S.stock.week!==weekOf(S.date)){ rollForge(); changed=true; }
   if (changed) save();
   return changed;
 }
@@ -1663,7 +1671,19 @@ const bySlot=(a,b)=>SLOT_ORDER.indexOf(GEAR[a].slot)-SLOT_ORDER.indexOf(GEAR[b].
 const byCls=v=>typeof v==='string'?v:v[S.cls]||v.warrior;
 const gName=k=>byCls(GEAR[k].n), gDesc=k=>byCls(GEAR[k].d);
 // her forge settings: price override and whether it's on the rack
-const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price, off:!!S.forge[k]?.off});
+const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price});
+// the forge doesn't sell everything at once: 8 pieces a week (one per slot, rarity rolled), new stock every Monday.
+// She can pull any piece or add any from the catalog whenever she likes (S.stock = {week, keys})
+const FORGE_ODDS=[30,30,20,12,6,2];   // rarity weights, Uncommon to Legendary
+const weekOf=date=>{ const [y,m,d]=date.split('-').map(Number); return addDays(date,-((new Date(y,m-1,d).getDay()+6)%7)); };
+function rollForge(){
+  const keys=[];
+  SLOT_ORDER.forEach(s=>{ const ks=Object.keys(GEAR).filter(k=>GEAR[k].slot===s&&!S.gear.includes(k));   // never what he already owns
+    let n=Math.random()*ks.reduce((a,k)=>a+FORGE_ODDS[GEAR[k].r],0); const k=ks.find(k=>(n-=FORGE_ODDS[GEAR[k].r])<0); if(k) keys.push(k); });
+  S.stock={week:weekOf(S.date), keys};
+}
+const stockDays=()=>Math.round((at(addDays(S.stock.week,7),720)-at(S.date,720))/864e5);   // days until new stock
+const inStock=k=>S.stock.keys.includes(k);
 // the four kinds of boon gear gives: [key, what it does, icon]
 const BOONS=[['gold','gold when the daily mob falls','coinbag'],['exp','EXP when the daily mob falls','star'],['min','minutes before the day ends','scroll'],['kick','gold per bonus kick','chest']];
 const boonText=b=>BOONS.filter(([k])=>b[k]).map(([k,t])=>`+${b[k]} ${t}`).join(' · ');
@@ -1773,8 +1793,7 @@ function renderShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='shop') renderMain(); }); return; }
   const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
   const stock = forge
-    ? RARITY.map((R,r)=>{ const ks=Object.keys(GEAR).filter(k=>GEAR[k].r===r&&(!forgeOf(k).off||S.gear.includes(k))).sort(byRarity);   // grouped by rarity, rarest first
-        return ks.length?`<div><h3 style="color:${R.c}">${R.n}</h3><div class="crates">${ks.map(k=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><i class="rpip" style="background:${R.c}"></i><img alt="" src="${url(gearIcon(k))}" style="width:64px;height:64px"><span class="tagp">${esc(gName(k))}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')}</div></div>`:''; }).reverse().join('')
+    ? S.stock.keys.filter(k=>GEAR[k]).sort(byRarity).map(k=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><i class="rpip" style="background:${rarOf(k).c}"></i><img alt="" src="${url(gearIcon(k))}" style="width:64px;height:64px"><span class="tagp">${esc(gName(k))}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')
     : S.shop.map(it=>`<button class="crate ${S.vcoins<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price" style="color:var(--hex)"><img alt="" src="${url(VCOIN())}">${it.price}</span></button>`).join('');
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
@@ -1782,8 +1801,8 @@ function renderShop(m){
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">
       <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?ARRIVE_LINES[ui.shopRoom]:lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
-      <p class="hint">${forge?`You have <b style="color:var(--gold)">${S.gold} gold</b>. Gear gives small boons, never extra damage.`:`You have <b style="color:var(--hex)">${S.vcoins} V.coins</b>. Tap a crate to look closer.`}</p>
-      ${stock?(forge?stock:`<div class="crates">${stock}</div>`):'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
+      <p class="hint">${forge?`This week’s stock. New gear arrives in ${stockDays()} day${stockDays()===1?'':'s'}. You have <b style="color:var(--gold)">${S.gold} gold</b>.`:`You have <b style="color:var(--hex)">${S.vcoins} V.coins</b>. Tap a crate to look closer.`}</p>
+      ${stock?`<div class="crates">${stock}</div>`:`<div class="px empty">${forge?'The racks are bare this week.':'The shelves are empty. Ask your Villainess to stock them.'}</div>`}</div></div>`;
   const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
   let li=0; cv.onclick=()=>{ li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
   $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); };
@@ -1986,6 +2005,8 @@ function renderVMobs(m){
     S.tasks.push({id:nid(),name,dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)),repeat:d.repeat,taunt:d.taunt.trim(),done:false,hit:false}); save(); ui.draft={name:'',dmg:10,repeat:'once',taunt:''}; rerender(); toast(`Added to ${P.his} Quest Log.`); };
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.tasks=S.tasks.filter(t=>t.id!==b.dataset.del); S.pending=S.pending.filter(id=>id!==b.dataset.del); save(); rerender(); });
 }
+const gearRow=(k,btn)=>`<div class="vrow px wrap2"><img alt="" src="${url(gearIcon(k))}"><div class="t"><b>${esc(gName(k))} ${rtag(k)}</b><span class="small muted">${boonText(GEAR[k].boon)}${S.gear.includes(k)?` · ${P.he} owns it`:''}</span></div>
+  <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${forgeOf(k).price}" aria-label="Price of ${esc(gName(k))} in gold">${btn}</div>`;
 // her side of the shop: the same scene (without the hero), with the arrow to her forge
 function renderVShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
@@ -1995,9 +2016,11 @@ function renderVShop(m){
       <div class="shopsign"><span>${forge?'The Forge':'Ye Olde Shoppe'}</span></div>
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">${forge?`
-      <div><h2 style="color:var(--hex)">Run the forge</h2><p class="muted small">Gear costs gold, ${P.his} in-game currency. Set prices or take pieces off the rack. Boons are fixed and never add damage.</p></div>
-      <div class="vlist">${Object.keys(GEAR).sort(byRarity).map(k=>{ const g=GEAR[k]; const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(k))}"><div class="t"><b>${esc(gName(k))} ${rtag(k)}</b><span class="small muted">${boonText(g.boon)}${own?` · ${P.he} owns it`:''}</span></div>
-        <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${f.price}" aria-label="Price of ${esc(gName(k))} in gold"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--hex);flex:none" data-sell="${k}" ${f.off?'':'checked'} aria-label="${esc(gName(k))} for sale"></div>`; }).join('')}</div>
+      <div><h2 style="color:var(--hex)">Run the forge</h2><p class="muted small">Gear costs gold, ${P.his} in-game currency. A new stock of 8 rolls in every Monday (next in ${stockDays()} day${stockDays()===1?'':'s'}). Pull or add any piece whenever you like. Boons are fixed and never add damage.</p></div>
+      <div><h3>This week’s stock</h3><div class="vlist">${S.stock.keys.filter(k=>GEAR[k]).sort(byRarity).map(k=>gearRow(k,`<button class="btn ghost" data-pull="${k}">Pull</button>`)).join('')||'<div class="px empty">The racks are bare. Add something from the catalog.</div>'}</div>
+        <button class="btn ghost block" id="reroll" style="margin-top:12px">Roll a new stock now</button></div>
+      <div><h3>The catalog</h3>${RARITY.map((R,r)=>{ const ks=Object.keys(GEAR).filter(k=>GEAR[k].r===r&&!inStock(k)).sort(byRarity);
+        return ks.length?`<details class="cat"><summary style="color:${R.c}">${R.n} <span class="muted small">(${ks.length})</span></summary><div class="vlist">${ks.map(k=>gearRow(k,`<button class="btn hex" data-add="${k}">Add</button>`)).join('')}</div></details>`:''; }).reverse().join('')}</div>
       <div><h3>Gift ${P.him} gold</h3><div class="px vpanel"><div class="row2"><input class="inp" id="gift" type="number" min="1" max="999" value="20" aria-label="Gold to give"><button class="btn hex" id="gift-go">Give gold</button></div><p class="small muted">${P.He} has ${S.gold} gold.</p></div></div>`
     :`
       <div><h2 style="color:var(--hex)">Stock the shop</h2><p class="muted small">Treats only. You set the price and write what ${P.he} gets.</p></div>
@@ -2015,7 +2038,11 @@ function renderVShop(m){
   if (forge){
     const set=(k,o)=>{ S.forge[k]={...forgeOf(k),...o}; save(); };
     m.querySelectorAll('[data-price]').forEach(el=>el.onchange=()=>{ set(el.dataset.price,{price:Math.max(0,Math.min(9999,parseInt(el.value,10)||0))}); toast(`${gName(el.dataset.price)}: ${forgeOf(el.dataset.price).price} gold.`); });
-    m.querySelectorAll('[data-sell]').forEach(el=>el.onchange=()=>{ set(el.dataset.sell,{off:!el.checked}); toast(`${gName(el.dataset.sell)} ${el.checked?'is back on the rack':'is off the rack'}.`); });
+    const restock=(msg,fn)=>()=>{ const open=[...m.querySelectorAll('details.cat')].map(d=>d.open);   // catalog sections stay open across the re-render
+      fn(); save(); const sc=m.querySelector('.below').scrollTop; rerender(); $('#main .below').scrollTop=sc; $('#main').querySelectorAll('details.cat').forEach((d,i)=>d.open=open[i]||false); toast(msg); };
+    m.querySelectorAll('[data-pull]').forEach(el=>el.onclick=restock(`${gName(el.dataset.pull)} is off the rack.`,()=>{ S.stock.keys=S.stock.keys.filter(k=>k!==el.dataset.pull); }));
+    m.querySelectorAll('[data-add]').forEach(el=>el.onclick=restock(`${gName(el.dataset.add)} is on the rack.`,()=>{ S.stock.keys.push(el.dataset.add); }));
+    $('#reroll').onclick=restock('A fresh stock rolled in.',rollForge);
     $('#gift-go').onclick=()=>{ const n=Math.max(1,Math.min(999,parseInt($('#gift').value,10)||0)); S.gold+=n; save(); renderHud(); rerender(); toast(`You gave ${P.him} ${n} gold. How generous.`); };
     return;
   }
