@@ -63,6 +63,22 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;padding-block:14px 26px}
 .tabs button[aria-selected="true"]{color:var(--gold);background:rgba(0,0,0,.25)}
 .tabs button[aria-selected="true"] img{opacity:1}
 .tabs .badge{position:absolute;top:5px;right:calc(50% - 22px);background:var(--bad);color:#fff;font-size:8px;padding:3px 4px;min-width:14px;text-shadow:none}
+/* hero bar: Bag | Shop | (Idle) | Hero | Talents. Slanted dividers, Idle is a raised pixel circle. */
+.tabs.hero{display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;position:relative;z-index:5}
+.tabs.hero button{padding-top:12px}
+.tabs.hero button.side::after{content:"";position:absolute;top:-2px;bottom:-2px;width:4px;background:var(--line);box-shadow:2px 0 0 var(--wood-hi)}
+.tabs.hero button.l1::after{right:-2px;transform:skewX(-12deg)}
+.tabs.hero button.r2::after{left:-2px;transform:skewX(12deg)}
+.tabs.hero button.idle{background:transparent;padding:0;overflow:visible}
+.tabs.hero button.idle[aria-selected="true"]{background:transparent}
+.idle-orb{position:absolute;left:50%;top:-34px;width:88px;height:88px;transform:translateX(-50%);background:var(--line);clip-path:var(--pxcircle)}
+.idle-orb i{position:absolute;inset:4px;clip-path:var(--pxcircle);background:radial-gradient(circle at 50% 38%,var(--wood-hi) 0 30%,var(--wood2) 31% 62%,var(--wood) 63%)}
+.idle-orb b{position:absolute;inset:10px;clip-path:var(--pxcircle);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:inset 0 0 0 4px var(--gold-dk)}
+.idle-orb img{width:34px!important;height:34px!important}
+.tabs.hero button.idle[aria-selected="true"] .idle-orb b{box-shadow:inset 0 0 0 4px var(--gold);background:rgba(246,196,69,.16)}
+.tabs.hero button.idle .badge{top:-36px;right:calc(50% - 46px);z-index:2}
+.tabs[hidden]{display:none}
+main.has-orb{padding-bottom:52px}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
 h2{font-family:var(--f-display);font-size:12px;letter-spacing:.04em;margin:0 0 10px;text-wrap:balance;line-height:1.6;text-shadow:2px 2px 0 var(--line)}
@@ -134,6 +150,29 @@ p{margin:0}
 .crate .price img{width:12px;height:12px;filter:none}
 .crate.poor .price{color:#a8957e}
 
+/* hero sheet */
+.doll{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px 12px}
+.slots{display:flex;flex-direction:column;gap:10px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:5px}
+.slot i{width:50px;height:50px;display:block;background:#1e140d;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--wood-hi)}
+.slot span{font-family:var(--f-display);font-size:7px;color:var(--muted)}
+.doll .me{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}
+.doll .me img{width:100%;max-width:150px;image-rendering:pixelated}
+.doll .me b{font-family:var(--f-display);font-size:9px;text-align:center;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.stat span{font-family:var(--f-display);font-size:7px;color:var(--muted)}
+.stat b{font-family:var(--f-display);font-size:12px;color:var(--gold);text-shadow:2px 2px 0 var(--line)}
+
+/* talent tree */
+.tree{padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
+.tree::before{content:"";position:absolute;top:40px;bottom:60px;left:50%;width:4px;margin-left:-2px;background:var(--line)}
+.tier{display:flex;justify-content:center;gap:14px;position:relative;width:100%}
+.tal{position:relative;width:86px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;background:transparent;border:0;cursor:pointer;color:var(--ink);padding:0}
+.tal i{width:56px;height:56px;display:grid;place-items:center;background:var(--wood2);box-shadow:0 0 0 4px var(--line),inset 0 3px 0 var(--wood-hi);transform:rotate(45deg)}
+.tal i img{width:32px;height:32px;image-rendering:pixelated;transform:rotate(-45deg);opacity:.5;filter:grayscale(.7)}
+.tal b{font-family:var(--f-display);font-size:7px;line-height:1.5;margin-top:6px;color:var(--muted)}
+
 /* forms */
 label.f,.f{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--muted)}
 .inp{background:#1e140d;border:3px solid var(--line);box-shadow:inset 0 3px 0 rgba(0,0,0,.35);padding:9px 10px;color:var(--ink);width:100%;min-width:0}
@@ -191,7 +230,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .btnrow .btn{flex:1;margin-top:0}
 .need{font-size:15px;color:#a0402a}
 
-.toast{position:absolute;left:16px;right:16px;bottom:86px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
+.toast{position:absolute;left:16px;right:16px;bottom:110px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){.paper,.toast,.paper .stamp,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
 </style>
@@ -358,6 +397,13 @@ let toastT; function toast(msg){ document.querySelectorAll('.toast').forEach(t=>
 /* =========================================================
    Shell
    ========================================================= */
+// stepped (pixel) circle as a clip-path, used for the raised Idle button
+function pixelCircle(n){
+  const r=n/2, w=y=>Math.round(Math.sqrt(Math.max(0,r*r-(y+.5-r)**2))), p=v=>(v/n*100).toFixed(2)+'%', R=[], L=[];
+  for(let y=0;y<n;y++){ const h=w(y); R.push(`${p(r+h)} ${p(y)}`,`${p(r+h)} ${p(y+1)}`); L.unshift(`${p(r-h)} ${p(y+1)}`,`${p(r-h)} ${p(y)}`); }
+  return `polygon(${R.concat(L).join(',')})`;
+}
+document.documentElement.style.setProperty('--pxcircle', pixelCircle(22));
 function render(){ renderHud(); renderTabs(); renderMain(); }
 function renderHud(){
   const h=$('#hud'), coin=url(COIN());
@@ -375,17 +421,21 @@ function renderHud(){
 function bindRole(){ $('#r-hero').onclick=()=>{ ui.role='hero'; render(); }; $('#r-vill').onclick=()=>{ ui.role='vill'; render(); }; }
 function renderTabs(){
   const n=$('#tabs');
-  if (!S.cls && ui.role==='hero'){ n.hidden=true; return; }
+  if (!S.cls && ui.role==='hero'){ n.hidden=true; $('#main').classList.remove('has-orb'); return; }
   n.hidden=false;
-  const tabs = ui.role==='hero' ? [['idle','Idle','sword'],['quests','Quests','scroll'],['shop','Shop','coinbag'],['bag','Bag','chest']] : [['mobs','Send mobs','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
-  const cur=ui.role==='hero'?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length;
-  n.innerHTML=tabs.map(([id,label,ic])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`;
-    return `<button role="tab" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${url(icon(ic))}">${label}${badge}</button>`; }).join('');
+  const hero=ui.role==='hero';
+  n.classList.toggle('hero',hero); $('#main').classList.toggle('has-orb',hero);
+  // hero order follows the owner's sketch: Bag | Shop | (Idle) | Hero | Talents
+  const tabs = hero ? [['bag','Bag','bag','side l1'],['shop','Shop','coinbag',''],['idle','Idle','sword','idle'],['hero','Hero','shield',''],['talents','Talents','star','side r2']] : [['mobs','Send mobs','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
+  const cur=hero?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length;
+  n.innerHTML=tabs.map(([id,label,ic,cls=''])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`;
+    if (id==='idle') return `<button role="tab" class="idle" data-t="idle" aria-selected="${cur==='idle'}" aria-label="Idle"><span class="idle-orb"><i></i><b><img alt="" src="${url(icon(ic))}">${label}</b></span>${badge}</button>`;
+    return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${url(icon(ic))}">${label}${badge}</button>`; }).join('');
   n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(ui.role==='hero') ui.heroTab=b.dataset.t; else ui.villTab=b.dataset.t; render(); $('#main').scrollTop=0; });
 }
 function renderMain(){
   const m=$('#main'); stopScene();
-  if (ui.role==='hero'){ if(!S.cls) return renderClassPick(m); ({idle:renderIdle,quests:renderQuests,shop:renderShop,bag:renderBag})[ui.heroTab](m); }
+  if (ui.role==='hero'){ if(!S.cls) return renderClassPick(m); ({idle:renderIdle,shop:renderShop,bag:renderBag,hero:renderHero,talents:renderTalents})[ui.heroTab](m); }
   else ({mobs:renderVMobs,vshop:renderVShop,rules:renderVRules})[ui.villTab](m);
 }
 function renderClassPick(m){
@@ -457,10 +507,9 @@ function renderIdle(m){
   m.innerHTML=`<div class="stack">
     <div class="scene px"><canvas id="cv" width="480" height="270" aria-label="Battle scene, ${tod}" style="aspect-ratio:16/9"></canvas></div>
     <p class="hint" id="hint">${pend?`${pend} defeated mob${pend>1?'s':''} incoming…`:mobs.length?'Check off quests to defeat mobs. Tap a mob to poke it.':ACTIVITIES[act.k]+'. The field is clear for today.'}</p>
-    ${front?`<div class="px front"><img alt="" src="${url(mobThumb(front.mob))}" style="object-fit:contain"><div class="t"><div class="mn">${esc(mobName(front.mob))} · ${MOB_BASES[front.mob.b].flavor}</div><b>${esc(front.name)}</b></div><div class="gold"><img alt="" src="${url(COIN())}">${front.gold}</div></div>`:''}
-    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(front&&front.taunt?front.taunt:mobs.length?'Run along, hero. My mobs are hungry.':'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div>
-    <button class="btn ghost block" id="go-q">Open the Quest Log</button></div>`;
-  $('#go-q').onclick=()=>{ ui.heroTab='quests'; render(); };
+    <div id="qlog"></div>
+    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(front&&front.taunt?front.taunt:mobs.length?'Run along, hero. My mobs are hungry.':'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div></div>`;
+  renderQuestLog();
   cvs=$('#cv'); ctx=cvs.getContext('2d'); sceneCtx=ctx; ctx.imageSmoothingEnabled=false;
   cvs.addEventListener('pointerdown', onPoke);
   const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; kill=null; booms=[]; floats=[]; parts=[];
@@ -498,16 +547,15 @@ function killTask(task){
   S.gold+=task.gold; S.exp+=task.gold+5; S.dayLoot.real+=task.gold; S.dayLoot.names.push(mobName(task.mob));
   let up=false; while(S.exp>=expNeed(S.level)){ S.exp-=expNeed(S.level); S.level++; up=true; }
   if (up){ floats.push({x:HERO_X-60,y:G-170,text:'LEVEL UP!',life:90,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
-  save(); renderHud(); renderTabs();
+  save(); renderHud(); renderTabs(); renderQuestLog();
 }
 function afterKills(){
   if (!S.tasks.some(t=>!t.killed) && S.dayLoot.real>0){ ui.justCleared=true; setTimeout(showReceipt,500); }
   else setTimeout(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle'&&!kill) renderIdleText(); },300);
 }
 function renderIdleText(){
-  const front=fieldMobs()[0], card=document.querySelector('.front'), h=$('#hint');
+  const front=fieldMobs()[0], h=$('#hint');
   if (h) h.textContent='Check off quests to defeat mobs. Tap a mob to poke it.';
-  if (card&&front){ card.querySelector('img').src=url(mobThumb(front.mob)); card.querySelector('.mn').textContent=mobName(front.mob)+' · '+MOB_BASES[front.mob.b].flavor; card.querySelector('b').textContent=front.name; card.querySelector('.gold').lastChild.textContent=front.gold; }
   const tn=$('#taunt'); if(tn&&front) tn.textContent=front.taunt||'Run along, hero. My mobs are hungry.';
 }
 function onPoke(e){
@@ -686,20 +734,39 @@ function showReceipt(){
 }
 
 /* =========================================================
-   Quest Log
+   Quest Log (sits under the battle on the Idle screen)
    ========================================================= */
 const CHECK_SVG=`<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 17 L12 25 L29 3" stroke="#2b1a10" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-function renderQuests(m){
-  const pend=S.pending.length, coin=url(COIN()), left=S.tasks.filter(t=>!t.done).length;
-  m.innerHTML=`<div class="stack">
-    ${pend?`<div class="banner"><p>${pend} mob${pend>1?'s':''} defeated. Watch the fight on the Idle tab.</p><button class="btn" id="go-idle">Watch</button></div>`:''}
-    <div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'}</p>
+function renderQuestLog(){
+  const box=$('#qlog'); if(!box) return;
+  const left=S.tasks.filter(t=>!t.done).length;
+  box.innerHTML=`<div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'}</p>
       <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.killed?'killed':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.killed?-1:0}">
-        <span class="box">${t.done?CHECK_SVG:''}</span><span class="txt"><span>${esc(t.name)}</span>${t.done&&!t.killed?'<em class="note" style="font-style:normal">fight pending</em>':''}</span><span class="g"><img alt="" src="${coin}">${t.gold}</span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div></div>`;
+        <span class="box">${t.done?CHECK_SVG:''}</span><span class="txt"><span>${esc(t.name)}</span></span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
   ui.freshQuest=null;
-  if (pend) $('#go-idle').onclick=()=>{ ui.heroTab='idle'; render(); };
-  m.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.killed) return; t.done=!t.done; if(t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuests(m); };
+  box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.killed) return; t.done=!t.done; if(t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuestLog(); };
     el.onclick=go; el.onkeydown=e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); go(); } }; });
+}
+
+/* =========================================================
+   Hero sheet + Talents (placeholders until gear and talents exist)
+   ========================================================= */
+const GEAR_SLOTS=[['head','Head'],['chest','Chest'],['pants','Pants'],['boots','Boots'],['weapon','Weapon'],['offhand','Off-hand'],['ring','Ring'],['amulet','Amulet']];
+function renderHero(m){
+  const C=CLASSES[S.cls], slot=([k,l])=>`<div class="slot"><i aria-label="${l} slot, empty"></i><span>${l}</span></div>`;
+  m.innerHTML=`<div class="stack"><div><h2>Hero</h2><p class="muted small">Gear gives small boons only. Nothing equipped yet.</p></div>
+    <div class="px doll"><div class="slots">${GEAR_SLOTS.slice(0,4).map(slot).join('')}</div>
+      <div class="me"><img alt="" src="${url(heroThumb(S.cls))}"><b>Lv ${S.level}<br>${C.name}</b></div>
+      <div class="slots">${GEAR_SLOTS.slice(4).map(slot).join('')}</div></div>
+    <div class="stats"><div class="px stat"><span>LEVEL</span><b>${S.level}</b></div><div class="px stat"><span>EXP</span><b>${S.exp}/${expNeed(S.level)}</b></div>
+      <div class="px stat"><span>GOLD</span><b>${S.gold}</b></div><div class="px stat"><span>DAY</span><b>${S.day}</b></div></div></div>`;
+}
+const TALENTS=[[['coinbag','Bounty Hunter','+ gold when the daily mob falls']],[['scroll','Night Owl','+ minutes before the day ends'],['potion','Lucky Find','Better odds on mob drops']],[['star','Hero’s Pride','+ EXP when the daily mob falls']]];
+function renderTalents(m){
+  m.innerHTML=`<div class="stack"><div><h2>Talents</h2><p class="muted small">One tree for every class. Talents give small boons and never help you hit harder. Coming soon.</p></div>
+    <div class="px tree">${TALENTS.map(tier=>`<div class="tier">${tier.map(([ic,n,d])=>`<button class="tal" data-d="${esc(d)}" aria-label="${esc(n)}: ${esc(d)} (locked)"><i><img alt="" src="${url(icon(ic))}"></i><b>${esc(n)}</b></button>`).join('')}</div>`).join('')}</div>
+    <p class="hint">Talent points: 0</p></div>`;
+  m.querySelectorAll('.tal').forEach(b=>b.onclick=()=>toast(b.querySelector('b').textContent+': '+b.dataset.d+'. Locked for now.'));
 }
 
 /* =========================================================
