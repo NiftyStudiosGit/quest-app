@@ -65,20 +65,28 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;padding-block:14px 26px}
 .tabs button[aria-selected="true"] img{opacity:1}
 .tabs .badge{position:absolute;top:5px;right:calc(50% - 22px);background:var(--bad);color:#fff;font-size:8px;padding:3px 4px;min-width:14px;text-shadow:none}
 /* hero bar: Bag | Shop | (Idle) | Hero | Talents. Slanted dividers, Idle is a raised pixel circle. */
-.tabs.hero{display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;position:relative;z-index:5}
-.tabs.hero button{padding-top:12px}
-.tabs.hero button.side::after{content:"";position:absolute;top:-2px;bottom:-2px;width:4px;background:var(--line);box-shadow:2px 0 0 var(--wood-hi)}
-.tabs.hero button.l1::after{right:-2px;transform:skewX(-12deg)}
-.tabs.hero button.r2::after{left:-2px;transform:skewX(12deg)}
-.tabs.hero button.idle{background:transparent;padding:0;overflow:visible}
-.tabs.hero button.idle[aria-selected="true"]{background:transparent}
+.tabs.five{display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;position:relative;z-index:5}
+.tabs.five button{padding-top:12px}
+.tabs.five button.side::after{content:"";position:absolute;top:-2px;bottom:-2px;width:4px;background:var(--line);box-shadow:2px 0 0 var(--wood-hi)}
+.tabs.five button.l1::after{right:-2px;transform:skewX(-12deg)}
+.tabs.five button.r2::after{left:-2px;transform:skewX(12deg)}
+.tabs.five button.idle{background:transparent;padding:0;overflow:visible}
+.tabs.five button.idle[aria-selected="true"]{background:transparent}
 .idle-orb{position:absolute;left:50%;top:-34px;width:88px;height:88px;transform:translateX(-50%);background:var(--line);clip-path:var(--pxcircle)}
 .idle-orb i{position:absolute;inset:4px;clip-path:var(--pxcircle);background:radial-gradient(circle at 50% 38%,var(--wood-hi) 0 30%,var(--wood2) 31% 62%,var(--wood) 63%)}
 .idle-orb b{position:absolute;inset:10px;clip-path:var(--pxcircle);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:inset 0 0 0 4px var(--gold-dk)}
 .idle-orb img{width:34px!important;height:34px!important}
-.tabs.hero button.idle[aria-selected="true"] .idle-orb b{box-shadow:inset 0 0 0 4px var(--gold);background:rgba(246,196,69,.16)}
-.tabs.hero button.idle .badge{top:-36px;right:calc(50% - 46px);z-index:2}
+.tabs.five button.idle[aria-selected="true"] .idle-orb b{box-shadow:inset 0 0 0 4px var(--gold);background:rgba(246,196,69,.16)}
+.tabs.five button.idle .badge{top:-36px;right:calc(50% - 46px);z-index:2}
 .tabs[hidden]{display:none}
+.tabs button img{object-fit:contain}
+/* her bar: same layout, pink accents */
+.tabs.vill button[aria-selected="true"]{color:var(--hex)}
+.tabs.vill .idle-orb b{box-shadow:inset 0 0 0 4px var(--hex-dk)}
+.tabs.five.vill button.idle[aria-selected="true"] .idle-orb b{box-shadow:inset 0 0 0 4px var(--hex);background:rgba(232,80,138,.16)}
+.plate .hpb{display:block;width:180px;height:10px;background:#5a2a20;box-shadow:0 0 0 2px var(--line)}
+.plate .hpb i{display:block;height:100%;background:linear-gradient(180deg,#ff8a7a 0 35%,#e04a3c 35%)}
+.plate.hex b{color:var(--hex)}
 main.has-orb{padding-bottom:52px}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
@@ -190,7 +198,7 @@ main.has-orb .below{padding-bottom:56px}
 /* showcase: big icon + description on the main screen (Talents, Bag) */
 .stage.show{background:repeating-linear-gradient(180deg,var(--wood) 0 14px,var(--line) 14px 16px,var(--wood2) 16px 30px,var(--line) 30px 32px);display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:14px 16px}
 .pedestal{width:104px;height:104px;display:grid;place-items:center;background:radial-gradient(circle,rgba(246,196,69,.35) 0 38%,transparent 70%)}
-.pedestal img{width:88px;height:88px;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 rgba(0,0,0,.45))}
+.pedestal img{width:88px;height:88px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 rgba(0,0,0,.45))}
 .pedestal.locked img{filter:grayscale(.6) drop-shadow(4px 4px 0 rgba(0,0,0,.45));opacity:.75}
 .show .info{display:flex;flex-direction:column;gap:8px;min-width:0;max-height:100%;overflow-y:auto}
 .show h2{margin:0;font-size:11px}
@@ -431,12 +439,12 @@ function freshState(){
       {id:nid(), name:'Gaming hour', price:35, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
       {id:nid(), name:'Breakfast in bed', price:60, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
     ],
-    bag:[], gear:[], equip:{}
+    bag:[], gear:[], equip:{}, forge:{}
   };
 }
 let S; try{ S=JSON.parse(localStorage.getItem(KEY))||freshState(); }catch(e){ S=freshState(); }
 if (S.cls && !CLASSES[S.cls]) S.cls=null;
-S.gear=S.gear||[]; S.equip=S.equip||{};
+S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 
 /* =========================================================
@@ -474,7 +482,7 @@ function nextDay(){
 }
 if (!S.mob){ spawnMob(); save(); }
 
-let ui={role:'hero', heroTab:'idle', villTab:'mobs', resetArm:false, justCleared:false, freshQuest:null,
+let ui={role:'hero', heroTab:'idle', villTab:'lair', spellSel:'ambush', resetArm:false, justCleared:false, freshQuest:null,
   shopRoom:'shop', arrive:false, gearSel:null, talSel:'bounty', bagSel:null,
   draft:{name:'',dmg:10,repeat:'once',taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -513,20 +521,30 @@ function renderTabs(){
   if (!S.cls && ui.role==='hero'){ n.hidden=true; return; }
   n.hidden=false;
   const hero=ui.role==='hero';
-  n.classList.toggle('hero',hero);
-  // hero order follows the owner's sketch: Bag | Shop | (Idle) | Hero | Talents
-  const tabs = hero ? [['bag','Bag','bag','side l1'],['shop','Shop','coinbag',''],['idle','Idle','sword','idle'],['hero','Hero','shield',''],['talents','Talents','star','side r2']] : [['mobs','Daily mob','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
-  const cur=hero?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length;
-  n.innerHTML=tabs.map(([id,label,ic,cls=''])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`;
-    if (id==='idle') return `<button role="tab" class="idle" data-t="idle" aria-selected="${cur==='idle'}" aria-label="Idle"><span class="idle-orb"><i></i><b><img alt="" src="${url(icon(ic))}">${label}</b></span>${badge}</button>`;
-    return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${url(icon(ic))}">${label}${badge}</button>`; }).join('');
-  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(ui.role==='hero'){ ui.heroTab=b.dataset.t; if(b.dataset.t==='shop') ui.shopRoom='shop'; } else ui.villTab=b.dataset.t; render(); $('#main').scrollTop=0; });
+  n.classList.add('five'); n.classList.toggle('vill',!hero);
+  // same layout on both sides, the raised circle in the middle is "home"
+  // hero (owner's sketch): Bag | Shop | (Idle) | Hero | Talents.  Villainess: Mobs | Shop | (Lair) | Spells | Rules
+  const ic=k=>url(icon(k));
+  const tabs = hero ? [['bag','Bag',ic('bag'),'side l1'],['shop','Shop',ic('coinbag'),''],['idle','Idle',ic('sword'),'idle'],['hero','Hero',ic('shield'),''],['talents','Talents',ic('star'),'side r2']]
+    : [['mobs','Mobs',url(mobThumb({b:3,v:0})),'side l1'],['vshop','Shop',ic('coinbag'),''],['lair','Lair',url(CROWN()),'idle'],['spells','Spells',ic('orb'),''],['rules','Rules',ic('book'),'side r2']];
+  const cur=hero?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length, deliver=S.bag.filter(b=>b.used&&!b.delivered).length;
+  n.innerHTML=tabs.map(([id,label,src,cls])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`; if(id==='lair'&&deliver) badge=`<span class="badge" style="background:var(--hex)">${deliver}</span>`;
+    if (cls==='idle') return `<button role="tab" class="idle" data-t="${id}" aria-selected="${cur===id}" aria-label="${label}"><span class="idle-orb"><i></i><b><img alt="" src="${src}">${label}</b></span>${badge}</button>`;
+    return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${src}">${label}${badge}</button>`; }).join('');
+  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const t=b.dataset.t; if(t==='shop'||t==='vshop') ui.shopRoom='shop'; if(hero) ui.heroTab=t; else ui.villTab=t; render(); $('#main').scrollTop=0; });
 }
 function renderMain(){
   const m=$('#main'); stopScene();
-  m.className='wrap'+(ui.role==='hero'&&S.cls?' has-orb':''); // hero tabs add 'split' (pinned main screen)
+  m.className='wrap'+(ui.role==='vill'||S.cls?' has-orb':''); // tabs add 'split' (pinned main screen)
   if (ui.role==='hero'){ if(!S.cls) return renderClassPick(m); ({idle:renderIdle,shop:renderShop,bag:renderBag,hero:renderHero,talents:renderTalents})[ui.heroTab](m); }
-  else ({mobs:renderVMobs,vshop:renderVShop,rules:renderVRules})[ui.villTab](m);
+  else ({mobs:renderVMobs,vshop:renderVShop,lair:renderLair,spells:renderSpells,rules:renderVRules})[ui.villTab](m);
+}
+// re-render the current tab but keep the scroll position of the part below the main screen
+function rerender(){ const b=$('#main .below'), sc=b?b.scrollTop:$('#main').scrollTop; renderMain(); const nb=$('#main .below'); if(nb) nb.scrollTop=sc; else $('#main').scrollTop=sc; }
+// a simple animated main screen (hero sheet, her views): one canvas, one draw function
+function stageLoop(cv, fn){
+  if (!atlasReady) return; const x=cv.getContext('2d'); x.imageSmoothingEnabled=false;
+  const lp=now=>{ if(!heroRaf) return; fn(x,now); heroRaf=requestAnimationFrame(lp); }; heroRaf=requestAnimationFrame(lp);
 }
 function renderClassPick(m){
   m.innerHTML=`<div class="stack">
@@ -917,6 +935,8 @@ const GEAR={
   ring:{slot:'ring', n:'Copper Ring', price:60, boon:{gold:3}, d:'Turns your finger a little green. Worth it.'},
   amulet:{slot:'amulet', n:'Lucky Amulet', price:80, boon:{gold:2,min:5}, d:'A pendant that hums when gold is near.'}
 };
+// her forge settings: price override and whether it's on the rack
+const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price, off:!!S.forge[k]?.off});
 const boonText=b=>[b.gold&&`+${b.gold} gold when the daily mob falls`, b.min&&`+${b.min} minutes before the day ends`].filter(Boolean).join(' · ');
 function heroBoons(){ const t={gold:0,min:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g){ t.gold+=g.boon.gold||0; t.min+=g.boon.min||0; } }); return t; }
 // simple code-drawn gear icons until real gear art exists (sword and shield come from the icon sheet)
@@ -947,9 +967,7 @@ function renderHero(m){
   m.querySelectorAll('[data-g]').forEach(el=>el.onclick=()=>{ ui.gearSel=el.dataset.g; renderMain(); });
   m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=()=>{ const g=S.equip[el.dataset.slot]; if(g){ ui.gearSel=g; renderMain(); } else toast(GEAR_SLOTS.find(s=>s[0]===el.dataset.slot)[1]+' slot is empty.'); });
   if (sel) $('#eq').onclick=()=>{ const g=GEAR[sel]; if(equipped(sel)) delete S.equip[g.slot]; else S.equip[g.slot]=sel; save(); renderMain(); };
-  if (!atlasReady) return;
-  const hx=$('#herocv').getContext('2d'); hx.imageSmoothingEnabled=false;
-  const lp=now=>{ if(!heroRaf) return; drawHeroStage(hx,now); heroRaf=requestAnimationFrame(lp); }; heroRaf=requestAnimationFrame(lp);
+  stageLoop($('#herocv'), drawHeroStage);
 }
 function drawHeroStage(x,now){
   const tod=getTod(), sk=SKIES[tod], C=CLASSES[S.cls];
@@ -993,7 +1011,7 @@ function renderShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='shop') renderMain(); }); return; }
   const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
   const stock = forge
-    ? Object.entries(GEAR).map(([k,g])=>{ const own=S.gear.includes(k); return `<button class="crate ${!own&&S.gold<g.price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(g.slot))}" style="width:64px;height:64px"><span class="tagp">${esc(g.n)}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${g.price}`}</span></button>`; }).join('')
+    ? Object.entries(GEAR).filter(([k])=>!forgeOf(k).off||S.gear.includes(k)).map(([k,g])=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(g.slot))}" style="width:64px;height:64px"><span class="tagp">${esc(g.n)}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')
     : S.shop.map(it=>`<button class="crate ${S.vcoins<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price" style="color:var(--hex)"><img alt="" src="${url(VCOIN())}">${it.price}</span></button>`).join('');
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
@@ -1025,8 +1043,8 @@ function drawShop(now){
     r(340,128,4,22,'#8a5530'); r(330,122,24,10,'#5a5a66'); r(330,122,24,2,'#9a9aaa'); }
   else { r(316,150,164,FLOOR-150+6,'#8a5530'); r(316,150,164,8,'#b07a44'); r(316,158,164,2,'#5a3418'); for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#6b4226');
     x.drawImage(icon('coinbag'),324,122); x.drawImage(icon('chest'),448,122); }
-  // the hero hops in through the door on the left, then stands still
-  if (S.cls){
+  // the hero hops in through the door on the left, then stands still (not in her view of the shop)
+  if (S.cls && ui.role==='hero'){
     const C=CLASSES[S.cls], t=now-shopT0, dur=1300;
     const k=Math.min(1,t/dur), e=1-Math.pow(1-k,2);
     const cx=20+(160-20)*e, hop=k<1?Math.round(Math.abs(Math.sin(t/110))*6):0;
@@ -1083,13 +1101,13 @@ function forgeRoom(x,r,now,FLOOR){
   r(206,FLOOR-24,70,10,'#4a4a56'); r(206,FLOOR-24,70,2,'#8a8a9a'); r(194,FLOOR-22,14,6,'#4a4a56'); r(226,FLOOR-14,30,14,'#3a3a44'); r(214,FLOOR-2,54,8,'#3a3a44');
 }
 function openGear(k){
-  const g=GEAR[k], own=S.gear.includes(k), short=g.price-S.gold;
+  const g=GEAR[k], own=S.gear.includes(k), price=forgeOf(k).price, short=price-S.gold;
   const o=document.createElement('div'); o.className='overlay';
   o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(g.n)}"><img alt="" src="${url(gearIcon(g.slot))}"><h3>${esc(g.n)}</h3><p>${esc(g.d)}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
-    <div class="price"><img alt="" src="${url(COIN())}">${g.price} gold</div>${own?'<span class="need" style="color:#5a3d26">Already on your gear rack.</span>':short>0?`<span class="need">You need ${short} more gold.</span>`:''}
+    <div class="price"><img alt="" src="${url(COIN())}">${price} gold</div>${own?'<span class="need" style="color:#5a3d26">Already on your gear rack.</span>':short>0?`<span class="need">You need ${short} more gold.</span>`:''}
     <div class="btnrow"><button class="btn ghost" id="it-x">Back</button><button class="btn" id="it-buy" ${own||short>0?'disabled':''}>Buy</button></div></div>`;
   $('#app').appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); $('#it-x').onclick=()=>o.remove();
-  $('#it-buy').onclick=()=>{ if(own||S.gold<g.price) return; S.gold-=g.price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${g.n}. Equip it on the Hero tab.`); };
+  $('#it-buy').onclick=()=>{ if(own||S.gold<price) return; S.gold-=price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${g.n}. Equip it on the Hero tab.`); };
 }
 function openItem(id){
   const it=S.shop.find(x=>x.id===id); if(!it) return; const short=it.price-S.vcoins;
@@ -1115,13 +1133,26 @@ function renderBag(m){
 /* =========================================================
    Villainess views
    ========================================================= */
+// her main screen on the Mobs tab: a peek at his field with today's mob
+function drawField(x,now){
+  const tod=getTod(), sk=SKIES[tod], mb=S.mob, k=2/3, gy=y=>(y+TOP)*k;
+  x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
+  x.fillStyle=sk.bands[0]; x.fillRect(0,0,480,30); x.drawImage(background(tod),0,30,480,270);
+  const sh=(cx,cy,w)=>{ x.fillStyle='rgba(30,40,20,.28)'; x.beginPath(); x.ellipse(cx,cy,w,w*.28,0,0,Math.PI*2); x.fill(); };
+  if (S.cls){ sh(HERO_X*k,gy(G)+2,27); spr(x,CLASSES[S.cls].idle,Math.floor(now/110),HERO_X*k,gy(G)); }
+  if (mb.state==='alive') mobSlots().forEach((s,i)=>{ const a=mobArt(mb,'idle'), sc=(a.scale||1)*s.sc; sh(s.x*k,gy(s.y)+2,(23*(a.scale>1?1:a.scale||1)+4)*s.sc);
+    spr(x,a.name,0,s.x*k,gy(s.y)+Math.round(Math.sin(now/400+i)*2),{flip:true,fx:a.fx,scale:sc}); });
+  if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,300); }
+}
 function renderVMobs(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
   const d=ui.draft, mb=S.mob, p=S.plan, all=[]; MOB_BASES.forEach((_,b)=>[0,1,2,3].forEach(v=>all.push({b,v})));
   const alive=mb.state==='alive', hpLeft=Math.max(0,Math.ceil(mb.hp-mb.dmg)), share=t=>Math.round(t.dmg/mb.hp*100);
-  m.innerHTML=`<div class="stack">
-    <div><h2 style="color:var(--hex)">Today’s mob</h2><div class="vrow px"><img alt="" src="${url(mobThumb(mb))}" style="object-fit:contain;width:48px;height:48px"><div class="t"><b>${esc(dailyName(mb))}</b>
-      <span class="small muted">${alive?`${hpLeft} of ${Math.ceil(mb.hp)} HP left`:'Defeated'} · dies at ${mb.threshold}% of the damage you assigned · bounty ${mb.bounty} V.coins · gold drop: ${mb.gold??'default loot table'}</span></div></div>
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="fieldcv" width="480" height="300" aria-label="His field with today’s mob"></canvas>
+      <div class="plate hex"><b>${esc(dailyName(mb))}</b><span class="hpb"><i style="width:${hpFrac()*100}%"></i></span><span>${alive?`${hpLeft} of ${Math.ceil(mb.hp)} HP left`:'Defeated today'}</span></div></div>
+    <div class="below wrap"><div class="stack">
+    <div><h2 style="color:var(--hex)">Today’s mob</h2><p class="small muted">Dies at ${mb.threshold}% of the damage you assigned · bounty ${mb.bounty} V.coins · gold drop: ${mb.gold??'default loot table'}</p>
       <label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="30" placeholder="${esc(mobName(mb)+(mb.group>1?' '+GROUP_NAMES[mb.b]:''))}" value="${esc(mb.name||'')}"></label>
       <p class="small muted">The threshold locked when the mob spawned. Quests you add now make today’s kill easier, never harder.</p></div>
     <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in his Quest Log. He never sees how much damage it does.</p></div>
@@ -1137,43 +1168,117 @@ function renderVMobs(m){
       <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
         <span class="small muted">The mob dies once he’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
-      <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div></div></div>`;
+      <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div></div></div></div>`;
+  stageLoop($('#fieldcv'), drawField);
   const sync=()=>{ d.name=$('#mf-name').value; d.dmg=$('#mf-dmg').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; };
   const num=v=>v===''?null:Math.max(0,Math.min(999,parseInt(v,10)||0));
   $('#np-th').oninput=e=>{ p.threshold=+e.target.value; $('#np-tv').textContent=e.target.value+'%'; save(); };
-  $('#tm-name').onchange=e=>{ mb.name=e.target.value.trim(); save(); renderVMobs(m); toast(mb.name?`Today’s mob is now “${mb.name}”.`:'Name reset.'); };
+  $('#tm-name').onchange=e=>{ mb.name=e.target.value.trim(); save(); rerender(); toast(mb.name?`Today’s mob is now “${mb.name}”.`:'Name reset.'); };
   $('#np-name').onchange=e=>{ p.name=e.target.value.trim(); save(); };
   $('#np-bounty').onchange=e=>{ p.bounty=num(e.target.value); save(); };
   $('#np-gold').onchange=e=>{ p.gold=num(e.target.value); save(); };
-  $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); p.mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; save(); const sc=$('#main').scrollTop; renderVMobs(m); $('#main').scrollTop=sc; });
+  $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); p.mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; save(); rerender(); });
   $('#mf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Give the quest a name first.'); return; }
-    S.tasks.push({id:nid(),name,dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)),repeat:d.repeat,taunt:d.taunt.trim(),done:false,hit:false}); save(); ui.draft={name:'',dmg:10,repeat:'once',taunt:''}; renderVMobs(m); toast('Added to his Quest Log.'); };
-  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.tasks=S.tasks.filter(t=>t.id!==b.dataset.del); S.pending=S.pending.filter(id=>id!==b.dataset.del); save(); renderVMobs(m); });
+    S.tasks.push({id:nid(),name,dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)),repeat:d.repeat,taunt:d.taunt.trim(),done:false,hit:false}); save(); ui.draft={name:'',dmg:10,repeat:'once',taunt:''}; rerender(); toast('Added to his Quest Log.'); };
+  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.tasks=S.tasks.filter(t=>t.id!==b.dataset.del); S.pending=S.pending.filter(id=>id!==b.dataset.del); save(); rerender(); });
 }
+// her side of the shop: the same scene (without the hero), with the arrow to her forge
 function renderVShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
-  const d=ui.shopDraft, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), inBag=S.bag.filter(b=>!b.used);
-  m.innerHTML=`<div class="stack">
-    ${toDeliver.length?`<div><h3 style="color:var(--gold)">Rewards to deliver</h3><div class="vlist">${toDeliver.map(b=>`<div class="vrow px"><img alt="" src="${url(icon(b.icon))}"><div class="t"><b>${esc(b.name)}</b><span class="small muted">${esc(b.desc||'He cashed this in')}</span></div><button class="btn hex" data-dl="${b.id}">Delivered</button></div>`).join('')}</div></div>`:''}
-    <div><h2 style="color:var(--hex)">Stock the shop</h2><p class="muted small">Treats only. You set the price and write what he gets.</p></div>
-    <form class="px vpanel" id="sf" autocomplete="off">
-      <label class="f">Reward name<input class="inp" id="sf-name" maxlength="40" placeholder="e.g. Movie" value="${esc(d.name)}"></label>
-      <label class="f">Description<textarea class="inp" id="sf-desc" maxlength="200" placeholder="e.g. You get to pick a movie to watch for us tonight, 2 hours or shorter.">${esc(d.desc)}</textarea></label>
-      <label class="f">Price in V.coins<input class="inp" id="sf-price" type="number" min="1" max="9999" value="${d.price}"></label>
-      <div class="f"><span>Icon</span><div class="pick" id="sf-pick">${ICON_KEYS.map(k=>`<button type="button" data-k="${k}" aria-label="${k}" aria-pressed="${d.icon===k}"><img alt="" src="${url(icon(k))}"></button>`).join('')}</div></div>
-      <button class="btn hex block" type="submit">Add to shop</button></form>
-    <div><h3>In the shop</h3><div class="vlist">${S.shop.map(it=>`<div class="vrow"><img alt="" src="${url(icon(it.icon))}"><div class="t"><b>${esc(it.name)} · ${it.price} V</b><span class="small muted">${esc(it.desc||'')}</span></div><button class="x" data-del="${it.id}" aria-label="Remove ${esc(it.name)}">X</button></div>`).join('')||'<div class="empty">Empty shelves.</div>'}</div></div>
-    ${inBag.length?`<p class="small muted">In his bag, unused: ${inBag.map(b=>esc(b.name)).join(', ')}</p>`:''}</div>`;
+  const forge=ui.shopRoom==='forge', d=ui.shopDraft, inBag=S.bag.filter(b=>!b.used);
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your forge':'Your shop'}"></canvas>
+      <div class="shopsign"><span>${forge?'The Forge':'Ye Olde Shoppe'}</span></div>
+      <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
+    <div class="below wrap"><div class="stack">${forge?`
+      <div><h2 style="color:var(--hex)">Run the forge</h2><p class="muted small">Gear costs gold, his in-game currency. Set prices or take pieces off the rack. Boons are fixed and never add damage.</p></div>
+      <div class="vlist">${Object.entries(GEAR).map(([k,g])=>{ const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(g.slot))}"><div class="t"><b>${esc(g.n)}</b><span class="small muted">${boonText(g.boon)}${own?' · he owns it':''}</span></div>
+        <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${f.price}" aria-label="Price of ${esc(g.n)} in gold"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--hex);flex:none" data-sell="${k}" ${f.off?'':'checked'} aria-label="${esc(g.n)} for sale"></div>`; }).join('')}</div>
+      <div><h3>Gift him gold</h3><div class="px vpanel"><div class="row2"><input class="inp" id="gift" type="number" min="1" max="999" value="20" aria-label="Gold to give"><button class="btn hex" id="gift-go">Give gold</button></div><p class="small muted">He has ${S.gold} gold.</p></div></div>`
+    :`
+      <div><h2 style="color:var(--hex)">Stock the shop</h2><p class="muted small">Treats only. You set the price and write what he gets.</p></div>
+      <form class="px vpanel" id="sf" autocomplete="off">
+        <label class="f">Reward name<input class="inp" id="sf-name" maxlength="40" placeholder="e.g. Movie" value="${esc(d.name)}"></label>
+        <label class="f">Description<textarea class="inp" id="sf-desc" maxlength="200" placeholder="e.g. You get to pick a movie to watch for us tonight, 2 hours or shorter.">${esc(d.desc)}</textarea></label>
+        <label class="f">Price in V.coins<input class="inp" id="sf-price" type="number" min="1" max="9999" value="${d.price}"></label>
+        <div class="f"><span>Icon</span><div class="pick" id="sf-pick">${ICON_KEYS.map(k=>`<button type="button" data-k="${k}" aria-label="${k}" aria-pressed="${d.icon===k}"><img alt="" src="${url(icon(k))}"></button>`).join('')}</div></div>
+        <button class="btn hex block" type="submit">Add to shop</button></form>
+      <div><h3>In the shop</h3><div class="vlist">${S.shop.map(it=>`<div class="vrow"><img alt="" src="${url(icon(it.icon))}"><div class="t"><b>${esc(it.name)} · ${it.price} V</b><span class="small muted">${esc(it.desc||'')}</span></div><button class="x" data-del="${it.id}" aria-label="Remove ${esc(it.name)}">X</button></div>`).join('')||'<div class="empty">Empty shelves.</div>'}</div></div>
+      ${inBag.length?`<p class="small muted">In his bag, unused: ${inBag.map(b=>esc(b.name)).join(', ')}</p>`:''}`}</div></div>`;
+  const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
+  const lp=now=>{ if(!shopCtx) return; drawShop(now); shopRaf=requestAnimationFrame(lp); }; shopRaf=requestAnimationFrame(lp);
+  $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; renderMain(); };
+  if (forge){
+    const set=(k,o)=>{ S.forge[k]={...forgeOf(k),...o}; save(); };
+    m.querySelectorAll('[data-price]').forEach(el=>el.onchange=()=>{ set(el.dataset.price,{price:Math.max(0,Math.min(9999,parseInt(el.value,10)||0))}); toast(`${GEAR[el.dataset.price].n}: ${forgeOf(el.dataset.price).price} gold.`); });
+    m.querySelectorAll('[data-sell]').forEach(el=>el.onchange=()=>{ set(el.dataset.sell,{off:!el.checked}); toast(`${GEAR[el.dataset.sell].n} ${el.checked?'is back on the rack':'is off the rack'}.`); });
+    $('#gift-go').onclick=()=>{ const n=Math.max(1,Math.min(999,parseInt($('#gift').value,10)||0)); S.gold+=n; save(); renderHud(); rerender(); toast(`You gave him ${n} gold. How generous.`); };
+    return;
+  }
   const sync=()=>{ d.name=$('#sf-name').value; d.price=$('#sf-price').value; d.desc=$('#sf-desc').value; };
-  $('#sf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.icon=b.dataset.k; renderVShop(m); });
-  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:Math.max(1,parseInt(d.price,10)||1),icon:d.icon}); save(); ui.shopDraft={name:'',price:20,icon:'heart',desc:''}; renderVShop(m); toast('Added to the shop.'); };
-  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); renderVShop(m); });
-  m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); render(); toast('Marked as delivered.'); });
+  $('#sf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.icon=b.dataset.k; rerender(); });
+  $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:Math.max(1,parseInt(d.price,10)||1),icon:d.icon}); save(); ui.shopDraft={name:'',price:20,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
+  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); rerender(); });
+}
+// her home tab: the lair, with deliveries and the scouting report
+function drawLair(x,now){
+  const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),c,d); }, FL=232, sk=SKIES[getTod()];
+  x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
+  // stone wall
+  r(0,0,480,FL,'#3a2440'); for(let y=0,row=0;y<FL;y+=20,row++){ r(0,y,480,2,'#4a3050'); r(0,y+18,480,2,'#28182e'); for(let i=(row%2)*28;i<480;i+=56) r(i,y,2,18,'#28182e'); }
+  // banners with her crown
+  [60,380].forEach(bx=>{ r(bx-4,10,48,4,'#c9a46a'); r(bx,14,40,100,'#8f2d58'); r(bx,14,40,4,'#e8508a'); r(bx,114,16,10,'#8f2d58'); r(bx+24,114,16,10,'#8f2d58'); x.drawImage(CROWN(),bx+6,44,28,20); });
+  // floor and carpet
+  r(0,FL,480,68,'#2a1a2e'); for(let i=0;i<480;i+=32) for(let j=0;j<3;j++) if((i/32+j)%2) r(i,FL+j*24,32,24,'#342038');
+  r(196,FL,88,68,'#a02040'); r(202,FL,76,68,'#c02a4a'); r(196,FL,88,3,'#f6c445');
+  // throne
+  r(200,100,80,132,'#6a1830'); r(194,92,92,10,'#f6c445'); r(194,92,10,140,'#f6c445'); r(276,92,10,140,'#f6c445'); r(236,100,8,8,'#e8508a');
+  // candles
+  [140,340].forEach(cx=>{ const f=Math.floor(now/140+cx)%2; r(cx-3,FL-52,6,52,'#c9a46a'); r(cx-12,FL-54,24,4,'#c9a46a'); r(cx-3,FL-64,6,10,'#fff0d0');
+    r(cx-4,FL-74,8,10,'#ff8a2a'); r(cx-2+f,FL-80,4,10,'#ffd25a'); r(cx-1,FL-72,2,4,'#fff6c0'); });
+  x.save(); x.globalCompositeOperation='lighter'; [140,340].forEach(cx=>{ x.globalAlpha=.08+.03*Math.sin(now/90+cx); x.fillStyle='#ff9a3a'; x.beginPath(); x.arc(cx,FL-72,34,0,Math.PI*2); x.fill(); }); x.restore();
+  // her, undisguised for once, in front of the throne
+  const v=villSprite(false,true), bob=Math.round(Math.sin(now/600)*1.5);
+  x.fillStyle='rgba(0,0,0,.3)'; x.beginPath(); x.ellipse(240,FL+6,34,7,0,0,Math.PI*2); x.fill();
+  x.drawImage(v, Math.round(240-v.width/2), FL+6-v.height+bob);
+}
+function renderLair(m){
+  if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
+  const mb=S.mob, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), unused=S.bag.filter(b=>!b.used), done=S.tasks.filter(t=>t.done).length;
+  const ln=(a,b)=>`<div class="switch"><span>${a}</span><b>${b}</b></div>`;
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="laircv" width="480" height="300" aria-label="Your lair"></canvas>
+      <div class="plate hex"><b>LAIR OF ${esc(S.villName.toUpperCase())}</b><span>Infamy ${S.infamy}</span></div></div>
+    <div class="below wrap"><div class="stack">
+      <div><h3 style="color:var(--gold)">Rewards to deliver</h3>${toDeliver.length?`<div class="vlist">${toDeliver.map(b=>`<div class="vrow px"><img alt="" src="${url(icon(b.icon))}"><div class="t"><b>${esc(b.name)}</b><span class="small muted">${esc(b.desc||'He cashed this in')}</span></div><button class="btn hex" data-dl="${b.id}">Delivered</button></div>`).join('')}</div>`:'<p class="small muted">Nothing to deliver. He hasn’t cashed anything in.</p>'}</div>
+      <div><h3>Scouting report · Day ${S.day}</h3><div class="px vpanel">
+        ${ln('Today’s mob',esc(dailyName(mb)))}${ln('Its HP',mb.state==='alive'?Math.round(hpFrac()*100)+'% left':'Defeated')}
+        ${ln('Quests done',`${done} of ${S.tasks.length}`)}${ln('Streak',`${S.streak} (best ${S.best})`)}
+        ${ln('His purse',`${S.gold} gold · ${S.vcoins} V.coins`)}${ln('Unused rewards',unused.length?unused.map(b=>esc(b.name)).join(', '):'none')}</div></div>
+      <div class="px empty">Building and decorating your lair is coming soon.</div></div></div>`;
+  stageLoop($('#laircv'), drawLair);
+  m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); renderTabs(); rerender(); toast('Marked as delivered.'); });
+}
+// her spells (not built yet): the selected one is shown big on the main screen
+const SPELLS=[
+  {k:'ambush',ic:'sword',n:'Ambush',d:'Send a surprise mob in the middle of the day, with its own quick quest.'},
+  {k:'haste',ic:'potion',n:'Haste',d:'Put a deadline on a quest. He has to finish it before time runs out.'},
+  {k:'fog',ic:'orb',n:'Fog',d:'Hide today’s mob in the mist until he starts his first quest.'},
+  {k:'blessing',ic:'star',n:'Blessing',d:'Double the gold the mob drops today. Even villainesses have soft days.'}
+];
+function renderSpells(m){
+  const sp=SPELLS.find(x=>x.k===ui.spellSel)||SPELLS[0];
+  m.classList.add('split');
+  m.innerHTML=showcase(url(icon(sp.ic)), sp.n, sp.d, '<span class="st">COMING SOON</span>')+`<div class="below wrap"><div class="stack">
+    <p class="hint">Hexes and blessings you can cast on his day. Tap one to read it.</p>
+    <div><h3>Spellbook</h3><div class="inv">${SPELLS.map(x=>`<button data-k="${x.k}" aria-pressed="${x===sp}" aria-label="${esc(x.n)}"><img alt="" src="${url(icon(x.ic))}"><span class="tag">${esc(x.n.toUpperCase())}</span></button>`).join('')}</div></div></div></div>`;
+  m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.spellSel=b.dataset.k; rerender(); });
 }
 const taxText=(ex,g)=>`Shown once a day, when the daily mob dies. If the bounty is ${ex} V.coins, the receipt says ${g} earned and ${g-ex} paid in taxes. He still keeps ${ex}. The tax becomes your Infamy.`;
 function renderVRules(m){
   const ex=20, gross=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex, todOpts=[['auto','Match the phone clock'],['morning','Morning'],['day','Day'],['evening','Evening'],['night','Night']];
-  m.innerHTML=`<div class="stack"><div><h2 style="color:var(--hex)">Rules of the realm</h2></div>
+  m.classList.add('split');
+  m.innerHTML=showcase(url(villSprite(false,true)), S.villName, `Tax ${Math.round(S.taxRate*100)}% · default threshold ${DEF.threshold}% · default bounty ${DEF.bounty} V.coins`, '<span class="st">RULES OF THE REALM</span>')+`<div class="below wrap"><div class="stack">
     <div class="px vpanel"><label class="f">Your name<input class="inp" id="vr-name" maxlength="30" value="${esc(S.villName)}"></label>
       <div class="f"><div class="switch"><span>Cosmetic tax rate</span><span class="rateval" id="vr-rv">${Math.round(S.taxRate*100)}%</span></div><input type="range" id="vr-rate" min="0" max="50" step="5" value="${Math.round(S.taxRate*100)}" aria-label="Tax rate">
         <span class="small muted" id="vr-ex">${taxText(ex,gross)}</span></div>
@@ -1182,15 +1287,15 @@ function renderVRules(m){
       <label class="f">Time of day in scenes<select class="inp" id="pc-tod">${todOpts.map(([v,l])=>`<option value="${v}" ${S.tod===v?'selected':''}>${l}</option>`).join('')}</select></label>
       <button class="btn ghost block" id="pc-day">Start day ${S.day+1}</button><p class="small muted">Acts like midnight: if today’s mob is still alive it flees and his streak resets. Daily quests come back, finished one-offs are cleared, and a new mob spawns with your “Tomorrow’s mob” settings.</p>
       <button class="btn ghost block" id="pc-gold">Give him 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let him pick a new class</button>
-      <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?'Tap again to erase everything':'Reset the prototype'}</button></div></div></div>`;
-  $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); };
+      <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?'Tap again to erase everything':'Reset the prototype'}</button></div></div></div></div>`;
+  $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); rerender(); };
   $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
   $('#vr-show').onchange=e=>{ S.showValue=e.target.checked; save(); };
   $('#pc-tod').onchange=e=>{ S.tod=e.target.value; save(); toast('Scenes now show: '+(S.tod==='auto'?'the phone clock ('+getTod()+')':S.tod)+'.'); };
   $('#pc-day').onclick=()=>{ nextDay(); render(); toast(S.fled?`The mob fled. Day ${S.day} begins with a new one.`:`Day ${S.day} begins. A new mob has spawned.`); };
   $('#pc-gold').onclick=()=>{ S.gold+=50; S.vcoins+=50; save(); renderHud(); toast('50 gold and 50 V.coins granted. How generous.'); };
   $('#pc-cls').onclick=()=>{ S.cls=null; save(); ui.role='hero'; render(); };
-  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; renderVRules(m); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') renderVRules(m); },3000); return; } ui.resetArm=false; S=freshState(); spawnMob(); save(); ui.role='hero'; hit=null; render(); toast('Prototype reset.'); };
+  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; rerender(); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') rerender(); },3000); return; } ui.resetArm=false; S=freshState(); spawnMob(); save(); ui.role='hero'; hit=null; render(); toast('Prototype reset.'); };
 }
 
 if (atlasReady) render(); else readyCbs.push(render);
