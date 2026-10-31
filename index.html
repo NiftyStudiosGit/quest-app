@@ -54,6 +54,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#a8ec8a 0 40%,var(--ok) 40%);display:block}
 .gold{display:flex;align-items:center;gap:6px;font-family:var(--f-display);font-size:12px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:2px 2px 0 var(--line)}
 .gold img{width:16px;height:16px;image-rendering:pixelated}
+.gold.vc{color:var(--hex)}
 .lbl{font-family:var(--f-display);font-size:8px;color:var(--muted)}
 
 main{flex:1;overflow-y:auto;overflow-x:hidden;padding-block:14px 26px}
@@ -133,6 +134,11 @@ p{margin:0}
 .qi .g{font-family:var(--f-display);font-size:10px;color:#7a5410;display:flex;align-items:center;gap:5px;white-space:nowrap}
 .qi .g img{width:14px;height:14px;image-rendering:pixelated}
 .qi.killed{cursor:default}
+.mobhp{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.mobhp b{font-family:var(--f-display);font-size:9px;color:#7a2a20;line-height:1.5}
+.mobhp b.down{color:#3f7a2a}
+.mobhp .hpbar{height:14px;background:#5a2a20;box-shadow:0 0 0 3px var(--ink-dk);position:relative}
+.mobhp .hpbar i{position:absolute;inset:0 auto 0 0;display:block;background:linear-gradient(180deg,#ff8a7a 0 35%,#e04a3c 35%);transition:width .5s steps(6)}
 .banner{padding:12px;display:flex;gap:10px;align-items:center;background:#5a3a12;box-shadow:inset 0 3px 0 #7a5420,0 -4px 0 0 var(--line),0 4px 0 0 var(--line),-4px 0 0 0 var(--line),4px 0 0 0 var(--line);margin:4px}
 .banner p{flex:1;min-width:0}
 
@@ -381,6 +387,9 @@ function mobArt(m, pose){ // -> {name, fx, scale}
 const mobName = m => MOB_BASES[m.b].vars[m.v]+' '+MOB_BASES[m.b].n;
 const mobThumb = m => { const a=mobArt(m,'idle'); return memo('thumb'+m.b+'-'+m.v, ()=>{ const f=frame(a.name,0,a.fx); const c=makeCanvas(f.width,f.height), g=c.getContext('2d'); g.translate(f.width,0); g.scale(-1,1); g.drawImage(f,0,0); return c; }); };
 const rmob = () => ({b:Math.floor(Math.random()*MOB_BASES.length), v:Math.floor(Math.random()*4)});
+// the daily mob is sometimes a group: still one HP pool, members drop off as it falls
+const GROUP_NAMES=['Gang','Squad','Crew','Raiding Party','Flock'];
+const dailyName = m => mobName(m)+(m.group>1?' '+GROUP_NAMES[m.b]:'');
 
 /* Villainess (procedural until she gets real art) */
 function villSprite(disguise, full){ return frame((disguise?'vill_shop':'vill')+(full?'':'_face'),0); }
@@ -390,25 +399,31 @@ function strSprite(key, rows, pal){
     rows.forEach((r,j)=>{ for(let i=0;i<r.length;i++){ const col=pal[r[i]]; if(!col) continue; x.fillStyle=col; x.fillRect(i,j,1,1);} }); return c; });
 }
 const COIN = () => strSprite('coin',["..kkkk..",".kggggk.","kggyyggk","kgygkggk","kgygkggk","kggkkggk",".kggggk.","..kkkk.."],{k:'#2a1a24',g:'#f6c445',y:'#ffe9a0'});
+const VCOIN = () => strSprite('vcoin',["..kkkk..",".kppppk.","kpwppwpk","kpwppwpk","kppwwppk","kppwwppk",".kppppk.","..kkkk.."],{k:'#2a1a24',p:'#e8508a',w:'#ffe0ec'});
 const CROWN = () => strSprite('crown',["g..g..g","gg.g.gg","ggggggg","gryrygg","ggggggg"],{g:'#f6c445',r:'#ef6b5b',y:'#ffe9a0'});
 
 /* =========================================================
    State
    ========================================================= */
-const KEY='qv-proto-v3';
+const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
+const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own (and in solo mode)
+const LOOT=[6,8,10,12,15];             // default gold drop table
+const NEXT_PLAN=()=>({threshold:null, bounty:null, gold:null, mob:null}); // null = use the default
+// the NPC Villainess's list: the starting quests, and the fallback when nothing is assigned by spawn time
+const NPC_TASKS=[
+  {name:'Drink 2 liters of water', dmg:5, repeat:'daily', taunt:'Hydrate, little hero. Dry heroes crumble.'},
+  {name:'30-minute walk outside', dmg:10, repeat:'daily', taunt:'The sun is out. You are not. Fix that.'},
+  {name:'Read 20 pages', dmg:8, repeat:'daily', taunt:'My orc can read. Can you?'},
+  {name:'Tidy the desk', dmg:6, repeat:'once', taunt:'My miner found three mugs under your papers.'},
+  {name:'Deep-clean the bathroom', dmg:18, repeat:'once', taunt:'This one bites. Bring gloves.'}
+];
+const newTasks=()=>NPC_TASKS.map(t=>({...t, id:nid(), done:false, hit:false}));
 function freshState(){
   return {
-    cls:null, gold:0, exp:0, level:1, day:1,
+    cls:null, gold:0, vcoins:0, exp:0, level:1, day:1, streak:0, best:0, infamy:0,
     taxRate:0.25, showValue:true, villName:'Lady Malvessa', tod:'auto',
-    tasks:[
-      {name:'Drink 2 liters of water', gold:5, repeat:'daily', mob:{b:4,v:0}, pinned:false, taunt:'Hydrate, little hero. Dry heroes crumble.'},
-      {name:'30-minute walk outside', gold:10, repeat:'daily', mob:{b:1,v:1}, pinned:false, taunt:'The sun is out. You are not. Fix that.'},
-      {name:'Read 20 pages', gold:8, repeat:'daily', mob:{b:3,v:0}, pinned:true, taunt:'My orc can read. Can you?'},
-      {name:'Tidy the desk', gold:6, repeat:'once', mob:{b:2,v:3}, pinned:false, taunt:'My miner found three mugs under your papers.'},
-      {name:'Deep-clean the bathroom', gold:18, repeat:'once', mob:{b:0,v:2}, pinned:false, taunt:'This one bites. Bring gloves.'}
-    ].map(t=>({...t, id:nid(), done:false, killed:false})),
-    pending:[], dayLoot:{real:0,names:[]},
+    tasks:newTasks(), pending:[], mob:null, plan:NEXT_PLAN(), loot:null, fled:null,
     shop:[
       {id:nid(), name:'Movie', price:20, icon:'orb', desc:'You get to pick a movie to watch for us tonight, 2 hours or shorter.'},
       {id:nid(), name:'Bubble tea', price:25, icon:'cocoa', desc:'One bubble tea of your choice, any size, toppings included. I’ll go get it.'},
@@ -424,9 +439,44 @@ if (S.cls && !CLASSES[S.cls]) S.cls=null;
 S.gear=S.gear||[]; S.equip=S.equip||{};
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 
+/* =========================================================
+   The daily mob: one per day, HP fixed at spawn
+   ========================================================= */
+// HP = threshold % of the damage assigned at spawn. Quests added later add damage but never raise the HP
+function spawnMob(){
+  if (!S.tasks.length) S.tasks=newTasks();
+  const p=S.plan, art=p.mob||rmob(), total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??DEF.threshold;
+  S.mob={b:art.b, v:art.v, group:Math.random()<.35?3:1, threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, state:'alive'};
+  S.plan=NEXT_PLAN();
+}
+const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
+function gainExp(n){ S.exp+=n; let up=false; while(S.exp>=expNeed(S.level)){ S.exp-=expNeed(S.level); S.level++; up=true; } return up; }
+// one finished quest's hidden damage lands; returns true if this blow kills the mob
+function landHit(task){
+  task.hit=true; S.pending=S.pending.filter(id=>id!==task.id);
+  const m=S.mob; if (m.state!=='alive'){ save(); return false; }
+  m.dmg+=task.dmg;
+  if (m.dmg < m.hp-1e-6){ save(); return false; }
+  m.state='dead';
+  const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
+  const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
+  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak);
+  S.loot={day:S.day, name:dailyName(m), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
+  save(); return true;
+}
+function nextDay(){
+  // quests checked off but not watched yet still count for the day that's ending
+  S.pending.slice().forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) landHit(t); });
+  if (S.mob.state==='alive'){ S.fled={name:dailyName(S.mob), streak:S.streak}; S.streak=0; }
+  S.day++;
+  S.tasks=S.tasks.filter(t=>t.repeat==='daily'||!t.done).map(t=>t.repeat==='daily'?{...t,done:false,hit:false}:t);
+  S.pending=[]; spawnMob(); save();
+}
+if (!S.mob){ spawnMob(); save(); }
+
 let ui={role:'hero', heroTab:'idle', villTab:'mobs', resetArm:false, justCleared:false, freshQuest:null,
   shopRoom:'shop', arrive:false, gearSel:null, talSel:'bounty', bagSel:null,
-  draft:{name:'',gold:10,repeat:'once',mob:null,taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
+  draft:{name:'',dmg:10,repeat:'once',taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=s=>document.querySelector(s);
 const expNeed=lv=>40+lv*20;
@@ -450,10 +500,10 @@ function renderHud(){
   if (!S.cls && ui.role==='hero'){ h.innerHTML=`<div class="hud-row"><div class="who"><div class="nm">New game</div></div>${roleSw}</div>`; bindRole(); return; }
   if (ui.role==='hero'){
     const need=expNeed(S.level), pct=Math.min(100,S.exp/need*100);
-    h.innerHTML=`<div class="hud-row"><div class="who"><img alt="" src="${url(avatar(S.cls))}"><div style="min-width:0"><div class="nm">Lv ${S.level} ${CLASSES[S.cls].name}</div><div class="sub">Day ${S.day}</div></div></div>${roleSw}</div>
-      <div class="hud-row"><span class="lbl">EXP</span><div class="bar" aria-label="Experience ${S.exp} of ${need}"><i style="width:${pct}%"></i></div><div class="gold"><img alt="" src="${coin}">${S.gold}</div></div>`;
+    h.innerHTML=`<div class="hud-row"><div class="who"><img alt="" src="${url(avatar(S.cls))}"><div style="min-width:0"><div class="nm">Lv ${S.level} ${CLASSES[S.cls].name}</div><div class="sub">Day ${S.day} · Streak ${S.streak}</div></div></div>${roleSw}</div>
+      <div class="hud-row"><span class="lbl">EXP</span><div class="bar" aria-label="Experience ${S.exp} of ${need}"><i style="width:${pct}%"></i></div><div class="gold" aria-label="${S.gold} gold"><img alt="" src="${coin}">${S.gold}</div><div class="gold vc" aria-label="${S.vcoins} V.coins"><img alt="" src="${url(VCOIN())}">${S.vcoins}</div></div>`;
   } else {
-    h.innerHTML=`<div class="hud-row"><div class="who"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="nm" style="color:var(--hex)">${esc(S.villName)}</div><div class="sub">Day ${S.day} · his gold: ${S.gold}</div></div></div>${roleSw}</div>`;
+    h.innerHTML=`<div class="hud-row"><div class="who"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="nm" style="color:var(--hex)">${esc(S.villName)}</div><div class="sub">Day ${S.day} · Infamy ${S.infamy}</div></div></div>${roleSw}</div>`;
   }
   bindRole();
 }
@@ -465,7 +515,7 @@ function renderTabs(){
   const hero=ui.role==='hero';
   n.classList.toggle('hero',hero);
   // hero order follows the owner's sketch: Bag | Shop | (Idle) | Hero | Talents
-  const tabs = hero ? [['bag','Bag','bag','side l1'],['shop','Shop','coinbag',''],['idle','Idle','sword','idle'],['hero','Hero','shield',''],['talents','Talents','star','side r2']] : [['mobs','Send mobs','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
+  const tabs = hero ? [['bag','Bag','bag','side l1'],['shop','Shop','coinbag',''],['idle','Idle','sword','idle'],['hero','Hero','shield',''],['talents','Talents','star','side r2']] : [['mobs','Daily mob','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
   const cur=hero?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length;
   n.innerHTML=tabs.map(([id,label,ic,cls=''])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`;
     if (id==='idle') return `<button role="tab" class="idle" data-t="idle" aria-selected="${cur==='idle'}" aria-label="Idle"><span class="idle-orb"><i></i><b><img alt="" src="${url(icon(ic))}">${label}</b></span>${badge}</button>`;
@@ -480,7 +530,7 @@ function renderMain(){
 }
 function renderClassPick(m){
   m.innerHTML=`<div class="stack">
-    <div class="title-card"><img alt="" src="${url(villSprite(false,true))}" style="width:78px;height:96px;image-rendering:pixelated"><h1>Choose your class</h1><p class="muted">${esc(S.villName)} has already filled the field with mobs. Pick how you fight them.</p></div>
+    <div class="title-card"><img alt="" src="${url(villSprite(false,true))}" style="width:78px;height:96px;image-rendering:pixelated"><h1>Choose your class</h1><p class="muted">${esc(S.villName)} has already sent today’s mob. Pick how you fight it.</p></div>
     <div class="classes">${Object.entries(CLASSES).map(([k,c])=>`<button class="cls px" data-c="${k}"><img alt="" src="${url(heroThumb(k))}"><b>${c.name}</b><span>${c.blurb}</span></button>`).join('')}</div>
     <p class="small muted" style="text-align:center">Classes only change the attack pose in this prototype.</p></div>`;
   m.querySelectorAll('.cls').forEach(b=>b.onclick=()=>{ S.cls=b.dataset.c; save(); ui.heroTab='idle'; render(); toast('You are a '+CLASSES[S.cls].name+'. Your quests await.'); });
@@ -533,81 +583,94 @@ const W=720, H=405, G=350;          // scene size and ground line
 const TOP=45;                        // extra sky above the scene (the main screen is 16:10)
 const HERO_X=150;
 const BEAT=2300;                     // how long each cut is held
-const SLOTS=[{x:440,y:G+6},{x:536,y:G-26},{x:560,y:G+16},{x:640,y:G-20},{x:664,y:G+8}];
-let raf=0, ctx=null, cvs=null, enterT=0, combatT0=0, lastBeat=-1, shakeT=-9999, beatKind='';
-let kill=null, booms=[], floats=[], parts=[], act=null;
+// where the daily mob stands: one big mob, or a group of three that drops off as its HP falls
+const SOLO=[{x:560,y:G+12,sc:1.5}], PACK=[{x:470,y:G+8,sc:1},{x:580,y:G-22,sc:1},{x:630,y:G+18,sc:1}];
+const HIT_LAND=450, HIT_LEN=1500, KILL_LEN=2300;   // big hit: wind-up cut, then the impact cut
+const HIT_WORDS=['SMASH!','KABOOM!','CRUNCH!','WALLOP!'];
+let raf=0, ctx=null, cvs=null, enterT=0, combatT0=0, lastBeat=-1, shakeT=-9999, shakeDur=150, shakeAmp=1, beatKind='';
+let hit=null, booms=[], floats=[], parts=[], act=null, wob=[];
 
-function fieldMobs(){ const alive=S.tasks.filter(t=>!t.killed), order=id=>{ const i=S.pending.indexOf(id); return i<0?1000:i; }; return alive.map((t,i)=>({t,i})).sort((a,b)=>(order(a.t.id)-order(b.t.id))||(a.i-b.i)).map(o=>o.t); }
+const membersAlive=()=>S.mob.state!=='alive'?0:S.mob.group>1?Math.max(1,Math.ceil(S.mob.group*hpFrac()-1e-6)):1;
+const mobSpots=()=>S.mob.group>1?PACK:SOLO;
+const mobSlots=()=>mobSpots().slice(0,membersAlive());
+const taunts=()=>S.tasks.filter(t=>t.taunt&&!t.done).map(t=>t.taunt);
 const ACTIVITIES={ victory:'Celebrating a clear field', chop:'Chopping wood', camp:'Resting by the campfire', fish:'Fishing at the pond', nap:'Napping in the grass', sheep:'Watching the sheep', train:'Training on a dummy' };
+const IDLE_HINT='Finish quests to wear the mob down. Tap it to poke it.';
 
 function renderIdle(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); }); return; }
-  const mobs=fieldMobs(), front=mobs[0], pend=S.pending.length;
-  if (!mobs.length && !pend){ const keys=Object.keys(ACTIVITIES); const k=ui.justCleared?'victory':keys[Math.floor(Math.random()*keys.length)]; ui.justCleared=false; act={k,t0:performance.now(),flags:{}}; } else act=null;
+  const alive=S.mob.state==='alive', pend=S.pending.length, tn=taunts();
+  if (!alive && !pend){ const keys=Object.keys(ACTIVITIES); const k=ui.justCleared?'victory':keys[Math.floor(Math.random()*keys.length)]; ui.justCleared=false; act={k,t0:performance.now(),flags:{}}; } else act=null;
   const tod=getTod();
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="cv" width="480" height="300" aria-label="Battle scene, ${tod}"></canvas></div><div class="below wrap"><div class="stack">
-    <p class="hint" id="hint">${pend?`${pend} defeated mob${pend>1?'s':''} incoming…`:mobs.length?'Check off quests to defeat mobs. Tap a mob to poke it.':ACTIVITIES[act.k]+'. The field is clear for today.'}</p>
+    <p class="hint" id="hint">${pend?'Your finished quests are about to land…':alive?IDLE_HINT:ACTIVITIES[act.k]+'. The mob is down for today.'}</p>
     <div id="qlog"></div>
-    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(front&&front.taunt?front.taunt:mobs.length?'Run along, hero. My mobs are hungry.':'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div></div></div>`;
+    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(alive?(tn[0]||'Run along, hero. My mob is hungry.'):'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div></div></div>`;
   renderQuestLog();
   cvs=$('#cv'); ctx=cvs.getContext('2d'); sceneCtx=ctx; ctx.imageSmoothingEnabled=false;
   cvs.addEventListener('pointerdown', onPoke);
-  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; kill=null; booms=[]; floats=[]; parts=[];
+  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; hit=null; booms=[]; floats=[]; parts=[]; wob=[];
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
+  // news from a day that ended while he was away
+  if (S.loot && !pend) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400);
 }
 function stopScene(){ if(raf) cancelAnimationFrame(raf); raf=0; ctx=null; if(shopRaf) cancelAnimationFrame(shopRaf); shopRaf=0; shopCtx=null; if(heroRaf) cancelAnimationFrame(heroRaf); heroRaf=0; }
 function loop(now){ if(!ctx) return; update(now); draw(now); raf=requestAnimationFrame(loop); }
+function shake(now,dur,amp){ shakeT=now; shakeDur=dur; shakeAmp=amp; }
 
 function update(now){
   floats=floats.filter(f=>{ f.y-=0.6; f.life--; return f.life>0; });
   parts=parts.filter(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g??0.15; p.life--; return p.life>0; });
   booms=booms.filter(b=>now-b.t0<700);
-  if (!kill && S.pending.length && now-enterT>500){ kill={t0:now, step:0}; const h=$('#hint'); if(h) h.textContent='Finishing blows!'; }
-  if (kill){
-    const t=now-kill.t0;
-    if (t>=380 && !kill.done){
-      kill.done=true;
-      const task=S.tasks.find(x=>x.id===S.pending[0]);
-      if (task && !task.killed){
-        const idx=fieldMobs().findIndex(x=>x.id===task.id), slot=SLOTS[Math.max(0,Math.min(idx,SLOTS.length-1))];
-        booms.push({x:slot.x, y:slot.y, t0:now});
-        floats.push({x:slot.x-30,y:slot.y-110,text:'+'+task.gold+'g',life:70,c:'#f6c445'});
-        shakeT=now; killTask(task);
-      } else S.pending.shift();
+  if (!hit && S.pending.length && now-enterT>500){
+    hit={t0:now, task:S.tasks.find(x=>x.id===S.pending[0]), from:hpFrac(), word:HIT_WORDS[Math.floor(Math.random()*HIT_WORDS.length)]};
+    const h=$('#hint'); if(h) h.textContent='A quest lands a big hit!';
+  }
+  if (hit){
+    const t=now-hit.t0;
+    if (t>=HIT_LAND && !hit.landed){
+      hit.landed=now; shake(now,320,2.4);
+      const before=membersAlive(), spots=mobSpots();
+      hit.killed = hit.task ? landHit(hit.task) : (S.pending.shift(), false);
+      hit.to=hpFrac();
+      for(let i=membersAlive();i<before;i++) booms.push({x:spots[i].x, y:spots[i].y, t0:now, sc:spots[i].sc});
+      const cx=spots[0].x;
+      for(let k=0;k<22;k++){ const a=Math.random()*Math.PI*2; parts.push({x:cx,y:G-80,vx:Math.cos(a)*(3+Math.random()*4),vy:Math.sin(a)*(3+Math.random()*4)-2,g:.2,life:40,c:['#ffe066','#ffffff','#ff8a3a'][k%3],sz:6}); }
+      if (hit.killed){
+        floats.push({x:cx-110,y:G-200,text:'DEFEATED!',life:110,c:'#f6c445',size:20});
+        if (S.loot.up){ floats.push({x:HERO_X-60,y:G-170,text:'LEVEL UP!',life:90,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
+      }
+      renderHud(); renderTabs(); renderQuestLog();
     }
-    if (t>=820){ if(S.pending.length){ kill={t0:now, step:kill.step+1}; } else { kill=null; combatT0=now; lastBeat=-1; afterKills(); } }
+    if (t>=(hit.killed?KILL_LEN:HIT_LEN)){
+      const killed=hit.killed; hit=null; combatT0=now; lastBeat=-1;
+      if (S.mob.state!=='alive'){ S.pending.slice().forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) landHit(t); }); renderQuestLog(); renderTabs(); }
+      if (!S.pending.length) afterHits(killed);
+    }
     return;
   }
   if (act) updateActivity(now);
-  else if (fieldMobs().length){ const b=Math.floor((now-combatT0)/BEAT); if(b!==lastBeat){ lastBeat=b; shakeT=now; beatKind=b%2===0?'hero':'mobs'; } }
+  else if (S.mob.state==='alive'){ const b=Math.floor((now-combatT0)/BEAT); if(b!==lastBeat){ lastBeat=b; shake(now,150,1); beatKind=b%2===0?'hero':'mobs'; } }
 }
-function killTask(task){
-  task.killed=true; S.pending=S.pending.filter(id=>id!==task.id);
-  S.gold+=task.gold; S.exp+=task.gold+5; S.dayLoot.real+=task.gold; S.dayLoot.names.push(mobName(task.mob));
-  let up=false; while(S.exp>=expNeed(S.level)){ S.exp-=expNeed(S.level); S.level++; up=true; }
-  if (up){ floats.push({x:HERO_X-60,y:G-170,text:'LEVEL UP!',life:90,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
-  save(); renderHud(); renderTabs(); renderQuestLog();
-}
-function afterKills(){
-  if (!S.tasks.some(t=>!t.killed) && S.dayLoot.real>0){ ui.justCleared=true; setTimeout(showReceipt,500); }
-  else setTimeout(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle'&&!kill) renderIdleText(); },300);
+function afterHits(killed){
+  if (killed){ ui.justCleared=true; setTimeout(showReceipt,300); }
+  else setTimeout(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle'&&!hit) renderIdleText(); },300);
 }
 function renderIdleText(){
-  const front=fieldMobs()[0], h=$('#hint');
-  if (h) h.textContent='Check off quests to defeat mobs. Tap a mob to poke it.';
-  const tn=$('#taunt'); if(tn&&front) tn.textContent=front.taunt||'Run along, hero. My mobs are hungry.';
+  const h=$('#hint'); if (h) h.textContent=IDLE_HINT;
+  const tn=$('#taunt'), t=taunts(); if(tn&&t.length) tn.textContent=t[0];
 }
 function onPoke(e){
   const r=cvs.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*W, py=(e.clientY-r.top)/r.height*(H+TOP)-TOP;
-  const mobs=fieldMobs().slice(0,SLOTS.length);
-  for (let i=mobs.length-1;i>=0;i--){ const s=SLOTS[i];
-    if (Math.abs(px-s.x)<62 && py>s.y-150 && py<s.y+10){
+  const spots=mobSlots();
+  for (let i=spots.length-1;i>=0;i--){ const s=spots[i];
+    if (Math.abs(px-s.x)<62*s.sc && py>s.y-150*s.sc && py<s.y+10){
       for(let k=0;k<10;k++){ const a=Math.random()*Math.PI*2; parts.push({x:px,y:py,vx:Math.cos(a)*2,vy:Math.sin(a)*2-1,g:.05,life:26,c:['#ffe9a0','#e8508a','#8fd4f4'][k%3],sz:4}); }
       floats.push({x:px-20,y:py-30,text:['poke','tickle','*bonk*','hey!'][Math.floor(Math.random()*4)],life:40,c:'#ffe9a0'});
-      mobs[i]._wob=performance.now();
-      const tn=$('#taunt'); if(tn) tn.textContent=mobs[i].taunt||('Stop poking my '+MOB_BASES[mobs[i].mob.b].n.toLowerCase()+'. Do the quest.');
+      wob[i]=performance.now();
+      const tn=$('#taunt'), t=taunts(); if(tn) tn.textContent=t.length?t[Math.floor(Math.random()*t.length)]:('Stop poking my '+MOB_BASES[S.mob.b].n.toLowerCase()+'. Do the quest.');
       return;
     }
   }
@@ -635,56 +698,86 @@ function drawScenery(tod, now){
   spr(ctx,'tree',(Math.floor(now/180)+3)%8,724,G-10);
   spr(ctx,'bush',0,300,G-12,{scale:.8}); spr(ctx,'rock',0,250,G+30); spr(ctx,'rock',0,700,G+40);
 }
-function heroDraw(pose, now){
+function heroDraw(pose, now, x=HERO_X, foot=G-70){
   const C=CLASSES[S.cls];
-  if (pose==='air'){ shadow(HERO_X,G+2,34); return spr(ctx,C.atk,C.cut,HERO_X,G-70); }
+  if (pose==='air'){ shadow(x,G+2,34); return spr(ctx,C.atk,C.cut,x,foot); }
   if (pose==='ouch'){ shadow(HERO_X,G+2,40); const r=spr(ctx,C.idle,0,HERO_X-14,G,{rot:-0.22, fx:(performance.now()-shakeT<140)?'tint:#ff3030':''}); return r; }
   shadow(HERO_X,G+2,40); return spr(ctx,C.idle,Math.floor(now/110),HERO_X,G);
 }
-function mobDraw(task, i, pose, now){
-  const s=SLOTS[i], a=mobArt(task.mob, pose==='atk'?'atk':'idle');
-  let x=s.x, rot=0, fx=a.fx;
+const crowned=()=>S.showValue&&S.mob.bounty>DEF.bounty;   // a juicier bounty than usual
+function mobDraw(i, s, pose, now, knock=0){
+  const a=mobArt(S.mob, pose==='atk'?'atk':'idle'), sc=(a.scale||1)*s.sc;
+  let x=s.x+knock, rot=0, fx=a.fx;
   if (pose==='hurt'){ x+=14; rot=0.2; if(now-shakeT<130) fx='solid:#ffffff'; }
   if (pose==='atk') x-=28;
-  if (task._wob && now-task._wob<260) x+=Math.round(Math.sin((now-task._wob)/22)*5);
-  shadow(s.x,s.y+2,34*(a.scale>1?1:a.scale||1)+6);
-  if (S.showValue && task.gold>=15){ ctx.globalAlpha=.25+.12*Math.sin(now/220); ctx.fillStyle='#f6c445'; ctx.beginPath(); ctx.ellipse(s.x,s.y-40,56,58,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
-  const r=spr(ctx,a.name,0,x,s.y,{flip:true, rot, fx, scale:a.scale});
-  if (S.showValue && task.gold>=15){ const cr=CROWN(); ctx.drawImage(cr, Math.round(x-cr.width*3), Math.round(r.top-30), cr.width*6, cr.height*6); }
+  if (wob[i] && now-wob[i]<260) x+=Math.round(Math.sin((now-wob[i])/22)*5);
+  shadow(s.x,s.y+2,(34*(a.scale>1?1:a.scale||1)+6)*s.sc);
+  if (crowned()){ ctx.globalAlpha=.25+.12*Math.sin(now/220); ctx.fillStyle='#f6c445'; ctx.beginPath(); ctx.ellipse(s.x,s.y-40*s.sc,56*s.sc,58*s.sc,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+  const r=spr(ctx,a.name,0,x,s.y,{flip:true, rot, fx, scale:sc});
+  if (crowned() && i===0){ const cr=CROWN(); ctx.drawImage(cr, Math.round(x-cr.width*3), Math.round(r.top-30), cr.width*6, cr.height*6); }
   return r;
+}
+// HP bar in the sky above the mob. No numbers, ever
+function hpBar(now){
+  if (S.mob.state!=='alive' && !hit) return;
+  let f=hpFrac();
+  if (hit && !hit.landed) f=hit.from;
+  else if (hit) f=hit.from+(hit.to-hit.from)*Math.min(1,(now-hit.landed)/500);
+  const x=430, y=-30, w=260, h=18;
+  rect(x-4,y-4,w+8,h+8,'#1a100a'); rect(x,y,w,h,'#5a2a20');
+  if (f>0){ rect(x,y,Math.max(4,Math.round(w*f)),h,'#e04a3c'); rect(x,y,Math.max(4,Math.round(w*f)),5,'#ff8a7a'); }
+}
+// completing a quest: a held wind-up cut, then a bigger impact cut than the idle POW
+function drawBigHit(now, spots, order){
+  const C=CLASSES[S.cls], t=now-hit.t0, cx=mobSpots()[0].x;
+  if (!hit.landed){
+    heroDraw('air',now,HERO_X+20,G-150);
+    text('HYAAA!', HERO_X-30, G-320, '#ffffff', 16);
+    order.forEach(i=>{ const r=mobDraw(i,spots[i],'idle',now); text('!', spots[i].x-6, r.top-40, '#ffe066', 24); });
+    return;
+  }
+  const land=now-hit.landed;
+  speedLines(60, 320, G-200, G-60);
+  heroDraw('air',now,330,G-60);
+  if (C.idle==='archer_idle'){ for(let k=0;k<3;k++) spr(ctx,'arrow',0,400+k*40,G-120+k*26,{rot:0.15}); }
+  const tops=[];
+  order.forEach(i=>{ tops[i]=mobDraw(i,spots[i],'hurt',now,30); });
+  if (C.idle==='mage_idle') spr(ctx,'fx_heal',5,cx,G+10,{fx:'hue:180',scale:1.4});
+  order.forEach(i=>{ if(tops[i]) ouch(spots[i].x+44, Math.max(30,tops[i].top-28)); });
+  if (land<700 || spots.length){ burstStar(cx-40,G-90,96,'#ff8a3a'); burstStar(cx-40,G-90,66,'#ffe066'); }
+  const word=hit.killed?'K.O.!':hit.word; text(word, cx-40-word.length*11, G-102, '#e04a3c', 22, '#fff4c0');
+  if (land<120){ ctx.fillStyle=`rgba(255,255,255,${0.55*(1-land/120)})`; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
 }
 
 function draw(now){
   const tod=getTod(), C=CLASSES[S.cls];
   ctx.setTransform(2/3,0,0,2/3,0,0); ctx.imageSmoothingEnabled=false;
   ctx.save();
-  if (now-shakeT<150){ ctx.translate(Math.round((Math.random()-.5)*10), Math.round((Math.random()-.5)*8)); }
+  if (now-shakeT<shakeDur){ ctx.translate(Math.round((Math.random()-.5)*10*shakeAmp), Math.round((Math.random()-.5)*8*shakeAmp)); }
   ctx.fillStyle=SKIES[tod].bands[0]; ctx.fillRect(-10,-10,W+20,TOP+12); ctx.translate(0,TOP);
   drawScenery(tod, now);
   if (act){ drawActivity(now); }
   else {
-    const mobs=fieldMobs().slice(0,SLOTS.length), order=mobs.map((t,i)=>i).sort((a,b)=>SLOTS[a].y-SLOTS[b].y);
-    const heroTurn = kill ? true : beatKind==='hero';
-    // hero
-    if (heroTurn){
-      if (kill && kill.step%2===1) ctx.save(), heroDraw('air',now), ctx.restore(); else heroDraw('air',now);
+    const spots=mobSlots(), order=spots.map((s,i)=>i).sort((a,b)=>spots[a].y-spots[b].y);
+    if (hit) drawBigHit(now, spots, order);
+    else if (!spots.length) heroDraw('idle',now);
+    else if (beatKind==='hero'){
+      heroDraw('air',now);
       if (C.idle==='archer_idle'){ for(let k=0;k<3;k++) spr(ctx,'arrow',0,330+k*40,G-110+k*26,{rot:0.15}); }
       speedLines(HERO_X+70, 380, G-150, G-60);
-    } else heroDraw('ouch',now);
-    // mobs
-    const tops=[];
-    order.forEach(i=>{ tops[i]=mobDraw(mobs[i], i, heroTurn?'hurt':'atk', now); });
-    if (heroTurn){
+      const tops=[]; order.forEach(i=>{ tops[i]=mobDraw(i,spots[i],'hurt',now); });
       if (C.idle==='mage_idle') spr(ctx,'fx_heal',5,520,G+10,{fx:'hue:180',scale:1});
-      order.forEach(i=>{ if(tops[i]) ouch(SLOTS[i].x+14, Math.max(30,tops[i].top-28)); });
-      if (mobs.length){ burstStar(440,G-70,46,'#ffe066'); text(kill?'KO!':'POW!', kill?414:400, G-80, '#e04a3c', 18, '#fff4c0'); }
-    } else if (mobs.length){
+      order.forEach(i=>{ if(tops[i]) ouch(spots[i].x+14, Math.max(30,tops[i].top-28)); });
+      burstStar(440,G-70,46,'#ffe066'); text('POW!', 400, G-80, '#e04a3c', 18, '#fff4c0');
+    } else {
+      heroDraw('ouch',now);
+      order.forEach(i=>mobDraw(i,spots[i],'atk',now));
       ouch(HERO_X-10, G-150);
       burstStar(HERO_X+50,G-60,40,'#ffffff'); text('WHACK!', HERO_X+8, G-70, '#e04a3c', 14, '#fff4c0');
     }
-    if (fieldMobs().length>SLOTS.length) text('+'+(fieldMobs().length-SLOTS.length)+' more', 560, 40, '#ffffff', 14);
-    // death puffs
-    booms.forEach(b=>{ const f=Math.min(7,Math.floor((now-b.t0)/85)); spr(ctx,'fx_boom',f,b.x,b.y+50,{scale:1}); });
+    // puffs for members that drop off, and for the kill
+    booms.forEach(b=>{ const f=Math.min(7,Math.floor((now-b.t0)/85)); spr(ctx,'fx_boom',f,b.x,b.y+50,{scale:b.sc||1}); });
+    hpBar(now);
   }
   parts.forEach(p=>rect(p.x,p.y,p.sz||4,p.sz||4,p.c));
   const sk=SKIES[tod]; if (sk.overlay){ ctx.fillStyle=sk.overlay; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
@@ -758,21 +851,34 @@ function drawActivity(now){
 function fireGlow(now,tod){ const a=tod==='night'?.3:tod==='evening'?.2:.08; ctx.save(); ctx.globalCompositeOperation='lighter'; [[150,a*.5],[90,a*.8],[50,a]].forEach(([r,al])=>{ ctx.globalAlpha=al*(0.9+0.1*Math.sin(now/90)); ctx.fillStyle='#ff9a3a'; ctx.beginPath(); ctx.arc(468,G-30,r,0,Math.PI*2); ctx.fill(); }); ctx.restore(); }
 
 /* =========================================================
-   Daily tax receipt (once, when the last mob falls)
+   Daily tax receipt (once, when the daily mob dies; taxes the V.coin bounty)
    ========================================================= */
 function showReceipt(){
-  if (!S.dayLoot.real) return;
-  const real=S.dayLoot.real, rate=S.taxRate, gross=rate>0?Math.round(real/(1-rate)):real, tax=gross-real, names=S.dayLoot.names, count=names.length;
-  const list=names.slice(0,5).join(', ')+(count>5?` and ${count-5} more`:'');
-  S.dayLoot={real:0,names:[]}; save();
+  const L=S.loot; if (!L || document.querySelector('.overlay')) return;
+  const tax=L.gross-L.bounty;
+  S.loot=null; save();
   const o=document.createElement('div'); o.className='overlay';
-  o.innerHTML=`<div class="paper" role="dialog" aria-label="Daily loot receipt"><div class="hd">Royal Tax Office<br>of ${esc(S.villName)}</div><div class="sub">Every mob defeated · Day ${S.day}</div>${tax>0?'<div class="stamp">TAXED</div>':''}
-    <div class="ln"><span>Mobs slain today</span><span>${count}</span></div><div class="ln"><span>Gross loot</span><span>${gross}g</span></div>
-    ${tax>0?`<div class="ln tax"><span>Villainess tax (${Math.round(rate*100)}%)</span><span>−${tax}g</span></div>`:''}
-    <div class="ln net"><span>Paid to you</span><span>${real}g</span></div><p class="slain">Defeated: ${esc(list)}</p>
+  o.innerHTML=`<div class="paper" role="dialog" aria-label="Daily loot receipt"><div class="hd">Royal Tax Office<br>of ${esc(S.villName)}</div><div class="sub">Daily mob slain · Day ${L.day}</div>${tax>0?'<div class="stamp">TAXED</div>':''}
+    <div class="ln"><span>Gross bounty</span><span>${L.gross} V</span></div>
+    ${tax>0?`<div class="ln tax"><span>Villainess tax (${Math.round(L.rate*100)}%)</span><span>−${tax} V</span></div>`:''}
+    <div class="ln net"><span>Paid to you</span><span>${L.bounty} V.coins</span></div>
+    <div class="ln"><span>Loot dropped (untaxed)</span><span>${L.gold} gold</span></div>
+    <div class="ln"><span>Streak</span><span>${L.streak} day${L.streak>1?'s':''}</span></div><p class="slain">Defeated: ${esc(L.name)}</p>
     <button class="btn block" id="rc-ok">${tax>0?'Grumble and accept':'Collect'}</button></div>`;
   $('#app').appendChild(o);
   $('#rc-ok').onclick=()=>{ o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); };
+}
+// the mob was still alive when the day ended
+function showFled(){
+  const F=S.fled; if (!F || document.querySelector('.overlay')) return;
+  S.fled=null; save();
+  const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML=`<div class="paper" role="dialog" aria-label="The mob fled"><div class="hd">It got away!</div><div class="sub">The ${esc(F.name)} fled at midnight with yesterday’s bounty.</div>
+    ${F.streak?`<div class="ln tax"><span>Streak lost</span><span>0 (was ${F.streak})</span></div>`:'<div class="ln"><span>Streak</span><span>none to lose</span></div>'}
+    <p class="slain">“Better luck today, hero. Or not.” · ${esc(S.villName)}</p>
+    <button class="btn block" id="fl-ok">Next time…</button></div>`;
+  $('#app').appendChild(o);
+  $('#fl-ok').onclick=()=>o.remove();
 }
 
 /* =========================================================
@@ -781,12 +887,15 @@ function showReceipt(){
 const CHECK_SVG=`<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 17 L12 25 L29 3" stroke="#2b1a10" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 function renderQuestLog(){
   const box=$('#qlog'); if(!box) return;
-  const left=S.tasks.filter(t=>!t.done).length;
+  const left=S.tasks.filter(t=>!t.done).length, m=S.mob, alive=m.state==='alive', pct=Math.round(hpFrac()*100);
   box.innerHTML=`<div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'}</p>
-      <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.killed?'killed':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.killed?-1:0}">
+      <div class="mobhp">${alive?`<b>${esc(dailyName(m))}</b><div class="hpbar" role="img" aria-label="Mob health: ${pct>66?'still strong':pct>33?'wounded':'nearly beaten'}"><i style="width:${pct}%"></i></div>`:`<b class="down">${esc(dailyName(m))}: defeated!</b>`}</div>
+      <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.hit?'killed':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.hit?-1:0}">
         <span class="box">${t.done?CHECK_SVG:''}</span><span class="txt"><span>${esc(t.name)}</span></span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
   ui.freshQuest=null;
-  box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.killed) return; t.done=!t.done; if(t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuestLog(); };
+  box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.hit) return; t.done=!t.done;
+      if (t.done && S.mob.state!=='alive'){ t.hit=true; ui.freshQuest=t.id; toast('The mob is already down. Pure glory, no extra loot.'); }
+      else if (t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuestLog(); };
     el.onclick=go; el.onkeydown=e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); go(); } }; });
 }
 
@@ -827,7 +936,7 @@ function renderHero(m){
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="Your hero, level ${S.level} ${C.name}"></canvas>
       <div class="doll-l">${GEAR_SLOTS.slice(0,4).map(slotBtn).join('')}</div><div class="doll-r">${GEAR_SLOTS.slice(4).map(slotBtn).join('')}</div>
-      <div class="plate"><b>LV ${S.level} ${C.name.toUpperCase()}</b><span>+${b.gold} bounty gold · +${b.min} min</span></div></div>
+      <div class="plate"><b>LV ${S.level} ${C.name.toUpperCase()}</b><span>+${b.gold} gold drop · +${b.min} min</span></div></div>
     <div class="below wrap"><div class="stack">
       ${sel?`<div class="px selbar"><img alt="" src="${url(gearIcon(GEAR[sel].slot))}"><div class="t"><b>${esc(GEAR[sel].n)}</b><span class="small boon">${boonText(GEAR[sel].boon)}</span><br><span class="small muted">${esc(GEAR[sel].d)}</span></div><button class="btn${equipped(sel)?' ghost':''}" id="eq">${equipped(sel)?'Remove':'Equip'}</button></div>`
         :`<p class="hint">${S.gear.length?'Tap gear to equip it. Gear gives small boons only.':'No gear yet. Visit the forge through the shop.'}</p>`}
@@ -882,14 +991,14 @@ function renderShop(m){
   const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
   const stock = forge
     ? Object.entries(GEAR).map(([k,g])=>{ const own=S.gear.includes(k); return `<button class="crate ${!own&&S.gold<g.price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(g.slot))}" style="width:64px;height:64px"><span class="tagp">${esc(g.n)}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${g.price}`}</span></button>`; }).join('')
-    : S.shop.map(it=>`<button class="crate ${S.gold<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price"><img alt="" src="${coin}">${it.price}</span></button>`).join('');
+    : S.shop.map(it=>`<button class="crate ${S.vcoins<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price" style="color:var(--hex)"><img alt="" src="${url(VCOIN())}">${it.price}</span></button>`).join('');
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
       <div class="shopsign"><span>${forge?'The Forge':'Ye Olde Shoppe'}</span></div>
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">
       <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?ARRIVE_LINES[ui.shopRoom]:lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
-      <p class="hint">You have <b style="color:var(--gold)">${S.gold} gold</b>. ${forge?'Gear gives small boons, never extra damage.':'Tap a crate to look closer.'}</p>
+      <p class="hint">${forge?`You have <b style="color:var(--gold)">${S.gold} gold</b>. Gear gives small boons, never extra damage.`:`You have <b style="color:var(--hex)">${S.vcoins} V.coins</b>. Tap a crate to look closer.`}</p>
       ${stock?`<div class="crates">${stock}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
   const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
   let li=0; cv.onclick=()=>{ li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
@@ -980,20 +1089,20 @@ function openGear(k){
   $('#it-buy').onclick=()=>{ if(own||S.gold<g.price) return; S.gold-=g.price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${g.n}. Equip it on the Hero tab.`); };
 }
 function openItem(id){
-  const it=S.shop.find(x=>x.id===id); if(!it) return; const short=it.price-S.gold;
+  const it=S.shop.find(x=>x.id===id); if(!it) return; const short=it.price-S.vcoins;
   const o=document.createElement('div'); o.className='overlay';
   o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(it.name)}"><img alt="" src="${url(icon(it.icon))}"><h3>${esc(it.name)}</h3><p>${esc(it.desc||'A mysterious reward. Ask the shopkeeper what it is.')}</p>
-    <div class="price"><img alt="" src="${url(COIN())}">${it.price} gold</div>${short>0?`<span class="need">You need ${short} more gold.</span>`:''}
+    <div class="price"><img alt="" src="${url(VCOIN())}">${it.price} V.coins</div>${short>0?`<span class="need">You need ${short} more V.coins.</span>`:''}
     <div class="btnrow"><button class="btn ghost" id="it-x">Back</button><button class="btn" id="it-buy" ${short>0?'disabled':''}>Buy</button></div></div>`;
   $('#app').appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); $('#it-x').onclick=()=>o.remove();
-  $('#it-buy').onclick=()=>{ if(S.gold<it.price) return; S.gold-=it.price; S.bag.push({id:nid(),name:it.name,icon:it.icon,desc:it.desc||'',used:false,delivered:false,day:S.day}); save(); o.remove(); render(); toast(`Bought: ${it.name}. It’s in your Bag.`); };
+  $('#it-buy').onclick=()=>{ if(S.vcoins<it.price) return; S.vcoins-=it.price; S.bag.push({id:nid(),name:it.name,icon:it.icon,desc:it.desc||'',used:false,delivered:false,day:S.day}); save(); o.remove(); render(); toast(`Bought: ${it.name}. It’s in your Bag.`); };
 }
 function renderBag(m){
   const items=S.bag.filter(b=>!b.delivered), sel=items.find(b=>b.id===ui.bagSel)||items[0];
   m.classList.add('split');
   m.innerHTML=(sel
       ? showcase(url(icon(sel.icon)), sel.name, sel.desc||'Bought on day '+sel.day, sel.used?'<span class="st">USED · WAITING FOR HER TO DELIVER</span>':'<button class="btn" id="bag-use">Use</button>')
-      : showcase(url(icon('bag')), 'Your bag is empty', 'Defeat mobs, earn gold, then visit the shop.'))
+      : showcase(url(icon('bag')), 'Your bag is empty', 'Defeat the daily mob, earn V.coins, then visit the shop.'))
     +`<div class="below wrap"><div class="stack"><p class="hint">Use a reward to tell ${esc(S.villName)} you’re cashing it in.</p>
       <div><h3>Items</h3>${items.length?`<div class="inv">${items.map(b=>`<button data-id="${b.id}" aria-pressed="${b===sel}" aria-label="${esc(b.name)}"><img alt="" src="${url(icon(b.icon))}">${b.used?'<span class="tag">USED</span>':''}</button>`).join('')}</div>`:'<div class="px empty">Nothing here yet.</div>'}</div></div></div>`;
   m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.bagSel=b.dataset.id; renderMain(); });
@@ -1005,19 +1114,33 @@ function renderBag(m){
    ========================================================= */
 function renderVMobs(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
-  const d=ui.draft, all=[]; MOB_BASES.forEach((_,b)=>[0,1,2,3].forEach(v=>all.push({b,v})));
-  m.innerHTML=`<div class="stack"><div><h2 style="color:var(--hex)">Send a mob</h2><p class="muted small">Write a real-life task. It appears in his Quest Log and as a monster on his field.</p></div>
+  const d=ui.draft, mb=S.mob, p=S.plan, all=[]; MOB_BASES.forEach((_,b)=>[0,1,2,3].forEach(v=>all.push({b,v})));
+  const alive=mb.state==='alive', hpLeft=Math.max(0,Math.ceil(mb.hp-mb.dmg)), share=t=>Math.round(t.dmg/mb.hp*100);
+  m.innerHTML=`<div class="stack">
+    <div><h2 style="color:var(--hex)">Today’s mob</h2><div class="vrow px"><img alt="" src="${url(mobThumb(mb))}" style="object-fit:contain;width:48px;height:48px"><div class="t"><b>${esc(dailyName(mb))}</b>
+      <span class="small muted">${alive?`${hpLeft} of ${Math.ceil(mb.hp)} HP left`:'Defeated'} · dies at ${mb.threshold}% of the damage you assigned · bounty ${mb.bounty} V.coins · gold drop: ${mb.gold??'default loot table'}</span></div></div>
+      <p class="small muted">The threshold locked when the mob spawned. Quests you add now make today’s kill easier, never harder.</p></div>
+    <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in his Quest Log. He never sees how much damage it does.</p></div>
     <form class="px vpanel" id="mf" autocomplete="off">
       <label class="f">Task<input class="inp" id="mf-name" maxlength="80" placeholder="e.g. Fold the laundry" value="${esc(d.name)}"></label>
-      <div class="row2"><label class="f">Gold value<input class="inp" id="mf-gold" type="number" min="1" max="999" value="${d.gold}"></label><label class="f">Repeats<select class="inp" id="mf-rep"><option value="once" ${d.repeat==='once'?'selected':''}>Today only</option><option value="daily" ${d.repeat==='daily'?'selected':''}>Every day</option></select></label></div>
-      <div class="f"><span>Mob: ${d.mob?esc(mobName(d.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="mf-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!d.mob}" aria-label="Random mob">?</button>${all.map(mb=>`<button type="button" data-b="${mb.b}" data-v="${mb.v}" aria-label="${esc(mobName(mb))}" aria-pressed="${!!d.mob&&d.mob.b===mb.b&&d.mob.v===mb.v}"><img alt="" src="${url(mobThumb(mb))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div>
-      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="140" placeholder="Shown when he pokes this mob">${esc(d.taunt)}</textarea></label>
-      <button class="btn hex block" type="submit">Send to the field</button></form>
-    <div><h3>On his field today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><img alt="" src="${url(mobThumb(t.mob))}" style="object-fit:contain"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.gold}g · ${t.repeat==='daily'?'daily':'once'} · ${t.killed?'defeated':t.done?'done, fight pending':'alive'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}">X</button></div>`).join('')||'<div class="empty">Nothing on the field.</div>'}</div></div></div>`;
-  const sync=()=>{ d.name=$('#mf-name').value; d.gold=$('#mf-gold').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; };
-  $('#mf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; renderVMobs(m); });
-  $('#mf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Give the task a name first.'); return; } const mob=d.mob||rmob();
-    S.tasks.push({id:nid(),name,gold:Math.max(1,Math.min(999,parseInt(d.gold,10)||1)),repeat:d.repeat,mob,pinned:!!d.mob,taunt:d.taunt.trim(),done:false,killed:false}); save(); ui.draft={name:'',gold:10,repeat:'once',mob:null,taunt:''}; renderVMobs(m); toast(`${mobName(mob)} sent to his field.`); };
+      <div class="row2"><label class="f">Damage (hidden)<input class="inp" id="mf-dmg" type="number" min="1" max="999" value="${d.dmg}"></label><label class="f">Repeats<select class="inp" id="mf-rep"><option value="once" ${d.repeat==='once'?'selected':''}>Today only</option><option value="daily" ${d.repeat==='daily'?'selected':''}>Every day</option></select></label></div>
+      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="140" placeholder="Shown when he pokes the mob">${esc(d.taunt)}</textarea></label>
+      <button class="btn hex block" type="submit">Add to his Quest Log</button></form>
+    <div><h3>His quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.dmg} damage (${share(t)}% of HP) · ${t.repeat==='daily'?'daily':'once'} · ${t.hit?'landed':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}">X</button></div>`).join('')||'<div class="empty">No quests. Tomorrow I’ll fall back to the default list.</div>'}</div></div>
+    <div><h2 style="color:var(--hex)">Tomorrow’s mob</h2><p class="muted small">Used when the next mob spawns, then reset. Leave a box empty to use the default.</p></div>
+    <div class="px vpanel">
+      <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
+        <span class="small muted">The mob dies once he’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
+      <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
+      <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div></div></div>`;
+  const sync=()=>{ d.name=$('#mf-name').value; d.dmg=$('#mf-dmg').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; };
+  const num=v=>v===''?null:Math.max(0,Math.min(999,parseInt(v,10)||0));
+  $('#np-th').oninput=e=>{ p.threshold=+e.target.value; $('#np-tv').textContent=e.target.value+'%'; save(); };
+  $('#np-bounty').onchange=e=>{ p.bounty=num(e.target.value); save(); };
+  $('#np-gold').onchange=e=>{ p.gold=num(e.target.value); save(); };
+  $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); p.mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; save(); const sc=$('#main').scrollTop; renderVMobs(m); $('#main').scrollTop=sc; });
+  $('#mf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Give the quest a name first.'); return; }
+    S.tasks.push({id:nid(),name,dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)),repeat:d.repeat,taunt:d.taunt.trim(),done:false,hit:false}); save(); ui.draft={name:'',dmg:10,repeat:'once',taunt:''}; renderVMobs(m); toast('Added to his Quest Log.'); };
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.tasks=S.tasks.filter(t=>t.id!==b.dataset.del); S.pending=S.pending.filter(id=>id!==b.dataset.del); save(); renderVMobs(m); });
 }
 function renderVShop(m){
@@ -1029,10 +1152,10 @@ function renderVShop(m){
     <form class="px vpanel" id="sf" autocomplete="off">
       <label class="f">Reward name<input class="inp" id="sf-name" maxlength="40" placeholder="e.g. Movie" value="${esc(d.name)}"></label>
       <label class="f">Description<textarea class="inp" id="sf-desc" maxlength="200" placeholder="e.g. You get to pick a movie to watch for us tonight, 2 hours or shorter.">${esc(d.desc)}</textarea></label>
-      <label class="f">Price in gold<input class="inp" id="sf-price" type="number" min="1" max="9999" value="${d.price}"></label>
+      <label class="f">Price in V.coins<input class="inp" id="sf-price" type="number" min="1" max="9999" value="${d.price}"></label>
       <div class="f"><span>Icon</span><div class="pick" id="sf-pick">${ICON_KEYS.map(k=>`<button type="button" data-k="${k}" aria-label="${k}" aria-pressed="${d.icon===k}"><img alt="" src="${url(icon(k))}"></button>`).join('')}</div></div>
       <button class="btn hex block" type="submit">Add to shop</button></form>
-    <div><h3>In the shop</h3><div class="vlist">${S.shop.map(it=>`<div class="vrow"><img alt="" src="${url(icon(it.icon))}"><div class="t"><b>${esc(it.name)} · ${it.price}g</b><span class="small muted">${esc(it.desc||'')}</span></div><button class="x" data-del="${it.id}" aria-label="Remove ${esc(it.name)}">X</button></div>`).join('')||'<div class="empty">Empty shelves.</div>'}</div></div>
+    <div><h3>In the shop</h3><div class="vlist">${S.shop.map(it=>`<div class="vrow"><img alt="" src="${url(icon(it.icon))}"><div class="t"><b>${esc(it.name)} · ${it.price} V</b><span class="small muted">${esc(it.desc||'')}</span></div><button class="x" data-del="${it.id}" aria-label="Remove ${esc(it.name)}">X</button></div>`).join('')||'<div class="empty">Empty shelves.</div>'}</div></div>
     ${inBag.length?`<p class="small muted">In his bag, unused: ${inBag.map(b=>esc(b.name)).join(', ')}</p>`:''}</div>`;
   const sync=()=>{ d.name=$('#sf-name').value; d.price=$('#sf-price').value; d.desc=$('#sf-desc').value; };
   $('#sf-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); d.icon=b.dataset.k; renderVShop(m); });
@@ -1040,26 +1163,27 @@ function renderVShop(m){
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); renderVShop(m); });
   m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); render(); toast('Marked as delivered.'); });
 }
+const taxText=(ex,g)=>`Shown once a day, when the daily mob dies. If the bounty is ${ex} V.coins, the receipt says ${g} earned and ${g-ex} paid in taxes. He still keeps ${ex}. The tax becomes your Infamy.`;
 function renderVRules(m){
   const ex=20, gross=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex, todOpts=[['auto','Match the phone clock'],['morning','Morning'],['day','Day'],['evening','Evening'],['night','Night']];
   m.innerHTML=`<div class="stack"><div><h2 style="color:var(--hex)">Rules of the realm</h2></div>
     <div class="px vpanel"><label class="f">Your name<input class="inp" id="vr-name" maxlength="30" value="${esc(S.villName)}"></label>
       <div class="f"><div class="switch"><span>Cosmetic tax rate</span><span class="rateval" id="vr-rv">${Math.round(S.taxRate*100)}%</span></div><input type="range" id="vr-rate" min="0" max="50" step="5" value="${Math.round(S.taxRate*100)}" aria-label="Tax rate">
-        <span class="small muted" id="vr-ex">Shown once a day, when his last mob falls. If he earned ${ex}g, the receipt says ${gross}g earned and ${gross-ex}g paid in taxes. He still keeps ${ex}g.</span></div>
-      <label class="switch"><span>Show gold value on mobs<br><span class="small muted">Crown and glow on mobs worth 15g or more</span></span><input type="checkbox" id="vr-show" ${S.showValue?'checked':''}></label></div>
+        <span class="small muted" id="vr-ex">${taxText(ex,gross)}</span></div>
+      <label class="switch"><span>Show a juicy bounty<br><span class="small muted">Crown and glow when the bounty is above ${DEF.bounty} V.coins</span></span><input type="checkbox" id="vr-show" ${S.showValue?'checked':''}></label></div>
     <div><h3>Prototype controls</h3><div class="px vpanel">
       <label class="f">Time of day in scenes<select class="inp" id="pc-tod">${todOpts.map(([v,l])=>`<option value="${v}" ${S.tod===v?'selected':''}>${l}</option>`).join('')}</select></label>
-      <button class="btn ghost block" id="pc-day">Start day ${S.day+1}</button><p class="small muted">Daily quests respawn as fresh mobs. Finished one-off quests are cleared. Unfinished ones stay.</p>
-      <button class="btn ghost block" id="pc-gold">Give him 50 test gold</button><button class="btn ghost block" id="pc-cls">Let him pick a new class</button>
+      <button class="btn ghost block" id="pc-day">Start day ${S.day+1}</button><p class="small muted">Acts like midnight: if today’s mob is still alive it flees and his streak resets. Daily quests come back, finished one-offs are cleared, and a new mob spawns with your “Tomorrow’s mob” settings.</p>
+      <button class="btn ghost block" id="pc-gold">Give him 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let him pick a new class</button>
       <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?'Tap again to erase everything':'Reset the prototype'}</button></div></div></div>`;
   $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); };
-  $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=`Shown once a day, when his last mob falls. If he earned ${ex}g, the receipt says ${g}g earned and ${g-ex}g paid in taxes. He still keeps ${ex}g.`; };
+  $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
   $('#vr-show').onchange=e=>{ S.showValue=e.target.checked; save(); };
   $('#pc-tod').onchange=e=>{ S.tod=e.target.value; save(); toast('Scenes now show: '+(S.tod==='auto'?'the phone clock ('+getTod()+')':S.tod)+'.'); };
-  $('#pc-day').onclick=()=>{ S.day++; S.tasks=S.tasks.filter(t=>t.repeat==='daily'||!t.killed).map(t=>t.repeat==='daily'?{...t,done:false,killed:false,mob:t.pinned?t.mob:rmob()}:t); S.pending=S.pending.filter(id=>S.tasks.some(t=>t.id===id&&t.done&&!t.killed)); S.dayLoot={real:0,names:[]}; save(); render(); toast(`Day ${S.day} begins. Fresh mobs are on the field.`); };
-  $('#pc-gold').onclick=()=>{ S.gold+=50; save(); renderHud(); toast('50 gold granted. How generous.'); };
+  $('#pc-day').onclick=()=>{ nextDay(); render(); toast(S.fled?`The mob fled. Day ${S.day} begins with a new one.`:`Day ${S.day} begins. A new mob has spawned.`); };
+  $('#pc-gold').onclick=()=>{ S.gold+=50; S.vcoins+=50; save(); renderHud(); toast('50 gold and 50 V.coins granted. How generous.'); };
   $('#pc-cls').onclick=()=>{ S.cls=null; save(); ui.role='hero'; render(); };
-  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; renderVRules(m); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') renderVRules(m); },3000); return; } ui.resetArm=false; S=freshState(); save(); ui.role='hero'; kill=null; render(); toast('Prototype reset.'); };
+  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; renderVRules(m); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') renderVRules(m); },3000); return; } ui.resetArm=false; S=freshState(); spawnMob(); save(); ui.role='hero'; hit=null; render(); toast('Prototype reset.'); };
 }
 
 if (atlasReady) render(); else readyCbs.push(render);
