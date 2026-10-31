@@ -293,6 +293,12 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .paper .stamp{position:absolute;right:14px;top:66px;transform:rotate(-14deg);border:3px solid #a2302a;color:#a2302a;font-family:var(--f-display);font-size:11px;padding:6px 8px;opacity:.85;animation:stamp .3s .45s steps(3) both}
 @keyframes stamp{from{transform:rotate(-14deg) scale(2.2);opacity:0}to{transform:rotate(-14deg) scale(1);opacity:.85}}
 .paper .slain{font-size:15px;margin-top:10px;color:#5a3d26}
+.paper.rc [style*="--d"]{animation:print .2s calc(.25s + var(--d)*.22s) steps(2) both}
+.paper.rc .stamp{animation-delay:1.9s}
+.paper.rc .ln.net{animation-name:print-pop}
+.paper .slain img{width:40px;height:auto;image-rendering:pixelated;vertical-align:middle;margin-right:8px;transform:rotate(180deg) scaleX(-1)}
+@keyframes print{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes print-pop{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:none}}
 .paper .btn{margin-top:16px}
 .detail{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .detail img{width:96px;height:96px;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 rgba(90,61,38,.35))}
@@ -306,7 +312,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 
 .toast{position:absolute;left:16px;right:16px;bottom:110px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
-@media (prefers-reduced-motion: reduce){.go,.paper,.toast,.paper .stamp,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
+@media (prefers-reduced-motion: reduce){.go,.paper,.toast,.paper .stamp,.paper.rc [style*="--d"],.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
 </style>
 
 <div class="app" id="app">
@@ -546,7 +552,7 @@ function landHit(task){
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
   S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak);
-  S.loot={day:S.day, name:dailyName(m), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
+  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
   save(); return true;
 }
 function endDay(){
@@ -729,7 +735,8 @@ const HERO_X=150;
 const BEAT=2300;                     // how long each cut is held
 // where the daily mob stands: one big mob, or a group of three that drops off as its HP falls
 const SOLO=[{x:560,y:G+12,sc:1.5}], PACK=[{x:470,y:G+8,sc:1},{x:580,y:G-22,sc:1},{x:630,y:G+18,sc:1}];
-const HIT_LAND=450, HIT_LEN=1500, KILL_LEN=2300;   // big hit: wind-up cut, then the impact cut
+const HIT_LAND=450, HIT_LEN=1500, KILL_LEN=3400;   // big hit: wind-up cut, then the impact cut
+const KO_FREEZE=700, KO_COLLECT=2300;              // the kill: K.O. freeze, then the burst and loot, then he scoops it up
 const HIT_WORDS=['SMASH!','KABOOM!','CRUNCH!','WALLOP!'];
 let raf=0, ctx=null, cvs=null, enterT=0, combatT0=0, lastBeat=-1, shakeT=-9999, shakeDur=150, shakeAmp=1, beatKind='';
 let hit=null, booms=[], floats=[], parts=[], act=null, wob=[];
@@ -774,7 +781,11 @@ function shake(now,dur,amp){ shakeT=now; shakeDur=dur; shakeAmp=amp; }
 
 function update(now){
   floats=floats.filter(f=>{ f.y-=0.6; f.life--; return f.life>0; });
-  parts=parts.filter(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g??0.15; p.life--; return p.life>0; });
+  parts=parts.filter(p=>{
+    if (p.home){ p.x+=(HERO_X+40-p.x)*.2; p.y+=(G-90-p.y)*.2; if(Math.abs(p.x-HERO_X-40)<16){ sparkle(p.x,p.y); return false; } return --p.life>0; }
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.g??0.15;
+    if (p.floor && p.y>p.floor){ p.y=p.floor; p.vy*=-0.45; p.vx*=0.6; }
+    p.life--; return p.life>0; });
   booms=booms.filter(b=>now-b.t0<700);
   if (!hit && S.pending.length && S.mob.state!=='coming' && now-enterT>500){
     hit={t0:now, task:S.tasks.find(x=>x.id===S.pending[0]), from:hpFrac(), word:HIT_WORDS[Math.floor(Math.random()*HIT_WORDS.length)]};
@@ -787,15 +798,13 @@ function update(now){
       const before=membersAlive(), spots=mobSpots();
       hit.killed = hit.task ? landHit(hit.task) : (S.pending.shift(), false);
       hit.to=hpFrac();
-      for(let i=membersAlive();i<before;i++) booms.push({x:spots[i].x, y:spots[i].y, t0:now, sc:spots[i].sc});
+      if (hit.killed){ hit.corpse=spots.slice(0,before); shake(now,420,3.2); }
+      else for(let i=membersAlive();i<before;i++) booms.push({x:spots[i].x, y:spots[i].y, t0:now, sc:spots[i].sc});
       const cx=spots[0].x;
       for(let k=0;k<22;k++){ const a=Math.random()*Math.PI*2; parts.push({x:cx,y:G-80,vx:Math.cos(a)*(3+Math.random()*4),vy:Math.sin(a)*(3+Math.random()*4)-2,g:.2,life:40,c:['#ffe066','#ffffff','#ff8a3a'][k%3],sz:6}); }
-      if (hit.killed){
-        floats.push({x:cx-110,y:G-200,text:'DEFEATED!',life:110,c:'#f6c445',size:20});
-        if (S.loot.up){ floats.push({x:HERO_X-60,y:G-170,text:'LEVEL UP!',life:90,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
-      }
       renderHud(); renderTabs(); renderQuestLog();
     }
+    if (hit.killed && hit.landed) updateKill(now, now-hit.landed);
     if (t>=(hit.killed?KILL_LEN:HIT_LEN)){
       const killed=hit.killed; hit=null; combatT0=now; lastBeat=-1;
       if (S.mob.state!=='alive'){ S.pending.slice().forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) landHit(t); }); renderQuestLog(); renderTabs(); }
@@ -806,6 +815,21 @@ function update(now){
   if (act) updateActivity(now);
   else if (S.mob.state==='alive'){ const b=Math.floor((now-combatT0)/BEAT); if(b!==lastBeat){ lastBeat=b; shake(now,150,1); beatKind=b%2===0?'hero':'mobs'; } }
 }
+// after the K.O. freeze: the mob bursts, loot fountains out, then he scoops it all up
+function updateKill(now, k){
+  if (k>=KO_FREEZE && !hit.boomed){
+    hit.boomed=1; shake(now,260,1.8);
+    hit.corpse.forEach(s=>booms.push({x:s.x, y:s.y, t0:now, sc:s.sc}));
+    const cx=hit.corpse[0].x;
+    for(let j=0;j<18;j++) parts.push({x:cx+Math.random()*40-20, y:G-70, vx:-7+Math.random()*8, vy:-7-Math.random()*5, g:.38, floor:G+6+Math.random()*26, life:999, img:j%2?COIN():VCOIN()});
+    floats.push({x:W/2-90,y:G-230,text:'DEFEATED!',life:120,c:'#f6c445',size:20});
+  }
+  if (k>=KO_COLLECT && !hit.collected){
+    hit.collected=1; parts.forEach(p=>{ if(p.img){ p.home=1; p.life=40; } });
+    if (S.loot && S.loot.up){ floats.push({x:HERO_X-70,y:G-210,text:'LEVEL UP!',life:100,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
+  }
+}
+function sparkle(x,y){ for(let k=0;k<4;k++){ const a=Math.random()*Math.PI*2; parts.push({x,y,vx:Math.cos(a)*2.4,vy:Math.sin(a)*2.4,g:0,life:12,c:k%2?'#ffffff':'#ffe066',sz:4}); } }
 function afterHits(killed){
   if (killed){ ui.justCleared=true; setTimeout(showReceipt,300); }
   else setTimeout(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle'&&!hit) renderIdleText(); },300);
@@ -832,12 +856,13 @@ function onPoke(e){
 function rect(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
 function text(t,x,y,col,size=16,outline='#1a100a'){ ctx.font=size+'px "Press Start 2P", monospace'; ctx.textBaseline='top'; ctx.fillStyle=outline; for(const [dx,dy] of [[-3,0],[3,0],[0,-3],[0,3],[3,3]]) ctx.fillText(t,x+dx,y+dy); ctx.fillStyle=col; ctx.fillText(t,x,y); }
 function shadow(x,y,w){ ctx.fillStyle='rgba(30,40,20,.28)'; ctx.beginPath(); ctx.ellipse(x,y,w,w*0.28,0,0,Math.PI*2); ctx.fill(); }
-// the >.< face badge
-function ouch(x,y){
+// the >.< face badge (or a happy ^o^ one, without the sweat drop)
+function ouch(x,y,face='>.<'){
   ctx.fillStyle='#ffffff'; ctx.strokeStyle='#1a100a'; ctx.lineWidth=4;
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x-34,y-20,68,34,10) : ctx.rect(x-34,y-20,68,34); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x-6,y+14); ctx.lineTo(x,y+24); ctx.lineTo(x+6,y+14); ctx.fill(); ctx.stroke(); rect(x-5,y+11,11,5,'#ffffff');
-  ctx.font='16px "Press Start 2P", monospace'; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillStyle='#1a100a'; ctx.fillText('>.<',x,y-2); ctx.textAlign='left';
+  ctx.font='16px "Press Start 2P", monospace'; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillStyle='#1a100a'; ctx.fillText(face,x,y-2); ctx.textAlign='left';
+  if (face!=='>.<') return;
   // sweat drop
   ctx.fillStyle='#8fd4f4'; ctx.beginPath(); ctx.moveTo(x+40,y-18); ctx.quadraticCurveTo(x+48,y-4,x+40,y); ctx.quadraticCurveTo(x+32,y-4,x+40,y-18); ctx.fill(); ctx.strokeStyle='#1a100a'; ctx.lineWidth=2; ctx.stroke();
 }
@@ -877,11 +902,12 @@ function heroDraw(pose, now, x=HERO_X, foot=G-70){
   shadow(HERO_X,G+2,40); return heroSpr(ctx,'idle',now,HERO_X,G);
 }
 const crowned=()=>S.showValue&&S.mob.bounty>DEF.bounty;   // a juicier bounty than usual
-function mobDraw(i, s, pose, now, knock=0){
+function mobDraw(i, s, pose, now, knock=0, fxo=''){
   const a=mobArt(S.mob, pose==='atk'?'atk':'idle'), sc=(a.scale||1)*s.sc;
   let x=s.x+knock, rot=0, fx=a.fx;
   if (pose==='hurt'){ x+=14; rot=0.2; if(now-shakeT<130) fx='solid:#ffffff'; }
   if (pose==='atk') x-=28;
+  if (fxo) fx=fxo;
   if (wob[i] && now-wob[i]<260) x+=Math.round(Math.sin((now-wob[i])/22)*5);
   shadow(s.x,s.y+2,(34*(a.scale>1?1:a.scale||1)+6)*s.sc);
   if (crowned()){ ctx.globalAlpha=.25+.12*Math.sin(now/220); ctx.fillStyle='#f6c445'; ctx.beginPath(); ctx.ellipse(s.x,s.y-40*s.sc,56*s.sc,58*s.sc,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
@@ -906,12 +932,14 @@ function hpBar(now){
 function drawBigHit(now, spots, order){
   const t=now-hit.t0, cx=mobSpots()[0].x;
   if (!hit.landed){
-    heroDraw('air',now,HERO_X+20,G-150);
-    text('HYAAA!', HERO_X-30, G-320, '#ffffff', 16);
+    shadow(HERO_X,G+2,40); heroSpr(ctx,'windup',now,HERO_X,G);
+    const sp=Math.floor(t/110)%2; [[-50,-150],[46,-176],[60,-70],[-62,-60]].forEach(([dx,dy],k)=>{ if((k+sp)%2) burstStar(HERO_X+dx,G+dy,9,'#ffe066'); });
+    text('HYAAA!', HERO_X-50, G-250, '#ffffff', 16);
     order.forEach(i=>{ const r=mobDraw(i,spots[i],'idle',now); text('!', spots[i].x-6, r.top-40, '#ffe066', 24); });
     return;
   }
   const land=now-hit.landed;
+  if (hit.killed) return drawKill(now, land);
   speedLines(60, 320, G-200, G-60);
   heroDraw('air',now,330,G-60);
   if (S.cls!=='mage') heroFx(S.cls,360,G-90,true);
@@ -922,6 +950,27 @@ function drawBigHit(now, spots, order){
   if (land<700 || spots.length){ burstStar(cx-40,G-90,96,'#ff8a3a'); burstStar(cx-40,G-90,66,'#ffe066'); }
   const word=hit.killed?'K.O.!':hit.word; text(word, cx-40-word.length*11, G-102, '#e04a3c', 22, '#fff4c0');
   if (land<120){ ctx.fillStyle=`rgba(255,255,255,${0.55*(1-land/120)})`; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
+}
+
+// the kill, in held cuts: a flashing K.O. freeze, then he lands and cheers while the loot bursts out
+function drawKill(now, land){
+  const sp=hit.corpse, cx=sp[0].x;
+  if (land<KO_FREEZE){
+    speedLines(60, 320, G-200, G-60);
+    heroDraw('air',now,330,G-60);
+    if (S.cls!=='mage') heroFx(S.cls,360,G-90,true);
+    const flash=Math.floor(land/90)%2===0, tops=[];
+    sp.forEach((s,i)=>{ tops[i]=mobDraw(i,s,'hurt',now,40,flash?'solid:#ffffff':''); });
+    if (S.cls==='mage') heroFx('mage',cx-150,G,true);
+    sp.forEach((s,i)=>ouch(s.x+54, Math.max(30,tops[i].top-28)));
+    burstStar(cx-40,G-90,124,'#e04a3c'); burstStar(cx-40,G-90,92,'#ff8a3a'); burstStar(cx-40,G-90,62,'#ffe066');
+    text('K.O.!', cx-100, G-106, '#ffffff', 30, '#a2302a');
+    if (land<140){ ctx.fillStyle=`rgba(255,255,255,${0.75*(1-land/140)})`; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
+    return;
+  }
+  const cheer=land>KO_FREEZE+450, up=cheer&&Math.floor(land/350)%2===0;
+  shadow(HERO_X+40,G+2,40); heroSpr(ctx,cheer?(up?'up':'land'):'land',now,HERO_X+40,up?G-34:G);
+  if (cheer) ouch(HERO_X+40, (up?G-34:G)-172, '^o^');
 }
 
 function draw(now){
@@ -954,11 +1003,13 @@ function draw(now){
     booms.forEach(b=>{ const f=Math.min(7,Math.floor((now-b.t0)/85)); spr(ctx,'fx_boom',f,b.x,b.y+50,{scale:b.sc||1}); });
     hpBar(now);
   }
-  parts.forEach(p=>rect(p.x,p.y,p.sz||4,p.sz||4,p.c));
+  parts.forEach(p=>{ if(!p.img) return rect(p.x,p.y,p.sz||4,p.sz||4,p.c); const w=Math.floor(now/120+p.floor)%3===1?12:24; ctx.drawImage(p.img,Math.round(p.x-w/2),Math.round(p.y-24),w,24); });
   const sk=SKIES[tod]; if (sk.overlay){ ctx.fillStyle=sk.overlay; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
   if (act && act.k==='camp') fireGlow(now,tod);
   floats.forEach(f=>text(f.text, Math.round(f.x+(f.drift?Math.sin(f.life/8)*6:0)), Math.round(f.y), f.c, f.size||16));
-  if (act && act.k==='victory' && now-act.t0<4500) text('VICTORY!', 232, 60, '#f6c445', 32);
+  if (act && act.k==='victory' && now-act.t0<4500){ const t=now-act.t0, sz=t<120?52:t<240?42:32, bob=Math.floor(t/350)%2?0:-8;
+    text('VICTORY!', Math.round(W/2-sz*4), 60+bob+(32-sz)/2, '#f6c445', sz);
+    if (t>300) text('FIELD CLEARED', W/2-104, 112+bob, '#ffffff', 16); }
   ctx.restore();
 }
 
@@ -978,7 +1029,7 @@ function updateActivity(now){
 }
 function drawActivity(now){
   const t=now-act.t0;
-  if (act.k==='victory'){ const up=Math.floor(t/350)%2===0; shadow(HERO_X+60,G+2,36); heroSpr(ctx,up?'up':'land',now,HERO_X+60,up?G-40:G); return; }
+  if (act.k==='victory'){ const up=Math.floor(t/350)%2===0; shadow(HERO_X+60,G+2,36); heroSpr(ctx,up?'up':'land',now,HERO_X+60,up?G-40:G); ouch(HERO_X+60,(up?G-40:G)-172,'^o^'); return; }
   if (act.k==='chop'){
     const f=Math.floor(t/110), cyc=f%10, hit=cyc===3;   // wind up, strike, rest
     shadow(490,G+2,60); spr(ctx,'tree',hit?2:0,490+(hit?6:0),G+6);
@@ -1033,13 +1084,14 @@ function showReceipt(){
   const tax=L.gross-L.bounty;
   S.loot=null; save();
   const o=document.createElement('div'); o.className='overlay';
-  o.innerHTML=`<div class="paper" role="dialog" aria-label="Daily loot receipt"><div class="hd">Royal Tax Office<br>of ${esc(S.villName)}</div><div class="sub">Daily mob slain · Day ${L.day}</div>${tax>0?'<div class="stamp">TAXED</div>':''}
-    <div class="ln"><span>Gross bounty</span><span>${L.gross} V</span></div>
-    ${tax>0?`<div class="ln tax"><span>Villainess tax (${Math.round(L.rate*100)}%)</span><span>−${tax} V</span></div>`:''}
-    <div class="ln net"><span>Paid to you</span><span>${L.bounty} V.coins</span></div>
-    <div class="ln"><span>Loot dropped (untaxed)</span><span>${L.gold} gold</span></div>
-    <div class="ln"><span>Streak</span><span>${L.streak} day${L.streak>1?'s':''}</span></div><p class="slain">Defeated: ${esc(L.name)}</p>
-    <button class="btn block" id="rc-ok">${tax>0?'Grumble and accept':'Collect'}</button></div>`;
+  const d=n=>` style="--d:${n}"`;
+  o.innerHTML=`<div class="paper rc" role="dialog" aria-label="Daily loot receipt"><div class="hd">Royal Tax Office<br>of ${esc(S.villName)}</div><div class="sub">Daily mob slain · Day ${L.day}</div>${tax>0?'<div class="stamp">TAXED</div>':''}
+    <div class="ln"${d(1)}><span>Gross bounty</span><span>${L.gross} V</span></div>
+    ${tax>0?`<div class="ln tax"${d(2)}><span>Villainess tax (${Math.round(L.rate*100)}%)</span><span>−${tax} V</span></div>`:''}
+    <div class="ln net"${d(3)}><span>Paid to you</span><span>${L.bounty} V.coins</span></div>
+    <div class="ln"${d(4)}><span>Loot dropped (untaxed)</span><span>${L.gold} gold</span></div>
+    <div class="ln"${d(5)}><span>Streak</span><span>${L.streak} day${L.streak>1?'s':''}</span></div><p class="slain"${d(6)}>${L.mb?`<img alt="" src="${url(mobThumb(L.mb))}">`:''}Defeated: ${esc(L.name)}</p>
+    <button class="btn block" id="rc-ok"${d(7)}>${tax>0?'Grumble and accept':'Collect'}</button></div>`;
   $('#app').appendChild(o);
   $('#rc-ok').onclick=()=>{ o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); };
 }
