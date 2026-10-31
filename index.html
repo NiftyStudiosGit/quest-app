@@ -14,7 +14,7 @@
 <title>Quest &amp; Villainess Prototype</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&family=Caveat:wght@600;700&display=swap">
 <style>
 /* Layout: one phone-width column. Warm wood chrome (HUD + tab bar), parchment for paper things, cartoon pixel scenes. Single committed look. */
 :root{
@@ -290,15 +290,48 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .paper .ln.tax span:last-child{color:#a2302a}
 .paper .ln.net{border-bottom:0;font-weight:700;padding-top:10px}
 .paper .ln.net span:last-child{font-size:14px}
-.paper .stamp{position:absolute;right:14px;top:66px;transform:rotate(-14deg);border:3px solid #a2302a;color:#a2302a;font-family:var(--f-display);font-size:11px;padding:6px 8px;opacity:.85;animation:stamp .3s .45s steps(3) both}
-@keyframes stamp{from{transform:rotate(-14deg) scale(2.2);opacity:0}to{transform:rotate(-14deg) scale(1);opacity:.85}}
 .paper .slain{font-size:15px;margin-top:10px;color:#5a3d26}
-.paper.rc [style*="--d"]{animation:print .2s calc(.25s + var(--d)*.22s) steps(2) both}
-.paper.rc .stamp{animation-delay:1.9s}
-.paper.rc .ln.net{animation-name:print-pop}
-.paper .slain img{width:40px;height:auto;image-rendering:pixelated;vertical-align:middle;margin-right:8px;transform:rotate(180deg) scaleX(-1)}
+
+/* the daily royal decree (the cosmetic tax receipt): sealed scroll that unrolls, her note, a random sign-off */
+.decree-ov{cursor:pointer;align-content:center}
+.decree{width:100%;max-width:330px;position:relative;filter:drop-shadow(8px 12px 0 rgba(0,0,0,.35))}
+.decree .rod{height:18px;margin:0 -14px;position:relative;z-index:2;background:linear-gradient(180deg,#a8723f 0 25%,#8a5a34 25% 55%,#6b4226 55% 80%,#4a2c18 80%);box-shadow:0 0 0 3px var(--line)}
+.decree .rod::before,.decree .rod::after{content:"";position:absolute;top:-5px;width:12px;height:28px;background:#c99a3a;box-shadow:0 0 0 3px var(--line),inset -3px -3px 0 #8a6420,inset 3px 3px 0 #f0cf6a}
+.decree .rod::before{left:-12px}.decree .rod::after{right:-12px}
+.decree .dbody{overflow:hidden;background:var(--parch);box-shadow:inset 0 0 0 3px var(--parch-dk),inset 0 0 30px rgba(150,100,40,.4),0 0 0 3px var(--line);animation:unroll .9s .55s steps(9) both}
+@keyframes unroll{from{max-height:0}to{max-height:640px}}
+.decree .din{padding:34px 22px 20px;color:var(--ink-dk);display:flex;flex-direction:column}
+.decree .wax{position:absolute;left:50%;top:-14px;width:58px;height:58px;margin-left:-29px;z-index:3;display:grid;place-items:center;background:#b8283a;border-radius:48% 54% 44% 56%/54% 44% 58% 46%;box-shadow:0 0 0 3px #7a1424,inset -5px -5px 0 #8e1c2c,inset 4px 4px 0 #e04a5a;animation:waxpop .5s steps(4) both}
+.decree .wax img{width:35px;image-rendering:pixelated}
+@keyframes waxpop{0%{transform:scale(1.5) rotate(-10deg)}50%{transform:scale(.9) rotate(6deg)}100%{transform:none}}
+.decree .hd{font-family:var(--f-display);font-size:13px;text-align:center;line-height:1.6;letter-spacing:.04em;color:#7a1424}
+.decree .hd small{display:block;font-family:var(--f-body);font-size:17px;letter-spacing:0;color:var(--ink-mid);margin-top:2px}
+.decree .flour{display:block;margin:8px auto 14px;width:170px;height:10px;background:linear-gradient(90deg,transparent 0 8%,#8a5a34 8% 44%,transparent 44% 47%,#b8283a 47% 53%,transparent 53% 56%,#8a5a34 56% 92%,transparent 92%) center/100% 3px no-repeat}
+.decree .ln{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:5px 0;font-size:19px}
+.decree .ln b{font-family:var(--f-display);font-size:12px;font-weight:400;display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-top:4px}
+.decree .ln b span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.decree .ln img{width:16px;height:16px;image-rendering:pixelated}
+.decree .ln.tax{color:#a2302a}
+.decree .ln.gap{margin-top:12px}
+.decree .ln.paid{margin-top:12px;padding-top:12px;border-top:3px double rgba(90,61,38,.45)}
+.decree .ln.paid b{font-size:14px}
+.decree [style*="--d"]{animation:print .25s calc(1.5s + var(--d)*.3s) steps(2) both}
 @keyframes print{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
-@keyframes print-pop{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:none}}
+.decree .note{font-family:"Caveat",cursive;font-weight:600;font-size:26px;line-height:1.05;color:#8f1c3a;margin:16px 0 0;transform:rotate(-3deg);transform-origin:left;animation:write 1s var(--nt) steps(10) both}
+@keyframes write{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.decree .mark{align-self:flex-end;margin:10px -4px 0 0;animation:slam .35s var(--mt) steps(3) both}
+@keyframes slam{from{transform:scale(2.4) rotate(var(--r));opacity:0}to{transform:rotate(var(--r));opacity:var(--o,1)}}
+.decree .mark.kiss{--r:-14deg;--o:.88;mix-blend-mode:multiply}
+.decree .mark.kiss img{width:84px;image-rendering:pixelated;display:block}
+.decree .mark.sign{--r:-7deg;font-family:"Caveat",cursive;font-weight:700;font-size:32px;color:#5a0f26;text-align:right;line-height:.9}
+.decree .mark.sign::after{content:"";display:block;height:6px;margin:2px -6px 0 10px;border-bottom:3px solid #5a0f26;border-radius:0 0 60% 40%}
+.decree .mark.stamp{--r:-12deg;--o:.8;width:100px;height:100px;border-radius:50%;border:4px solid #b8283a;box-shadow:inset 0 0 0 3px var(--parch),inset 0 0 0 5px #b8283a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#b8283a;font-family:var(--f-display);font-size:6px;text-align:center;line-height:1.5;mix-blend-mode:multiply}
+.decree .mark.stamp img{width:34px;image-rendering:pixelated}
+.tapon{position:absolute;left:0;right:0;bottom:calc(36px + env(safe-area-inset-bottom,0px));margin:0;text-align:center;font-family:var(--f-display);font-size:10px;color:var(--gold);text-shadow:2px 2px 0 var(--line);animation:tapin .4s var(--tt) steps(2) both,blink 1.2s calc(var(--tt) + .4s) steps(2) infinite}
+@keyframes tapin{from{opacity:0}to{opacity:1}}
+@keyframes blink{50%{opacity:.35}}
+.decree-ov.skip *,.decree-ov.skip{animation-delay:0s!important;animation-duration:0s!important}
+.decree-ov.skip .tapon{animation:none}
 .paper .btn{margin-top:16px}
 .detail{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .detail img{width:96px;height:96px;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 rgba(90,61,38,.35))}
@@ -312,7 +345,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 
 .toast{position:absolute;left:16px;right:16px;bottom:110px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
-@media (prefers-reduced-motion: reduce){.go,.paper,.toast,.paper .stamp,.paper.rc [style*="--d"],.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
+@media (prefers-reduced-motion: reduce){.go,.paper,.toast,.decree *,.tapon,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
 </style>
 
 <div class="app" id="app">
@@ -449,6 +482,8 @@ function strSprite(key, rows, pal){
 const COIN = () => strSprite('coin',["..kkkk..",".kggggk.","kggyyggk","kgygkggk","kgygkggk","kggkkggk",".kggggk.","..kkkk.."],{k:'#2a1a24',g:'#f6c445',y:'#ffe9a0'});
 const VCOIN = () => strSprite('vcoin',["..kkkk..",".kppppk.","kpwppwpk","kpwppwpk","kppwwppk","kppwwppk",".kppppk.","..kkkk.."],{k:'#2a1a24',p:'#e8508a',w:'#ffe0ec'});
 const CROWN = () => strSprite('crown',["g..g..g","gg.g.gg","ggggggg","gryrygg","ggggggg"],{g:'#f6c445',r:'#ef6b5b',y:'#ffe9a0'});
+const CROWN_IN = col => strSprite('crown'+col,["g.....g.....g","g....ggg....g","gg...ggg...gg","ggg.ggggg.ggg","ggggggggggggg","gg.ggg.ggg.gg","ggggggggggggg"],{g:col});   // pressed into wax or ink
+const KISS = () => strSprite('kiss2',["....rrrr....rrrr....","..rrRRRRr..rRRRRrr..",".rRRRhRRRrrRRRhRRRr.","rRRcRRRRRRRRRRRRcRRr","rddRRRRRRRRRRRRRRddr",".rddddddddddddddddr.","rRRRRRRRRRRRRRRRRRRr",".rRcRRcRRcRRcRRcRRr.","..rRRRRhhRRRRRRRRr..","....rrrrrrrrrrrr...."],{r:'#a8183a',R:'#e0335a',h:'#ff8aa6',c:'#f0a0b4',d:'#7a0f28'});
 
 /* =========================================================
    State
@@ -459,8 +494,8 @@ const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own 
 const LOOT=[6,8,10,12,15];             // default gold drop table
 const KICK_LOOT=[2,3,3,4,5];           // gold per quest finished after the kill (never tied to the quest's hidden damage)
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
-const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', quests:[]});
-const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||p.quests.length>0);
+const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', quests:[]});
+const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||p.quests.length>0);
 // the NPC Villainess's list: the starting quests, and the fallback when nothing is assigned by spawn time
 const NPC_TASKS=[
   {name:'Drink 2 liters of water', dmg:5, repeat:'daily', taunt:'Hydrate, little hero. Dry heroes crumble.'},
@@ -469,6 +504,8 @@ const NPC_TASKS=[
   {name:'Tidy the desk', dmg:6, repeat:'once', taunt:'My miner found three mugs under your papers.'},
   {name:'Deep-clean the bathroom', dmg:18, repeat:'once', taunt:'This one bites. Bring gloves.'}
 ];
+// solo mode: the NPC Villainess scribbles one of these on the decree (a real Villainess writes her own, or nothing)
+const NPC_NOTES=['Don’t spend it all on snacks. Actually, do.','Fine. You win today. Enjoy it, peasant.','I let you win. Obviously.','Tomorrow’s mob has your name on it.','Not bad, hero. Not good either.','Hmph. Lucky swing.'];
 const newTasks=()=>NPC_TASKS.map(t=>({...t, id:nid(), done:false, hit:false}));
 function freshState(){
   return {
@@ -538,7 +575,7 @@ function spawnMob(){
   if (!S.tasks.length) S.tasks=newTasks();
   if (p.mob){ m.b=p.mob.b; m.v=p.mob.v; }
   const total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??DEF.threshold;
-  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', state:'alive'});
+  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', state:'alive'});
   delete S.plans[S.date];
 }
 const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
@@ -555,7 +592,7 @@ function landHit(task){
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
   S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak);
-  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
+  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(S.paired?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
   save(); return true;
 }
 function endDay(){
@@ -1156,23 +1193,37 @@ function drawActivity(now){
 function fireGlow(now,tod){ const a=tod==='night'?.3:tod==='evening'?.2:.08; ctx.save(); ctx.globalCompositeOperation='lighter'; [[150,a*.5],[90,a*.8],[50,a]].forEach(([r,al])=>{ ctx.globalAlpha=al*(0.9+0.1*Math.sin(now/90)); ctx.fillStyle='#ff9a3a'; ctx.beginPath(); ctx.arc(468,G-30,r,0,Math.PI*2); ctx.fill(); }); ctx.restore(); }
 
 /* =========================================================
-   Daily tax receipt (once, when the daily mob dies; taxes the V.coin bounty)
+   Daily royal decree (the cosmetic tax receipt): once, when the daily mob dies; taxes the V.coin bounty.
+   A sealed scroll unrolls, the lines appear, her note writes itself, and a random sign-off lands
    ========================================================= */
+const MARKS=['kiss','sign','stamp'];
 function showReceipt(){
   const L=S.loot; if (!L || document.querySelector('.overlay')) return;
-  const tax=L.gross-L.bounty;
+  const tax=L.gross-L.bounty, V=`<img alt="V.coins" src="${url(VCOIN())}">`, Gd=`<img alt="gold" src="${url(COIN())}">`;
   S.loot=null; save();
-  const o=document.createElement('div'); o.className='overlay';
-  const d=n=>` style="--d:${n}"`;
-  o.innerHTML=`<div class="paper rc" role="dialog" aria-label="Daily loot receipt"><div class="hd">Royal Tax Office<br>of ${esc(S.villName)}</div><div class="sub">Daily mob slain · Day ${L.day}</div>${tax>0?'<div class="stamp">TAXED</div>':''}
-    <div class="ln"${d(1)}><span>Gross bounty</span><span>${L.gross} V</span></div>
-    ${tax>0?`<div class="ln tax"${d(2)}><span>Villainess tax (${Math.round(L.rate*100)}%)</span><span>−${tax} V</span></div>`:''}
-    <div class="ln net"${d(3)}><span>Paid to you</span><span>${L.bounty} V.coins</span></div>
-    <div class="ln"${d(4)}><span>Loot dropped (untaxed)</span><span>${L.gold} gold</span></div>
-    <div class="ln"${d(5)}><span>Streak</span><span>${L.streak} day${L.streak>1?'s':''}</span></div><p class="slain"${d(6)}>${L.mb?`<img alt="" src="${url(mobThumb(L.mb))}">`:''}Defeated: ${esc(L.name)}</p>
-    <button class="btn block" id="rc-ok"${d(7)}>${tax>0?'Grumble and accept':'Collect'}</button></div>`;
+  const d=n=>` style="--d:${n}"`, nt=2.9, mt=L.note?4.1:3.1, tt=mt+2.35;   // seconds: note, mark, "tap anywhere"
+  const mark=MARKS[Math.floor(Math.random()*MARKS.length)];
+  const markHtml=mark==='kiss'?`<img alt="Her lipstick kiss" src="${url(KISS())}">`
+    : mark==='sign'?esc(S.villName)
+    : `<img alt="" src="${url(CROWN_IN('#b8283a'))}"><span>SEALED BY<br>HER VILLAINY</span>`;
+  const o=document.createElement('div'); o.className='overlay decree-ov';
+  o.innerHTML=`<div class="decree" role="dialog" aria-label="Royal decree: today’s bounty">
+    <div class="rod"></div><div class="wax" aria-hidden="true"><img alt="" src="${url(CROWN_IN('#7a1424'))}"></div>
+    <div class="dbody"><div class="din">
+      <div class="hd">Royal Decree<small>of ${esc(S.villName)}</small></div><i class="flour" aria-hidden="true"></i>
+      <div class="ln"${d(1)}><span>Bounty</span><b><span>${L.gross} ${V}</span></b></div>
+      ${tax>0?`<div class="ln tax"${d(2)}><span>Villainess tax</span><b><span>-${tax} ${V}</span></b></div>`:''}
+      <div class="ln gap"${d(3)}><span>Gold gained</span><b><span>${L.gold} ${Gd}</span></b></div>
+      <div class="ln paid"${d(4)}><span>Paid out</span><b><span>${L.bounty} ${V}</span><span>${L.gold} ${Gd}</span></b></div>
+      ${L.note?`<p class="note" style="--nt:${nt}s">${esc(L.note)}</p>`:''}
+      <div class="mark ${mark}" style="--mt:${mt}s"${mark==='sign'?` aria-label="Signed, ${esc(S.villName)}"`:''}>${markHtml}</div>
+    </div></div><div class="rod"></div></div>
+    <p class="tapon" style="--tt:${tt}s">Tap anywhere to accept</p>`;
   $('#app').appendChild(o);
-  $('#rc-ok').onclick=()=>{ o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); };
+  // a tap before it's done skips to the end; the next one accepts
+  let ready=false; const t=setTimeout(()=>ready=true, tt*1000);
+  o.onclick=()=>{ if(!ready){ ready=true; clearTimeout(t); o.classList.add('skip'); return; }
+    o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); };
 }
 // the mob was still alive when the day ended
 function showFled(){
@@ -1563,6 +1614,7 @@ function renderVMobs(m){
       <div class="switch"><span>Day ends</span><b>${hm(Math.round((endAt-at(S.date,0))/60000))} · in ${dur(endAt-clock())}</b></div>
       <div class="f"><span>Grant extra time today${mb.extra?` (+${dur(mb.extra*60000)} so far)`:''}</span><div class="row3"><button class="btn ghost" data-ext="30">+30m</button><button class="btn ghost" data-ext="60">+1h</button><button class="btn ghost" data-ext="120">+2h</button></div></div>
       ${alive?`<div class="row2"><label class="f">Today’s bounty<input class="inp" id="td-bounty" type="number" min="0" max="999" value="${mb.bounty}"></label><label class="f">Today’s gold drop<input class="inp" id="td-gold" type="number" min="0" max="999" placeholder="Loot table" value="${mb.gold??''}"></label></div>`:''}
+      ${alive?`<label class="f">Note on today’s decree (optional)<textarea class="inp" id="td-note" maxlength="90" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(mb.note||'')}</textarea></label>`:''}
       <button class="btn ghost block" id="td-rest">Give ${P.him} a free rest day</button>
       <p class="small muted">Extra time and rest days are gifts: they never cost ${P.him} an Inn token. Ending the day earlier needs ${P.his} OK (Rules tab).</p></div>`:''}
     <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in ${P.his} Quest Log. ${P.He} never sees how much damage it does.</p></div>
@@ -1580,6 +1632,7 @@ function renderVMobs(m){
       <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
         <span class="small muted">The mob dies once ${P.he}’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
+      <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="90" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
       <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div>
       <div class="f"><span>Extra quests that day (one-offs, added at spawn)</span>
         ${p.quests.length?`<div class="vlist">${p.quests.map((q,i)=>`<div class="vrow"><div class="t"><b>${esc(q.name)}</b><span class="small muted">${q.dmg} damage</span></div><button class="x" data-pq="${i}" aria-label="Remove ${esc(q.name)}">X</button></div>`).join('')}</div>`:''}
@@ -1595,6 +1648,7 @@ function renderVMobs(m){
   m.querySelectorAll('[data-ext]').forEach(b=>b.onclick=()=>{ mb.extra=(mb.extra||0)+(+b.dataset.ext); save(); rerender(); toast(`${P.He} gets ${dur(+b.dataset.ext*60000)} more today. How merciful.`); });
   if ($('#td-bounty')) $('#td-bounty').onchange=e=>{ mb.bounty=num(e.target.value)??DEF.bounty; save(); toast(`Today’s bounty: ${mb.bounty} V.coins.`); };
   if ($('#td-gold')) $('#td-gold').onchange=e=>{ mb.gold=num(e.target.value); save(); toast(mb.gold==null?'Gold drop: default loot table.':`Today’s gold drop: ${mb.gold}.`); };
+  if ($('#td-note')) $('#td-note').onchange=e=>{ mb.note=e.target.value.trim(); save(); toast(mb.note?'Your note will be on today’s decree.':'No note today.'); };
   if ($('#td-rest')) $('#td-rest').onclick=()=>{ restDay(); save(); renderTabs(); rerender(); toast(`Rest day granted. ${P.His} streak is safe.`); };
   m.querySelectorAll('#cal button').forEach(b=>b.onclick=()=>{ sync(); ui.planDate=b.dataset.d; rerender(); });
   $('#np-th').oninput=e=>{ plan().threshold=+e.target.value; $('#np-tv').textContent=e.target.value+'%'; tidy(); };
@@ -1602,6 +1656,7 @@ function renderVMobs(m){
   $('#np-name').onchange=e=>{ sync(); plan().name=e.target.value.trim(); tidy(); rerender(); };
   $('#np-bounty').onchange=e=>{ sync(); plan().bounty=num(e.target.value); tidy(); rerender(); };
   $('#np-gold').onchange=e=>{ sync(); plan().gold=num(e.target.value); tidy(); rerender(); };
+  $('#np-note').onchange=e=>{ sync(); plan().note=e.target.value.trim(); tidy(); rerender(); };
   $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); plan().mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; tidy(); rerender(); });
   m.querySelectorAll('[data-pq]').forEach(b=>b.onclick=()=>{ sync(); plan().quests.splice(+b.dataset.pq,1); tidy(); rerender(); });
   $('#pq-add').onclick=()=>{ sync(); const name=pq.name.trim(); if(!name){ toast('Name the quest first.'); return; }
