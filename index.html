@@ -389,7 +389,7 @@ const mobThumb = m => { const a=mobArt(m,'idle'); return memo('thumb'+m.b+'-'+m.
 const rmob = () => ({b:Math.floor(Math.random()*MOB_BASES.length), v:Math.floor(Math.random()*4)});
 // the daily mob is sometimes a group: still one HP pool, members drop off as it falls
 const GROUP_NAMES=['Gang','Squad','Crew','Raiding Party','Flock'];
-const dailyName = m => mobName(m)+(m.group>1?' '+GROUP_NAMES[m.b]:'');
+const dailyName = m => m.name||(mobName(m)+(m.group>1?' '+GROUP_NAMES[m.b]:''));   // she can rename it
 
 /* Villainess (procedural until she gets real art) */
 function villSprite(disguise, full){ return frame((disguise?'vill_shop':'vill')+(full?'':'_face'),0); }
@@ -409,7 +409,7 @@ const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
 const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own (and in solo mode)
 const LOOT=[6,8,10,12,15];             // default gold drop table
-const NEXT_PLAN=()=>({threshold:null, bounty:null, gold:null, mob:null}); // null = use the default
+const NEXT_PLAN=()=>({threshold:null, bounty:null, gold:null, mob:null, name:''}); // null = use the default
 // the NPC Villainess's list: the starting quests, and the fallback when nothing is assigned by spawn time
 const NPC_TASKS=[
   {name:'Drink 2 liters of water', dmg:5, repeat:'daily', taunt:'Hydrate, little hero. Dry heroes crumble.'},
@@ -446,7 +446,7 @@ function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 function spawnMob(){
   if (!S.tasks.length) S.tasks=newTasks();
   const p=S.plan, art=p.mob||rmob(), total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??DEF.threshold;
-  S.mob={b:art.b, v:art.v, group:Math.random()<.35?3:1, threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, state:'alive'};
+  S.mob={b:art.b, v:art.v, group:Math.random()<.35?3:1, threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||'', state:'alive'};
   S.plan=NEXT_PLAN();
 }
 const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
@@ -723,9 +723,12 @@ function hpBar(now){
   let f=hpFrac();
   if (hit && !hit.landed) f=hit.from;
   else if (hit) f=hit.from+(hit.to-hit.from)*Math.min(1,(now-hit.landed)/500);
-  const x=430, y=-30, w=260, h=18;
+  // a boss bar across the whole top, with the mob's name (or the name she gave it) inside
+  const x=16, y=-38, w=W-32, h=30;
   rect(x-4,y-4,w+8,h+8,'#1a100a'); rect(x,y,w,h,'#5a2a20');
-  if (f>0){ rect(x,y,Math.max(4,Math.round(w*f)),h,'#e04a3c'); rect(x,y,Math.max(4,Math.round(w*f)),5,'#ff8a7a'); }
+  if (f>0){ rect(x,y,Math.max(4,Math.round(w*f)),h,'#e04a3c'); rect(x,y,Math.max(4,Math.round(w*f)),7,'#ff8a7a'); }
+  if (crowned()){ const cr=CROWN(); ctx.drawImage(cr, x+8, y+5, cr.width*4, cr.height*4); }
+  text(dailyName(S.mob), x+(crowned()?46:12), y+7, '#ffffff', 16);
 }
 // completing a quest: a held wind-up cut, then a bigger impact cut than the idle POW
 function drawBigHit(now, spots, order){
@@ -1119,6 +1122,7 @@ function renderVMobs(m){
   m.innerHTML=`<div class="stack">
     <div><h2 style="color:var(--hex)">Today’s mob</h2><div class="vrow px"><img alt="" src="${url(mobThumb(mb))}" style="object-fit:contain;width:48px;height:48px"><div class="t"><b>${esc(dailyName(mb))}</b>
       <span class="small muted">${alive?`${hpLeft} of ${Math.ceil(mb.hp)} HP left`:'Defeated'} · dies at ${mb.threshold}% of the damage you assigned · bounty ${mb.bounty} V.coins · gold drop: ${mb.gold??'default loot table'}</span></div></div>
+      <label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="30" placeholder="${esc(mobName(mb)+(mb.group>1?' '+GROUP_NAMES[mb.b]:''))}" value="${esc(mb.name||'')}"></label>
       <p class="small muted">The threshold locked when the mob spawned. Quests you add now make today’s kill easier, never harder.</p></div>
     <div><h2 style="color:var(--hex)">Add a quest</h2><p class="muted small">It appears in his Quest Log. He never sees how much damage it does.</p></div>
     <form class="px vpanel" id="mf" autocomplete="off">
@@ -1129,6 +1133,7 @@ function renderVMobs(m){
     <div><h3>His quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.dmg} damage (${share(t)}% of HP) · ${t.repeat==='daily'?'daily':'once'} · ${t.hit?'landed':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}">X</button></div>`).join('')||'<div class="empty">No quests. Tomorrow I’ll fall back to the default list.</div>'}</div></div>
     <div><h2 style="color:var(--hex)">Tomorrow’s mob</h2><p class="muted small">Used when the next mob spawns, then reset. Leave a box empty to use the default.</p></div>
     <div class="px vpanel">
+      <label class="f">Name (optional)<input class="inp" id="np-name" maxlength="30" placeholder="e.g. Laundry Golem" value="${esc(p.name||'')}"></label>
       <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
         <span class="small muted">The mob dies once he’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
@@ -1136,6 +1141,8 @@ function renderVMobs(m){
   const sync=()=>{ d.name=$('#mf-name').value; d.dmg=$('#mf-dmg').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; };
   const num=v=>v===''?null:Math.max(0,Math.min(999,parseInt(v,10)||0));
   $('#np-th').oninput=e=>{ p.threshold=+e.target.value; $('#np-tv').textContent=e.target.value+'%'; save(); };
+  $('#tm-name').onchange=e=>{ mb.name=e.target.value.trim(); save(); renderVMobs(m); toast(mb.name?`Today’s mob is now “${mb.name}”.`:'Name reset.'); };
+  $('#np-name').onchange=e=>{ p.name=e.target.value.trim(); save(); };
   $('#np-bounty').onchange=e=>{ p.bounty=num(e.target.value); save(); };
   $('#np-gold').onchange=e=>{ p.gold=num(e.target.value); save(); };
   $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); p.mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; save(); const sc=$('#main').scrollTop; renderVMobs(m); $('#main').scrollTop=sc; });
