@@ -868,11 +868,10 @@ function renderTalents(m){
 /* =========================================================
    Shop + Bag
    ========================================================= */
-let shopRaf=0, shopCtx=null, shopT0=0, swap=null, npcAt=0, popT=0;
+let shopRaf=0, shopCtx=null, shopT0=0;
 const SHOP_LINES=['Welcome, traveler! I am a perfectly ordinary merchant.','Villainess? Never heard of her. Lovely mustache, though, isn’t it?','Gold first, questions never.','Everything here was priced by… a stranger. A kind stranger.','Browse all you like. I have nowhere else to be. Certainly no lair.'];
 const FORGE_LINES=['Welcome to the forge! I am the blacksmith. We have never met before.','The shopkeeper? Different person. Completely different. Look at this beard.','This beard is real. Please stop looking at it.','No crown under these goggles. That’s just a very shiny… helmet.','Gear gives small boons. It will never help you hit harder. I made sure of that.'];
-// the running gag: every NPC is her, and she has to change costumes behind the counter
-const SWAP_LINES={shop:'The forge? Ah, yes, my… colleague. Wait right there!', forge:'Back to the shop? Off you go. I’ll just… tidy up back here.'};
+// the running gag: every NPC is her. Switching rooms is instant; the joke lives in her greeting
 const ARRIVE_LINES={forge:'*huff* *puff* Welcome to the forge! I was here the whole time.', shop:'Welcome back, traveler! Hm? Soot? What soot?'};
 // the blacksmith disguise: goggles over the crown, fake beard, leather apron, hammer
 const smithSprite=()=>frame('vill_smith',0);
@@ -889,17 +888,14 @@ function renderShop(m){
       <div class="shopsign"><span>${forge?'The Forge':'Ye Olde Shoppe'}</span></div>
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">
-      <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?'…':lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
+      <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?ARRIVE_LINES[ui.shopRoom]:lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
       <p class="hint">You have <b style="color:var(--gold)">${S.gold} gold</b>. ${forge?'Gear gives small boons, never extra damage.':'Tap a crate to look closer.'}</p>
       ${stock?`<div class="crates">${stock}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
-  const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
-  swap=null; popT=0; npcAt=arriving?shopT0+1500:0;
-  let li=0; cv.onclick=()=>{ if(swap||npcAt) return; li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
-  $('#go-room').onclick=()=>{ if(swap||npcAt) return; swap={t0:performance.now()}; $('#shopline').textContent=SWAP_LINES[ui.shopRoom]; };
+  const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now()-(arriving?2000:0); // no hop-in when coming from the other room
+  let li=0; cv.onclick=()=>{ li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
+  $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); };
   const lp=now=>{ if(!shopCtx) return;
-    if (npcAt && now>=npcAt){ npcAt=0; popT=now; const l=$('#shopline'); if(l) l.textContent=ARRIVE_LINES[ui.shopRoom]; }
     drawShop(now);
-    if (swap && now-swap.t0>1500){ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); return; }
     shopRaf=requestAnimationFrame(lp); };
   shopRaf=requestAnimationFrame(lp);
   m.querySelectorAll('.crate').forEach(b=>b.onclick=()=>b.dataset.g?openGear(b.dataset.g):openItem(b.dataset.id));
@@ -909,22 +905,14 @@ function drawShop(now){
   const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),c,d); };
   const FLOOR=214, sk=SKIES[getTod()], forge=ui.shopRoom==='forge';
   if (forge) forgeRoom(x,r,now,FLOOR); else shopRoom(x,r,FLOOR,sk);
-  // the NPC behind the counter: ducks down to change costumes, pops back up as someone "else"
-  const ducked = (npcAt && now<npcAt) || (swap && now-swap.t0>600);
-  if (!ducked){
-    const v=forge?smithSprite():villSprite(true,true), bob=Math.round(Math.sin(now/500));
-    x.save(); x.translate(420+Math.round(v.width/2), (forge?80:48)+bob); x.scale(-1,1); x.drawImage(v,0,0); x.restore();
-    if (swap && now-swap.t0<600){ x.font='20px "Press Start 2P", monospace'; x.textBaseline='top'; x.fillStyle='#1a100a'; x.fillText('!',424,24); x.fillStyle='#ffe066'; x.fillText('!',422,22); }
-  }
+  // the NPC behind the counter (always her, in a different disguise)
+  const v=forge?smithSprite():villSprite(true,true), bob=Math.round(Math.sin(now/500));
+  x.save(); x.translate(420+Math.round(v.width/2), (forge?80:48)+bob); x.scale(-1,1); x.drawImage(v,0,0); x.restore();
   // counter (shop) or workbench (forge)
   if (forge){ r(316,150,164,FLOOR-150+6,'#4a4652'); r(316,150,164,8,'#7a7484'); r(316,158,164,2,'#2e2a36'); for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#3a3644');
     r(340,128,4,22,'#8a5530'); r(330,122,24,10,'#5a5a66'); r(330,122,24,2,'#9a9aaa'); }
   else { r(316,150,164,FLOOR-150+6,'#8a5530'); r(316,150,164,8,'#b07a44'); r(316,158,164,2,'#5a3418'); for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#6b4226');
     x.drawImage(icon('coinbag'),324,122); x.drawImage(icon('chest'),448,122); }
-  // costume-change dust behind the counter
-  const dustT = swap && now-swap.t0>600 ? now-swap.t0-600 : popT && now-popT<500 ? now-popT : -1;
-  if (dustT>=0 && dustT<500){ spr(x,'fx_dust',Math.min(7,Math.floor(dustT/60)),400,160); spr(x,'fx_dust',Math.min(7,Math.floor(dustT/60)),450,156,{flip:true}); }
-  if (swap && now-swap.t0>650){ x.font='10px "Press Start 2P", monospace'; x.textBaseline='top'; x.fillStyle='#ffffff'; x.fillText(Math.floor(now/180)%2?'*rustle*':'*clank*',350,118); }
   // the hero hops in through the door on the left, then stands still
   if (S.cls){
     const C=CLASSES[S.cls], t=now-shopT0, dur=1300;
@@ -934,9 +922,7 @@ function drawShop(now){
     spr(x,C.idle,Math.floor(now/(k<1?70:120)),cx,FLOOR+22-hop);
     if (k>=1 && t<dur+500){ const f=Math.min(7,Math.floor((t-dur)/60)); spr(x,'fx_dust',f,cx-24,FLOOR+22); }
   }
-  if (!forge && sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,-40,480,300); }
-  if (swap && now-swap.t0>1150){ x.fillStyle='#000'; x.fillRect(0,-40,480,300); } // hard cut to the other room
-}
+  if (!forge && sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,-40,480,300); }}
 function shopRoom(x,r,FLOOR,sk){
   // back wall planks
   for(let y=-40;y<FLOOR;y+=20){ r(0,y,480,20,'#6b4428'); r(0,y+18,480,2,'#4e301b'); r(0,y,480,2,'#7d5232'); }
