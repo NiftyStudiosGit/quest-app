@@ -28,7 +28,7 @@
   color-scheme:dark;
 }
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent;overflow-wrap:anywhere}   /* a word with no spaces still breaks instead of spilling */
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent;overflow-wrap:anywhere;font-variant-ligatures:none}   /* a word with no spaces still breaks instead of spilling */
 *{box-sizing:border-box}
 button,input,select,textarea{font:inherit;color:inherit}
 .app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden}
@@ -185,12 +185,12 @@ main.has-orb .below{padding-bottom:56px}
 @keyframes nudge-back{50%{transform:translateX(-3px)}}
 
 /* hero sheet: gear slots around the hero on the main screen */
-.doll-l,.doll-r{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
-.doll-l{left:10px}.doll-r{right:10px}
-.slot{width:42px;height:42px;padding:0;border:0;cursor:pointer;background:rgba(20,12,6,.72);box-shadow:0 0 0 3px var(--line),inset 0 0 0 2px var(--wood-hi);display:grid;place-items:center}
-.slot img{width:32px;height:32px;image-rendering:pixelated}
-.slot span{font-family:var(--f-display);font-size:6px;color:var(--muted);line-height:1.3;text-align:center}
-.slot[aria-pressed="true"]{box-shadow:0 0 0 3px var(--line),inset 0 0 0 3px var(--gold)}
+.doll-l,.doll-r{position:absolute;top:5%;bottom:5%;display:flex;flex-direction:column;justify-content:space-between;align-items:center}
+.doll-l{left:3%}.doll-r{right:3%}
+.slot{height:21.5%;aspect-ratio:1;padding:0;border:0;cursor:pointer;background:rgba(20,12,6,.72);box-shadow:0 0 0 3px var(--line),inset 0 0 0 3px var(--rc,var(--wood-hi));display:grid;place-items:center}
+.slot img{width:72%;height:72%;image-rendering:pixelated}
+.slot span{font-family:var(--f-display);font-size:6px;color:var(--muted);line-height:1.4;text-align:center}
+.slot[aria-pressed="true"]{background:rgba(120,90,50,.85);transform:scale(1.08)}
 .plate{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(20,12,6,.72);box-shadow:0 0 0 3px var(--line);padding:6px 10px;text-align:center;display:flex;flex-direction:column;gap:5px;white-space:nowrap}
 .plate b{font-family:var(--f-display);font-size:8px;color:var(--gold);text-shadow:1px 1px 0 var(--line)}
 .plate span{font-size:14px}
@@ -199,11 +199,12 @@ main.has-orb .below{padding-bottom:56px}
 .selbar .t{flex:1;min-width:0}
 .selbar .t b{display:block;font-weight:600}
 .boon{color:var(--ok)}
-.plate .boon{font-size:13px}
-/* fine (tier 2) gear: a green corner gem and a small tag */
-.fine-t{font-style:normal;font-family:var(--f-display);font-size:6px;color:var(--ok);vertical-align:middle;margin-left:4px}
-.slot.fine,.inv button.fine{position:relative}
-.slot.fine::after,.inv button.fine::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;background:var(--ok);box-shadow:0 0 0 2px var(--line)}
+/* gear rarity: colored frames, a small label, a pip on forge crates */
+.rtag{font-style:normal;font-family:var(--f-display);font-size:6px;background:var(--line);padding:3px 5px;display:inline-block;vertical-align:middle;line-height:1.2}
+.selbar .rtag{margin:4px 0}
+.selbar.gear{flex-wrap:wrap}
+.selbar.gear .btn{width:100%}
+.rpip{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:10px;height:10px;box-shadow:0 0 0 2px var(--line)}
 .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .link{background:transparent;border:0;padding:0 0 10px;cursor:pointer;color:var(--gold);font-family:var(--f-display);font-size:7px}
 .vrow.off{opacity:.55}
@@ -222,10 +223,10 @@ main.has-orb .below{padding-bottom:56px}
 
 /* inventory grid (Hero gear, Bag items) */
 .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:12px}
-.inv button{aspect-ratio:1;background:#1e140d;border:0;cursor:pointer;position:relative;display:grid;place-items:center;margin:5px;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--wood-hi)}
+.inv button{aspect-ratio:1;background:#1e140d;border:0;cursor:pointer;position:relative;display:grid;place-items:center;margin:5px;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 6px var(--rc,var(--wood-hi))}
 .inv button img{width:72%;image-rendering:pixelated}
-.inv button[aria-pressed="true"]{box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--gold)}
-.inv .tag{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-family:var(--f-display);font-size:6px;color:var(--gold);text-shadow:1px 1px 0 var(--line)}
+.inv button[aria-pressed="true"]{background:#4a3420;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 6px var(--rc,var(--wood-hi)),0 0 0 9px var(--line),0 0 0 11px rgba(255,255,255,.55)}
+.inv .tag{position:absolute;top:0;left:0;background:var(--line);padding:3px 4px 2px;font-family:var(--f-display);font-size:8px;color:#fff}
 
 /* talent tree */
 .tree{padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
@@ -1589,36 +1590,76 @@ const dayLeftText=()=>'day ends in '+dur(dayEndAt(S.date)-clock());
 /* =========================================================
    Hero sheet: 8 gear slots, the gear rack, boons and stats
    ========================================================= */
-const GEAR_SLOTS=[['head','Head'],['chest','Chest'],['pants','Pants'],['boots','Boots'],['weapon','Weapon'],['offhand','Off-hand'],['ring','Ring'],['amulet','Amulet']];
-// gear sold at the forge, two tiers per slot (t:2 = fine, recolored with fx). Boons are small: they never add damage,
-// lower the threshold, touch V.coins or override her settings. Weapon and off-hand are named for his class
-// (the sprite keeps its own weapon until matching art exists)
-const GEAR={
-  cap:{slot:'head', price:30, boon:{gold:1}, n:'Iron Cap', d:'Dented, but it has character.'},
-  hat:{slot:'head', t:2, price:90, boon:{exp:5}, fx:'hue:250', n:'Feathered Hat', d:'The feather does all the work. Mostly.'},
-  vest:{slot:'chest', price:40, boon:{gold:1}, n:'Leather Vest', d:'Smells faintly of campfire. In a good way.'},
-  coat:{slot:'chest', t:2, price:110, boon:{gold:2,min:5}, fx:'hue:150', n:'Traveler’s Coat', d:'A pocket for every occasion, and one more for snacks.'},
-  trousers:{slot:'pants', price:30, boon:{min:5}, n:'Sturdy Trousers', d:'Extra pockets for extra snacks.'},
-  leggings:{slot:'pants', t:2, price:90, boon:{min:10,exp:3}, fx:'hue:240', n:'Ranger Leggings', d:'Quiet, comfy and suspiciously stain-proof.'},
-  boots:{slot:'boots', price:35, boon:{min:10}, n:'Swift Boots', d:'You won’t run faster, but you’ll feel like you do.'},
-  wings:{slot:'boots', t:2, price:120, boon:{min:15}, fx:'hue:180', n:'Winged Boots', d:'Tiny wings. Zero flight. Maximum style.'},
-  sword:{slot:'weapon', price:50, boon:{gold:2},
-    n:{warrior:'Iron Sword', archer:'Yew Bow', mage:'Oak Staff'},
-    d:{warrior:'Shiny and sharp. Mobs only fall to real quests, though.', archer:'Bendy in all the right places. Mobs only fall to real quests, though.', mage:'Knotted, humming, and a great walking stick.'}},
-  blade:{slot:'weapon', t:2, price:150, boon:{gold:2,kick:1}, fx:'hue:200',
-    n:{warrior:'Knight’s Blade', archer:'Silverwood Bow', mage:'Crystal Staff'},
-    d:{warrior:'So polished you can check your hair in it.', archer:'Sings a little note on every shot.', mage:'Glows when you’re about to finish a quest. Coincidence?'}},
-  shield:{slot:'offhand', price:40, boon:{min:5},
-    n:{warrior:'Oak Shield', archer:'Leather Quiver', mage:'Pocket Spellbook'},
-    d:{warrior:'Sturdy oak with a lucky knot in the middle.', archer:'Holds twelve arrows and one emergency cookie.', mage:'Mostly blank pages. Mostly.'}},
-  kite:{slot:'offhand', t:2, price:110, boon:{min:5,kick:1}, fx:'hue:160',
-    n:{warrior:'Kite Shield', archer:'Endless Quiver', mage:'Grand Grimoire'},
-    d:{warrior:'Tall, proud and only a little heavy.', archer:'It never runs out. Nobody knows why.', mage:'Every spell inside is about being on time.'}},
-  ring:{slot:'ring', price:60, boon:{gold:3}, n:'Copper Ring', d:'Turns your finger a little green. Worth it.'},
-  moon:{slot:'ring', t:2, price:140, boon:{gold:2,exp:5}, fx:'hue:200', n:'Moonstone Ring', d:'Cool to the touch, warm to the ego.'},
-  amulet:{slot:'amulet', price:80, boon:{gold:2,min:5}, n:'Lucky Amulet', d:'A pendant that hums when gold is near.'},
-  star:{slot:'amulet', t:2, price:180, boon:{gold:3,exp:5,kick:1}, fx:'hue:280', n:'Star Pendant', d:'A fallen star on a string. Wishes not included.'}
-};
+const GEAR_SLOTS=[['head','Head'],['chest','Chest'],['pants','Pants'],['boots','Boots'],['weapon','Main hand'],['offhand','Off-hand'],['ring','Ring'],['amulet','Amulet']];
+// where each slot sits around the hero (owner's sketch): main hand bottom left, off-hand bottom right
+const DOLL_L=['head','chest','pants','weapon'], DOLL_R=['amulet','ring','boots','offhand'];
+// six rarities, lowest first (owner's order and colors). Each tints the slot's base icon
+const RARITY=[{n:'Uncommon',c:'#9d9d9d',fx:'mul:#a8a8a8'},{n:'Common',c:'#ffffff',fx:''},{n:'Magic',c:'#4a9cff',fx:'tint:#4a9cff'},{n:'Rare',c:'#ffd23f',fx:'tint:#ffd23f'},{n:'Epic',c:'#b05cff',fx:'tint:#b05cff'},{n:'Legendary',c:'#ff8a1f',fx:'tint:#ff8a1f'}];
+const rarOf=k=>RARITY[GEAR[k].r];
+const rtag=k=>`<i class="rtag" style="color:${rarOf(k).c}">${rarOf(k).n}</i>`;
+// gear sold at the forge: one piece per slot and rarity. Boons are small: they never add damage, lower the threshold,
+// touch V.coins or override her settings. Weapon and off-hand are named for his class (the sprite keeps its own weapon
+// until matching art exists). Keys of older pieces never change, so saves keep their gear
+const GEAR={};
+[ // key, slot, rarity, price, boon, name, description
+  ['straw','head',0,15,{min:5},'Straw Hat','Keeps the sun off. Mostly.'],
+  ['cap','head',1,30,{gold:1},'Iron Cap','Dented, but it has character.'],
+  ['hat','head',2,90,{exp:5},'Feathered Hat','The feather does all the work. Mostly.'],
+  ['circlet','head',3,200,{gold:2,exp:5},'Silver Circlet','Makes every thought feel a little more heroic.'],
+  ['dragonhelm','head',4,400,{gold:2,exp:10,min:5},'Dragonbone Helm','A gift from a dragon who wanted a new look.'],
+  ['diadem','head',5,800,{gold:3,exp:10,min:10},'Sunfire Diadem','Glows at dawn. Great for early quests.'],
+  ['tunic','chest',0,15,{gold:1},'Patched Tunic','More patch than tunic at this point.'],
+  ['vest','chest',1,40,{gold:1},'Leather Vest','Smells faintly of campfire. In a good way.'],
+  ['coat','chest',2,110,{gold:2,min:5},'Traveler’s Coat','A pocket for every occasion, and one more for snacks.'],
+  ['chain','chest',3,220,{gold:2,min:5,exp:5},'Chainmail Shirt','Jingles heroically when you walk.'],
+  ['phoenix','chest',4,420,{gold:3,exp:5,min:10},'Phoenix Mail','Warm in winter. Suspiciously warm in summer.'],
+  ['mantle','chest',5,850,{gold:4,exp:10,min:5},'Mantle of Dawn','Woven from the first light of a very good morning.'],
+  ['shorts','pants',0,12,{min:5},'Frayed Shorts','Breezy. Very breezy.'],
+  ['trousers','pants',1,30,{min:5},'Sturdy Trousers','Extra pockets for extra snacks.'],
+  ['leggings','pants',2,90,{min:10,exp:3},'Ranger Leggings','Quiet, comfy and suspiciously stain-proof.'],
+  ['greaves','pants',3,190,{min:10,exp:5},'Scaled Greaves','Each scale polished by hand. Yours, probably.'],
+  ['shadow','pants',4,380,{min:15,exp:5,gold:1},'Shadowstep Breeches','You could sneak past a mob. You won’t, but you could.'],
+  ['starlegs','pants',5,780,{min:20,exp:10},'Starlight Greaves','They twinkle when you sit down. Classy.'],
+  ['sandals','boots',0,12,{min:5},'Worn Sandals','Your toes say hello to everyone.'],
+  ['boots','boots',1,35,{min:10},'Swift Boots','You won’t run faster, but you’ll feel like you do.'],
+  ['wings','boots',2,120,{min:15},'Winged Boots','Tiny wings. Zero flight. Maximum style.'],
+  ['storm','boots',3,230,{min:15,kick:1},'Stormstriders','A tiny thunderclap follows every step.'],
+  ['league','boots',4,420,{min:20,kick:1,gold:1},'Seven-League Boots','Sadly they only go one league at a time.'],
+  ['comet','boots',5,820,{min:25,kick:2},'Comet Treads','They leave a sparkly trail. Mobs hate that.'],
+  ['stick','weapon',0,15,{gold:1},{warrior:'Wooden Sword',archer:'Twig Bow',mage:'Broom Handle'},'Technically a weapon. Technically.'],
+  ['sword','weapon',1,50,{gold:2},{warrior:'Iron Sword',archer:'Yew Bow',mage:'Oak Staff'},
+    {warrior:'Shiny and sharp. Mobs only fall to real quests, though.', archer:'Bendy in all the right places. Mobs only fall to real quests, though.', mage:'Knotted, humming, and a great walking stick.'}],
+  ['blade','weapon',2,150,{gold:2,kick:1},{warrior:'Knight’s Blade',archer:'Silverwood Bow',mage:'Crystal Staff'},
+    {warrior:'So polished you can check your hair in it.', archer:'Sings a little note on every shot.', mage:'Glows when you’re about to finish a quest. Coincidence?'}],
+  ['runed','weapon',3,260,{gold:3,kick:1},{warrior:'Runed Broadsword',archer:'Hunter’s Longbow',mage:'Runed Scepter'},'Covered in runes nobody can read. Very impressive.'],
+  ['tempest','weapon',4,480,{gold:3,kick:2,exp:5},{warrior:'Dragonslayer',archer:'Windsong Bow',mage:'Staff of Storms'},'Crackles with power it isn’t allowed to use on mobs.'],
+  ['sunforged','weapon',5,950,{gold:4,kick:2,exp:10},{warrior:'Sunforged Greatsword',archer:'Starfall Bow',mage:'Archmage’s Staff'},'The stuff of legends. Mobs still only fall to real quests.'],
+  ['lid','offhand',0,12,{min:5},{warrior:'Pot Lid',archer:'Rag Quiver',mage:'Scribbled Notes'},
+    {warrior:'Borrowed from the kitchen. Please return it.', archer:'Holds three arrows if you squeeze.', mage:'Half spells, half shopping list.'}],
+  ['shield','offhand',1,40,{min:5},{warrior:'Oak Shield',archer:'Leather Quiver',mage:'Pocket Spellbook'},
+    {warrior:'Sturdy oak with a lucky knot in the middle.', archer:'Holds twelve arrows and one emergency cookie.', mage:'Mostly blank pages. Mostly.'}],
+  ['kite','offhand',2,110,{min:5,kick:1},{warrior:'Kite Shield',archer:'Endless Quiver',mage:'Grand Grimoire'},
+    {warrior:'Tall, proud and only a little heavy.', archer:'It never runs out. Nobody knows why.', mage:'Every spell inside is about being on time.'}],
+  ['tower','offhand',3,210,{min:10,kick:1},{warrior:'Tower Shield',archer:'Hunter’s Quiver',mage:'Tome of Tides'},'Sturdy, reliable and a bit of a show-off.'],
+  ['lion','offhand',4,400,{min:10,kick:1,gold:2},{warrior:'Lion Aegis',archer:'Quiver of Gales',mage:'Codex of Stars'},'Roars softly whenever you finish a quest.'],
+  ['dawnshield','offhand',5,800,{min:15,kick:2,exp:5},{warrior:'Shield of Dawn',archer:'Starlight Quiver',mage:'Book of Ages'},'Older than the kingdom, and somehow still shiny.'],
+  ['twine','ring',0,15,{gold:1},'Twine Ring','Tied with love and a slightly wonky knot.'],
+  ['ring','ring',1,60,{gold:2},'Copper Ring','Turns your finger a little green. Worth it.'],
+  ['moon','ring',2,140,{gold:2,exp:5},'Moonstone Ring','Cool to the touch, warm to the ego.'],
+  ['ruby','ring',3,240,{gold:3,exp:5},'Ruby Band','Red, bold and a little dramatic. Like someone you know.'],
+  ['echo','ring',4,450,{gold:3,exp:5,kick:1},'Ring of Echoes','Every coin you earn clinks twice. Only one counts.'],
+  ['eternity','ring',5,880,{gold:4,exp:10,kick:1},'Band of Eternity','No beginning, no end, no refunds.'],
+  ['pebble','amulet',0,15,{exp:5},'Pebble Necklace','A very nice pebble. You found it yourself.'],
+  ['amulet','amulet',1,80,{gold:2,min:5},'Lucky Amulet','A pendant that hums when gold is near.'],
+  ['star','amulet',2,180,{gold:2,exp:5,kick:1},'Star Pendant','A fallen star on a string. Wishes not included.'],
+  ['locket','amulet',3,260,{gold:3,exp:5,kick:1},'Sapphire Locket','Holds a tiny portrait. Of you. Obviously.'],
+  ['grove','amulet',4,460,{gold:3,exp:10,kick:1},'Heart of the Grove','Smells like rain and fresh leaves.'],
+  ['dragoneye','amulet',5,900,{gold:4,exp:10,min:5,kick:1},'Dragon’s Eye','It blinks sometimes. Try not to think about it.']
+].forEach(([k,slot,r,price,boon,n,d])=>GEAR[k]={slot,r,price,boon,n,d});
+const SLOT_ORDER=GEAR_SLOTS.map(s=>s[0]);
+// rarest first, then by slot (the forge and her forge list); bySlot = by slot, rarest first (his gear rack)
+const byRarity=(a,b)=>GEAR[b].r-GEAR[a].r||SLOT_ORDER.indexOf(GEAR[a].slot)-SLOT_ORDER.indexOf(GEAR[b].slot);
+const bySlot=(a,b)=>SLOT_ORDER.indexOf(GEAR[a].slot)-SLOT_ORDER.indexOf(GEAR[b].slot)||GEAR[b].r-GEAR[a].r;
 const byCls=v=>typeof v==='string'?v:v[S.cls]||v.warrior;
 const gName=k=>byCls(GEAR[k].n), gDesc=k=>byCls(GEAR[k].d);
 // her forge settings: price override and whether it's on the rack
@@ -1645,26 +1686,28 @@ function gearBase(slot){
     if (k==='offhand-archer'){ g.rect(5,5,6,10,'#8a5a2a'); g.rect(6,5,1,9,'#b07a40'); g.rect(5,9,6,1,'#5a3418'); [6,8,10].forEach((x,i)=>{ g.rect(x,1+i%2,1,4,'#efe6d2'); g.px(x,1+i%2,'#e04a3c'); }); }
     return g.outline().canvas(); });
 }
-const gearIcon=k=>{ const g=GEAR[k]; return memo('gi:'+k+':'+S.cls,()=>{ const b=gearBase(g.slot); if(!g.fx) return b; const c=makeCanvas(b.width,b.height); c.getContext('2d').drawImage(b,0,0); recolor(c,g.fx); return c; }); };
+const gearIcon=k=>{ const g=GEAR[k], fx=RARITY[g.r].fx; return memo('gi:'+k+':'+S.cls,()=>{ const b=gearBase(g.slot); if(!fx) return b; const c=makeCanvas(b.width,b.height); c.getContext('2d').drawImage(b,0,0); recolor(c,fx); return c; }); };
 const slotName=s=>GEAR_SLOTS.find(x=>x[0]===s)[1];
+// the round stone platform the hero stands on (owner's sketch)
+const DAIS=()=>memo('dais',()=>{ const g=new Grid(72,16);
+  g.ell(36,9,35,6.5,'#6e6046'); g.ell(36,7,34,6,'#c9b48a'); g.ell(36,7,30,4.6,'#d9c79e'); g.ell(28,5.5,14,1.6,'#ece0bf');
+  return g.outline().canvas(); });
 let heroRaf=0;
 function renderHero(m){
   const C=CLASSES[S.cls], b=heroBoons(), T=S.tally, fs=ui.slotSel, sel=S.gear.includes(ui.gearSel)&&GEAR[ui.gearSel]?ui.gearSel:null;
-  const on=k=>S.equip[GEAR[k].slot]===k, fine=k=>GEAR[k].t>1;
-  const slotBtn=([s,l])=>{ const g=S.equip[s]; return `<button class="slot${g&&fine(g)?' fine':''}" data-slot="${s}" aria-pressed="${s===fs}" aria-label="${l}: ${g?esc(gName(g)):'empty'}">${g?`<img alt="" src="${url(gearIcon(g))}">`:`<span>${l}</span>`}</button>`; };
-  const order=Object.keys(GEAR), rack=S.gear.filter(k=>GEAR[k]&&(!fs||GEAR[k].slot===fs)).sort((a,c)=>order.indexOf(a)-order.indexOf(c));
+  const on=k=>S.equip[GEAR[k].slot]===k;
+  const slotBtn=s=>{ const g=S.equip[s], l=slotName(s); return `<button class="slot" data-slot="${s}" ${g?`style="--rc:${rarOf(g).c}"`:''} aria-pressed="${s===fs}" aria-label="${l}: ${g?esc(gName(g)):'empty'}">${g?`<img alt="" src="${url(gearIcon(g))}">`:`<span>${l.replace(' ','<br>')}</span>`}</button>`; };
+  const rack=S.gear.filter(k=>GEAR[k]&&(!fs||GEAR[k].slot===fs)).sort(bySlot);
   const swap=sel&&!on(sel)&&S.equip[GEAR[sel].slot];   // what equipping it would replace
-  const short=BOONS.filter(([k])=>b[k]).map(([k])=>`+${b[k]}${{gold:'g',exp:' EXP',min:'m',kick:'g kick'}[k]}`).join(' · ');
   const ln=(a,v)=>`<div class="switch"><span>${a}</span><b>${v}</b></div>`;
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="${esc(S.heroName)}, level ${S.level} ${C.name}"></canvas>
-      <div class="doll-l">${GEAR_SLOTS.slice(0,4).map(slotBtn).join('')}</div><div class="doll-r">${GEAR_SLOTS.slice(4).map(slotBtn).join('')}</div>
-      <div class="plate"><b>${esc(S.heroName.toUpperCase())}</b><span>Lv ${S.level} ${C.name}</span><span class="small boon">${short||'No boons yet'}</span></div></div>
+      <div class="doll-l">${DOLL_L.map(slotBtn).join('')}</div><div class="doll-r">${DOLL_R.map(slotBtn).join('')}</div></div>
     <div class="below wrap"><div class="stack">
-      ${sel?`<div class="px selbar"><img alt="" src="${url(gearIcon(sel))}"><div class="t"><b>${esc(gName(sel))}${fine(sel)?' <i class="fine-t">FINE</i>':''}</b><span class="small boon">${boonText(GEAR[sel].boon)}</span><br><span class="small muted">${esc(gDesc(sel))}${swap?` Replaces your ${esc(gName(swap))}.`:''}</span></div><button class="btn${on(sel)?' ghost':''}" id="eq">${on(sel)?'Remove':'Equip'}</button></div>`
-        :`<p class="hint">${S.gear.length?'Tap a piece of gear to see it, or a slot to show only that slot.':'No gear yet. Visit the forge through the shop.'}</p>`}
+      ${sel?`<div class="px selbar gear"><img alt="" src="${url(gearIcon(sel))}"><div class="t"><b style="color:${rarOf(sel).c}">${esc(gName(sel))}</b>${rtag(sel)} <span class="small muted">${slotName(GEAR[sel].slot)}</span><br><span class="small boon">${boonText(GEAR[sel].boon).split(' · ').join('<br>')}</span><br><span class="small muted">${esc(gDesc(sel))}${swap?` Replaces your ${esc(gName(swap))}.`:''}</span></div><button class="btn${on(sel)?' ghost':''}" id="eq">${on(sel)?'Unequip':'Equip'}</button></div>`
+        :`<p class="hint">${S.gear.length?'Tap gear to equip or unequip it. Tap a slot to show only that slot.':'No gear yet. Visit the forge through the shop.'}</p>`}
       <div><div class="hrow"><h3>Equipment${fs?' · '+slotName(fs):''}</h3>${fs?'<button class="link" id="all">Show all</button>':''}</div>
-        ${rack.length?`<div class="inv">${rack.map(k=>`<button class="${fine(k)?'fine':''}" data-g="${k}" aria-pressed="${k===sel}" aria-label="${esc(gName(k))}${on(k)?' (equipped)':''}"><img alt="" src="${url(gearIcon(k))}">${on(k)?'<span class="tag">ON</span>':''}</button>`).join('')}</div>`
+        ${rack.length?`<div class="inv">${rack.map(k=>`<button data-g="${k}" style="--rc:${rarOf(k).c}" aria-pressed="${k===sel}" aria-label="${esc(gName(k))}, ${rarOf(k).n}${on(k)?' (equipped)':''}"><img alt="" src="${url(gearIcon(k))}">${on(k)?'<span class="tag">E</span>':''}</button>`).join('')}</div>`
         :`<div class="px empty">${fs?`Nothing for your ${slotName(fs).toLowerCase()} slot yet. The forge has some.`:'Your gear rack is empty.'}</div>`}</div>
       <div><h3>Boons</h3><div class="vlist">${BOONS.map(([k,t,ic])=>{ const from=Object.values(S.equip).filter(g=>GEAR[g]&&GEAR[g].boon[k]);
         return `<div class="vrow px${b[k]?'':' off'}"><img alt="" src="${url(icon(ic))}"><div class="t"><b>+${b[k]} ${t}</b><span class="small muted">${from.length?from.map(g=>`${esc(gName(g))} +${GEAR[g].boon[k]}`).join(', '):'No gear gives this yet'}</span></div></div>`; }).join('')}</div>
@@ -1672,23 +1715,23 @@ function renderHero(m){
       <div><h3>Stats</h3><div class="px vpanel stats">
         ${ln('Level',`${S.level} · ${S.exp}/${expNeed(S.level)} EXP`)}${ln('Streak',`${S.streak} (best ${S.best})`)}
         ${ln('Mobs defeated',T.slain)}${ln('Mobs that fled',T.fled)}${ln('Quests done',T.quests)}${ln('Bonus kicks',T.kicks)}${ln('Rest days',T.rests)}
-        ${ln('Gear owned',`${S.gear.length} of ${order.length}`)}</div></div></div></div>`;
+        ${ln('Gear owned',`${S.gear.length} of ${Object.keys(GEAR).length}`)}</div></div></div></div>`;
   const keep=fn=>()=>{ const sc=m.querySelector('.below').scrollTop; fn(); renderMain(); $('#main .below').scrollTop=sc; };
   m.querySelectorAll('[data-g]').forEach(el=>el.onclick=keep(()=>{ ui.gearSel=el.dataset.g; }));
-  m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=keep(()=>{ const s=el.dataset.slot; ui.slotSel=fs===s?null:s; if(ui.slotSel) ui.gearSel=S.equip[s]||S.gear.find(k=>GEAR[k]?.slot===s)||null; }));
+  m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=keep(()=>{ const s=el.dataset.slot; ui.slotSel=fs===s?null:s; if(ui.slotSel) ui.gearSel=S.equip[s]||S.gear.filter(k=>GEAR[k]?.slot===s).sort(bySlot)[0]||null; }));
   if ($('#all')) $('#all').onclick=keep(()=>{ ui.slotSel=null; });
-  if (sel) $('#eq').onclick=keep(()=>{ const g=GEAR[sel]; if(on(sel)){ delete S.equip[g.slot]; toast(`Took off: ${gName(sel)}.`); } else { S.equip[g.slot]=sel; ui.eqFx=performance.now(); toast(`Equipped: ${gName(sel)}.`); } save(); });
+  if (sel) $('#eq').onclick=keep(()=>{ const g=GEAR[sel]; if(on(sel)){ delete S.equip[g.slot]; toast(`Unequipped: ${gName(sel)}.`); } else { S.equip[g.slot]=sel; ui.eqFx=performance.now(); toast(`Equipped: ${gName(sel)}.`); } save(); });
   stageLoop($('#herocv'), drawHeroStage);
 }
 function drawHeroStage(x,now){
   const tod=getTod(), sk=SKIES[tod], e=now-(ui.eqFx||-1e9);
   x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
   x.fillStyle=sk.bands[0]; x.fillRect(0,0,480,30); x.drawImage(background(tod),0,30,480,270);
-  x.fillStyle='rgba(30,40,20,.28)'; x.beginPath(); x.ellipse(240,274,44,11,0,0,Math.PI*2); x.fill();
+  x.drawImage(DAIS(),96,226,288,64);
   // just equipped something: a little hop and a ring of sparkles, stepped (no tweening)
-  heroSpr(x,e<220?'up':e<380?'land':'idle',now,240,e<220?262:276,{scale:1.6});
-  if (e<700){ const st=Math.floor(e/100), r=56+st*10; x.globalAlpha=1-st/7;
-    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+st*0.3; x.fillStyle=i%2?'#ffffff':'#ffe066'; x.fillRect(Math.round(240+Math.cos(a)*r*1.2)-4,Math.round(196+Math.sin(a)*r)-4,8,8); }
+  heroSpr(x,e<220?'up':e<380?'land':'idle',now,240,e<220?244:256,{scale:2.1});
+  if (e<700){ const st=Math.floor(e/100), r=64+st*10; x.globalAlpha=1-st/7;
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+st*0.3; x.fillStyle=i%2?'#ffffff':'#ffe066'; x.fillRect(Math.round(240+Math.cos(a)*r*1.2)-4,Math.round(160+Math.sin(a)*r)-4,8,8); }
     x.globalAlpha=1; }
   if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,300); }
 }
@@ -1730,7 +1773,8 @@ function renderShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='shop') renderMain(); }); return; }
   const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
   const stock = forge
-    ? Object.entries(GEAR).filter(([k])=>!forgeOf(k).off||S.gear.includes(k)).map(([k,g])=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(k))}" style="width:64px;height:64px"><span class="tagp">${esc(gName(k))}${g.t>1?' <i class="fine-t">FINE</i>':''}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')
+    ? RARITY.map((R,r)=>{ const ks=Object.keys(GEAR).filter(k=>GEAR[k].r===r&&(!forgeOf(k).off||S.gear.includes(k))).sort(byRarity);   // grouped by rarity, rarest first
+        return ks.length?`<div><h3 style="color:${R.c}">${R.n}</h3><div class="crates">${ks.map(k=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><i class="rpip" style="background:${R.c}"></i><img alt="" src="${url(gearIcon(k))}" style="width:64px;height:64px"><span class="tagp">${esc(gName(k))}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')}</div></div>`:''; }).reverse().join('')
     : S.shop.map(it=>`<button class="crate ${S.vcoins<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price" style="color:var(--hex)"><img alt="" src="${url(VCOIN())}">${it.price}</span></button>`).join('');
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
@@ -1739,7 +1783,7 @@ function renderShop(m){
     <div class="below wrap"><div class="stack">
       <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?ARRIVE_LINES[ui.shopRoom]:lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
       <p class="hint">${forge?`You have <b style="color:var(--gold)">${S.gold} gold</b>. Gear gives small boons, never extra damage.`:`You have <b style="color:var(--hex)">${S.vcoins} V.coins</b>. Tap a crate to look closer.`}</p>
-      ${stock?`<div class="crates">${stock}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
+      ${stock?(forge?stock:`<div class="crates">${stock}</div>`):'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
   const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
   let li=0; cv.onclick=()=>{ li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
   $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); };
@@ -1825,7 +1869,7 @@ function forgeRoom(x,r,now,FLOOR){
 function openGear(k){
   const g=GEAR[k], n=gName(k), own=S.gear.includes(k), price=forgeOf(k).price, short=price-S.gold;
   const o=document.createElement('div'); o.className='overlay';
-  o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(n)}"><img alt="" src="${url(gearIcon(k))}"><h3>${esc(n)}${g.t>1?' <i class="fine-t">FINE</i>':''}</h3><p>${esc(gDesc(k))}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
+  o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(n)}"><img alt="" src="${url(gearIcon(k))}"><h3>${esc(n)}</h3><span>${rtag(k)}</span><p>${esc(gDesc(k))}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
     <div class="price"><img alt="" src="${url(COIN())}">${price} gold</div>${own?'<span class="need" style="color:#5a3d26">Already on your gear rack.</span>':short>0?`<span class="need">You need ${short} more gold.</span>`:''}
     <div class="btnrow"><button class="btn ghost" id="it-x">Back</button><button class="btn" id="it-buy" ${own||short>0?'disabled':''}>Buy</button></div></div>`;
   $('#app').appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); $('#it-x').onclick=()=>o.remove();
@@ -1952,7 +1996,7 @@ function renderVShop(m){
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">${forge?`
       <div><h2 style="color:var(--hex)">Run the forge</h2><p class="muted small">Gear costs gold, ${P.his} in-game currency. Set prices or take pieces off the rack. Boons are fixed and never add damage.</p></div>
-      <div class="vlist">${Object.entries(GEAR).map(([k,g])=>{ const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(k))}"><div class="t"><b>${esc(gName(k))}${g.t>1?' <i class="fine-t">FINE</i>':''}</b><span class="small muted">${boonText(g.boon)}${own?` · ${P.he} owns it`:''}</span></div>
+      <div class="vlist">${Object.keys(GEAR).sort(byRarity).map(k=>{ const g=GEAR[k]; const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(k))}"><div class="t"><b>${esc(gName(k))} ${rtag(k)}</b><span class="small muted">${boonText(g.boon)}${own?` · ${P.he} owns it`:''}</span></div>
         <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${f.price}" aria-label="Price of ${esc(gName(k))} in gold"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--hex);flex:none" data-sell="${k}" ${f.off?'':'checked'} aria-label="${esc(gName(k))} for sale"></div>`; }).join('')}</div>
       <div><h3>Gift ${P.him} gold</h3><div class="px vpanel"><div class="row2"><input class="inp" id="gift" type="number" min="1" max="999" value="20" aria-label="Gold to give"><button class="btn hex" id="gift-go">Give gold</button></div><p class="small muted">${P.He} has ${S.gold} gold.</p></div></div>`
     :`
