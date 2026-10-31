@@ -1,11 +1,11 @@
 // Service worker: lets the installed app open offline.
 // Network first, so a new deploy shows up the next time the app opens online; the cache is only a fallback.
-// build.py replaces 20261031-211856 with a timestamp so every build gets a fresh cache.
-const CACHE = 'qv-20261031-211856';
+// build.py replaces 20261031-212208 with a timestamp so every build gets a fresh cache.
+const CACHE = 'qv-20261031-212208';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -23,8 +23,9 @@ self.addEventListener('fetch', e => {
   const ours = url.origin === location.origin;
   const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (!ours && !fonts) return;
+  // GitHub Pages lets browsers reuse files for 10 minutes; 'no-cache' always asks the server, so a deploy shows at once
   e.respondWith(
-    fetch(req)
+    fetch(req, ours ? {cache: 'no-cache'} : undefined)
       .then(res => {
         if (res.ok || res.type === 'opaque') {
           const copy = res.clone();
