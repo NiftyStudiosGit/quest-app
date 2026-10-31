@@ -469,7 +469,7 @@ const NAMES = {
 const randName = sex => { const l=NAMES[sex]; return l[Math.floor(Math.random()*l.length)]; };
 const heroReady = () => !!(S.cls && S.sex && S.heroName);
 // the whole setup: title screen (solo or duo), the hero, and in solo mode her questions
-const setupDone = () => heroReady() && !!S.mode && (S.mode==='duo' || !!S.solo);
+const setupDone = () => !ui.title && heroReady() && !!S.mode && (S.mode==='duo' || !!S.solo);
 
 const COLORS=['red','purple','black','yellow'];
 const MOB_BASES = [
@@ -631,14 +631,23 @@ function freshState(){
     bag:[], gear:[], equip:{}, forge:{}
   };
 }
-let S; try{ S=JSON.parse(localStorage.getItem(KEY))||freshState(); }catch(e){ S=freshState(); }
-if (S.cls==='fighter') S.cls='warrior';   // old saves: Fighter became Warrior, Lancer was dropped
-if (S.cls && !CLASSES[S.cls]) S.cls=null;
-S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
-// saves from before the clock existed
-S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
-if (S.mob) S.mob.extra??=0;
-S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;   // saves from before the title screen pick a mode once, then keep everything
+// two separate saves, one per mode (solo / duo), plus the mode last played. KEY alone = a save that hasn't picked a mode yet
+const slotKey=mode=>KEY+'-'+mode, LAST=KEY+'-last';
+const readSave=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } };
+// saves from older versions: bring them up to date
+function upgrade(S){
+  if (S.cls==='fighter') S.cls='warrior';   // old saves: Fighter became Warrior, Lancer was dropped
+  if (S.cls && !CLASSES[S.cls]) S.cls=null;
+  S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
+  // saves from before the clock existed
+  S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
+  if (S.mob) S.mob.extra??=0;
+  S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;   // saves from before the title screen pick a mode once, then keep everything
+  return S;
+}
+// a save made before the split moves into its mode's slot
+(()=>{ const old=readSave(KEY); try{ if(old&&old.mode&&!localStorage.getItem(slotKey(old.mode))){ localStorage.setItem(slotKey(old.mode),JSON.stringify(old)); localStorage.setItem(LAST,old.mode); localStorage.removeItem(KEY); } }catch(e){} })();
+let S=upgrade(readSave(slotKey(localStorage.getItem(LAST)))||readSave(KEY)||freshState());
 const LIM={hero:14, vill:30, mob:30, quest:80, taunt:140, note:90, reward:40, desc:200, price:9999, coins:999};
 const clip=(v,n)=>typeof v==='string'?[...v].slice(0,n).join(''):v;   // by characters, so emoji never split
 const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
@@ -652,7 +661,7 @@ function tidyText(){
   if (S.loot){ S.loot.name=clip(S.loot.name,LIM.mob+20); S.loot.note=clip(S.loot.note,LIM.note); }
 }
 tidyText();
-function save(){ tidyText(); try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function save(){ tidyText(); try{ if(S.mode){ localStorage.setItem(slotKey(S.mode),JSON.stringify(S)); localStorage.setItem(LAST,S.mode); localStorage.removeItem(KEY); } else localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 
 /* =========================================================
    The clock: game days follow the phone's local time, so travel and daylight saving just work
@@ -818,8 +827,9 @@ function renderClassPick(m){
     m.innerHTML=`<div class="stack">
       <div class="title-card"><img alt="" src="${url(villSprite(false,true))}" style="width:78px;height:96px;image-rendering:pixelated"><h1>Choose your class</h1><p class="muted">${esc(S.villName)} has already sent today’s mob. Pick how you fight it.</p></div>
       <div class="classes one">${Object.entries(CLASSES).map(([k,c])=>`<button class="cls px row" data-c="${k}"><span class="pair"><img alt="" src="${url(heroThumb(k,'m'))}"><img alt="" src="${url(heroThumb(k,'f'))}"></span><span class="t"><b>${c.name}</b><span>${c.blurb}</span></span></button>`).join('')}</div>
-      <p class="small muted" style="text-align:center">Classes are just for looks. Every hero fights the same way.</p></div>`;
+      <p class="small muted" style="text-align:center">Classes are just for looks. Every hero fights the same way.</p><button class="btn ghost" id="np-title">Back to the title screen</button></div>`;
     m.querySelectorAll('.cls').forEach(b=>b.onclick=()=>{ nh.cls=b.dataset.c; render(); });
+    $('#np-title').onclick=()=>{ ui.newHero=null; ui.title=true; render(); };
     return;
   }
   if (step==='sex'){
@@ -850,19 +860,27 @@ function renderClassPick(m){
 
 // setup, in order: the title screen (solo or with a partner), the hero, then (solo) the NPC Villainess's questions
 function renderSetup(m){
-  if (!S.mode) return renderTitle(m);
+  if (!S.mode||ui.title) return renderTitle(m);
   if (!heroReady()) return renderClassPick(m);
   renderQuiz(m);
 }
+// what's in a mode's save, if anything (the one being played is S itself)
+const current=mode=>S.mode===mode?S:readSave(slotKey(mode));
+function slotInfo(mode){ const v=current(mode); return v&&v.heroName&&v.cls&&CLASSES[v.cls]?`Continue: ${esc(v.heroName)}, Lv ${v.level} ${CLASSES[v.cls].name} · Day ${v.day}`:''; }
 function renderTitle(m){
   m.innerHTML=`<div class="stack title-screen">
     <div class="title-card"><canvas id="titlecv" width="480" height="270" aria-label="A hero faces the Villainess"></canvas>
       <h1 class="logo">HERO <span>vs</span> VILLAINESS</h1><p class="muted">Real-life quests. Pixel monsters. A villainess who sets the rules.</p></div>
-    <button class="cls px row" id="tm-solo"><span class="pair"><img alt="" src="${url(heroThumb('warrior','m'))}"></span><span class="t"><b>Single player</b><span>${esc(S.villName)}, an NPC Villainess, sends your mobs and builds your quests from a few questions.</span></span></button>
-    <button class="cls px row" id="tm-duo"><span class="pair"><img alt="" src="${url(heroThumb('archer','f'))}"><img alt="" src="${url(villSprite(false,true))}"></span><span class="t"><b>Multiplayer</b><span>Pair up with a real Villainess. For now you both play on this phone.</span></span></button>
+    <button class="cls px row" id="tm-solo"><span class="pair"><img alt="" src="${url(heroThumb('warrior','m'))}"></span><span class="t"><b>Single player</b><span>${slotInfo('solo')||`${esc(S.villName)}, an NPC Villainess, sends your mobs and builds your quests from a few questions.`}</span></span></button>
+    <button class="cls px row" id="tm-duo"><span class="pair"><img alt="" src="${url(heroThumb('archer','f'))}"><img alt="" src="${url(villSprite(false,true))}"></span><span class="t"><b>Multiplayer</b><span>${slotInfo('duo')||'Pair up with a real Villainess. For now you both play on this phone.'}</span></span></button>
     <button class="btn ghost block" disabled>Sign in</button>
-    <p class="small muted" style="text-align:center">Accounts and pairing two phones come later. Your progress is saved on this phone.</p></div>`;
-  const pick=mode=>{ S.mode=mode; if(mode==='duo'&&!S.shop.length) S.shop=DUO_SHOP.map(r=>({...r, id:nid()})); ui.setup=null; save(); render(); };
+    <p class="small muted" style="text-align:center">Single player and Multiplayer are separate saves. Accounts and pairing two phones come later; for now your saves live on this phone.</p></div>`;
+  const pick=mode=>{
+    if (S.mode!==mode){ save(); const saved=current(mode);   // leave the other save as it is
+      // a save without a mode yet (older versions, or a brand-new game) becomes this mode's; otherwise this mode starts fresh
+      if (saved) S=upgrade(saved); else { if(S.mode) { S=freshState(); tick(); } S.mode=mode; if(mode==='duo'&&!S.shop.length) S.shop=DUO_SHOP.map(r=>({...r, id:nid()})); }
+      hit=null; ui.newHero=null; ui.bagSel=null; ui.heroTab='idle'; ui.villTab='lair'; tick(); }
+    ui.title=false; ui.setup=null; ui.role='hero'; save(); render(); };
   $('#tm-solo').onclick=()=>pick('solo'); $('#tm-duo').onclick=()=>pick('duo');
   const k=heroKey(['warrior','archer','mage'][S.day%3], S.sex||'m');
   stageLoop($('#titlecv'), (x,now)=>{ x.setTransform(1,0,0,1,0,0); x.drawImage(background(getTod()),0,0,480,270);
@@ -899,7 +917,7 @@ function renderQuiz(m){
     if (q.step===2) toggle(q.habits,k,3);
     if (q.step===3) toggle(q.treats,k,SOLO_TREATS.length);
     renderMain(); });
-  $('#qz-back').onclick=()=>{ if(q.step) q.step--; else { S.mode=null; save(); render(); return; } renderMain(); };
+  $('#qz-back').onclick=()=>{ if(q.step) q.step--; else { ui.title=true; render(); return; } renderMain(); };
   if ($('#qz-mix')) $('#qz-mix').onclick=()=>{ q.goals=Object.keys(GOALS); q.step=1; renderMain(); };
   $('#qz-next').onclick=()=>{ if(q.step<QUIZ_STEPS-1){ q.step++; renderMain(); $('#main').scrollTop=0; return; } finishQuiz(q); };
 }
@@ -1986,8 +2004,8 @@ function renderVRules(m){
       <button class="btn ghost block" id="pc-day">Jump to day ${S.day+1}’s spawn</button><button class="btn ghost block" id="pc-hour">Jump ahead 1 hour</button>
       <p class="small muted">Moves the game clock forward (it can’t go back, except with Reset). When a day ends with the mob alive, it flees and ${P.his} streak resets.</p>
       <label class="f">Time of day in scenes<select class="inp" id="pc-tod">${todOpts.map(([v,l])=>`<option value="${v}" ${S.tod===v?'selected':''}>${l}</option>`).join('')}</select></label>
-      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>${solo()?`<button class="btn ghost block" id="pc-quiz">Retake the solo questions</button>`:''}<button class="btn ghost block" id="pc-title">Back to the title screen (keeps progress)</button>
-      <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?'Tap again to erase everything':'Reset the prototype'}</button></div></div></div></div>`;
+      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>${solo()?`<button class="btn ghost block" id="pc-quiz">Retake the solo questions</button>`:''}<button class="btn ghost block" id="pc-title">Back to the title screen (switch saves)</button>
+      <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?`Tap again to erase this ${solo()?'Single player':'Multiplayer'} save`:'Reset this save'}</button></div></div></div></div>`;
   $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); rerender(); };
   $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
   $('#vr-show').onchange=e=>{ S.showValue=e.target.checked; save(); };
@@ -2006,8 +2024,8 @@ function renderVRules(m){
   $('#pc-gold').onclick=()=>{ S.gold+=50; S.vcoins+=50; save(); renderHud(); toast('50 gold and 50 V.coins granted. How generous.'); };
   $('#pc-cls').onclick=()=>{ S.cls=null; S.sex=null; ui.newHero=null; save(); ui.role='hero'; render(); };
   if ($('#pc-quiz')) $('#pc-quiz').onclick=()=>{ ui.setup={...S.solo, step:0}; S.solo=null; save(); ui.role='hero'; render(); };
-  $('#pc-title').onclick=()=>{ S.mode=null; ui.setup=null; save(); ui.role='hero'; render(); };
-  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; rerender(); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') rerender(); },3000); return; } ui.resetArm=false; S=freshState(); tick(); ui.role='hero'; hit=null; render(); toast('Prototype reset.'); };
+  $('#pc-title').onclick=()=>{ save(); ui.title=true; ui.setup=null; ui.role='hero'; render(); };
+  $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; rerender(); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') rerender(); },3000); return; } ui.resetArm=false; const mode=S.mode; try{ if(mode) localStorage.removeItem(slotKey(mode)); }catch(e){} S=freshState(); S.mode=mode; if(mode==='duo') S.shop=DUO_SHOP.map(r=>({...r, id:nid()})); tick(); ui.role='hero'; hit=null; render(); toast(mode?`The ${mode==='solo'?'Single player':'Multiplayer'} save was erased. The other one is untouched.`:'Prototype reset.'); };
 }
 
 // boot: catch up with the clock; old saves' "tomorrow's mob" becomes a plan in the calendar
