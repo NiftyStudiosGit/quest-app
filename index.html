@@ -172,6 +172,8 @@ main.split{display:flex;flex-direction:column;overflow:hidden;padding:0}
 main.has-orb .below{padding-bottom:56px}
 .stage .shopsign{position:absolute;top:6px;left:0;right:0;margin:0}
 .stage .shopsign span{font-size:9px;padding:6px 10px}
+.stage .shopsign.namesign{top:auto;bottom:2px;pointer-events:none}   /* hero tab: the plank on the platform's front edge */
+.stage .namesign span{font-size:7px;padding:5px 9px;max-width:64%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .go{position:absolute;right:2%;bottom:3%;display:flex;align-items:center;gap:6px;border:0;cursor:pointer;background:var(--wood2);color:var(--gold);font-family:var(--f-display);font-size:8px;padding:7px 9px;box-shadow:0 0 0 3px var(--line),inset 0 3px 0 var(--wood-hi);text-shadow:1px 1px 0 var(--line);animation:nudge .9s steps(2) infinite}
 .go i{width:14px;height:14px;background:var(--gold);clip-path:polygon(0 30%,50% 30%,50% 0,100% 50%,50% 100%,50% 70%,0 70%);order:2}
 .innbtn{position:absolute;left:6px;bottom:6px;width:48px;height:48px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:3px solid var(--line);cursor:pointer;background:radial-gradient(circle at 50% 35%,var(--wood-hi),var(--wood2) 70%);color:var(--gold);font-family:var(--f-display);font-size:6px;padding:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);text-shadow:1px 1px 0 var(--line)}
@@ -1665,6 +1667,7 @@ const GEAR={};
   ['dragoneye','amulet',5,900,{gold:4,exp:10,min:5,kick:1},'Dragon’s Eye','It blinks sometimes. Try not to think about it.']
 ].forEach(([k,slot,r,price,boon,n,d])=>GEAR[k]={slot,r,price,boon,n,d});
 const SLOT_ORDER=GEAR_SLOTS.map(s=>s[0]);
+const RARITY_SIZE=RARITY.map((_,r)=>Object.values(GEAR).filter(g=>g.r===r).length);   // pieces per rarity
 // rarest first, then by slot (the forge and her forge list); bySlot = by slot, rarest first (his gear rack)
 const byRarity=(a,b)=>GEAR[b].r-GEAR[a].r||SLOT_ORDER.indexOf(GEAR[a].slot)-SLOT_ORDER.indexOf(GEAR[b].slot);
 const bySlot=(a,b)=>SLOT_ORDER.indexOf(GEAR[a].slot)-SLOT_ORDER.indexOf(GEAR[b].slot)||GEAR[b].r-GEAR[a].r;
@@ -1672,14 +1675,14 @@ const byCls=v=>typeof v==='string'?v:v[S.cls]||v.warrior;
 const gName=k=>byCls(GEAR[k].n), gDesc=k=>byCls(GEAR[k].d);
 // her forge settings: price override and whether it's on the rack
 const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price});
-// the forge doesn't sell everything at once: 8 pieces a week (one per slot, rarity rolled), new stock every Monday.
+// the forge doesn't sell everything at once: 8 pieces a week drawn from the whole catalog (any slot, owned pieces
+// included, no piece twice), weighted by rarity; new stock every Monday.
 // She can pull any piece or add any from the catalog whenever she likes (S.stock = {week, keys})
-const FORGE_ODDS=[30,30,20,12,6,2];   // rarity weights, Uncommon to Legendary
+const FORGE_ODDS=[30,30,20,12,6,2], FORGE_N=8;   // rarity weights, Uncommon to Legendary
 const weekOf=date=>{ const [y,m,d]=date.split('-').map(Number); return addDays(date,-((new Date(y,m-1,d).getDay()+6)%7)); };
 function rollForge(){
-  const keys=[];
-  SLOT_ORDER.forEach(s=>{ const ks=Object.keys(GEAR).filter(k=>GEAR[k].slot===s&&!S.gear.includes(k));   // never what he already owns
-    let n=Math.random()*ks.reduce((a,k)=>a+FORGE_ODDS[GEAR[k].r],0); const k=ks.find(k=>(n-=FORGE_ODDS[GEAR[k].r])<0); if(k) keys.push(k); });
+  const keys=[], ks=Object.keys(GEAR), w=k=>FORGE_ODDS[GEAR[k].r]/RARITY_SIZE[GEAR[k].r];   // odds per rarity, shared by its pieces
+  while (keys.length<FORGE_N){ const left=ks.filter(k=>!keys.includes(k)); let n=Math.random()*left.reduce((a,k)=>a+w(k),0); keys.push(left.find(k=>(n-=w(k))<0)||left[0]); }
   S.stock={week:weekOf(S.date), keys};
 }
 const stockDays=()=>Math.round((at(addDays(S.stock.week,7),720)-at(S.date,720))/864e5);   // days until new stock
@@ -1722,7 +1725,8 @@ function renderHero(m){
   const ln=(a,v)=>`<div class="switch"><span>${a}</span><b>${v}</b></div>`;
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="${esc(S.heroName)}, level ${S.level} ${C.name}"></canvas>
-      <div class="doll-l">${DOLL_L.map(slotBtn).join('')}</div><div class="doll-r">${DOLL_R.map(slotBtn).join('')}</div></div>
+      <div class="doll-l">${DOLL_L.map(slotBtn).join('')}</div><div class="doll-r">${DOLL_R.map(slotBtn).join('')}</div>
+      <div class="shopsign namesign"><span>${esc(S.heroName.toUpperCase())} · LV ${S.level} ${C.name.toUpperCase()}</span></div></div>
     <div class="below wrap"><div class="stack">
       ${sel?`<div class="px selbar gear"><img alt="" src="${url(gearIcon(sel))}"><div class="t"><b style="color:${rarOf(sel).c}">${esc(gName(sel))}</b>${rtag(sel)} <span class="small muted">${slotName(GEAR[sel].slot)}</span><br><span class="small boon">${boonText(GEAR[sel].boon).split(' · ').join('<br>')}</span><br><span class="small muted">${esc(gDesc(sel))}${swap?` Replaces your ${esc(gName(swap))}.`:''}</span></div><button class="btn${on(sel)?' ghost':''}" id="eq">${on(sel)?'Unequip':'Equip'}</button></div>`
         :`<p class="hint">${S.gear.length?'Tap gear to equip or unequip it. Tap a slot to show only that slot.':'No gear yet. Visit the forge through the shop.'}</p>`}
