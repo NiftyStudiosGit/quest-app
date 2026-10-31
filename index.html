@@ -1786,7 +1786,7 @@ const TALENTS=[
                 {k:'toes',ic:'chest',n:'Steel Toes',d:'Bonus kicks on a beaten mob shake loose a little more gold.',max:3,boon:{kick:1}}]},
   {need:5, row:[{k:'pride',ic:'star',n:'Hero’s Pride',d:'A little extra EXP whenever the daily mob falls.',max:5,boon:{exp:3}},
                 {k:'stand',ic:'potion',n:'Last Stand',d:'Dig in your heels: more time before the day ends.',max:2,boon:{min:10}}]},
-  {need:10, row:[{k:'legend',ic:'trophy',n:'Legend of the Realm',d:'Bards sing of you. Mobs drop a bit more of everything when they fall.',max:1,boon:{gold:3,exp:5,kick:1}}]}
+  {need:10, row:[{k:'legend',ic:'trophy',n:'Legend of the Realm',d:'Bards sing of you. A bit more of everything.',max:1,boon:{gold:3,exp:5,kick:1}}]}
 ];
 const TAL={}; TALENTS.forEach((t,i)=>t.row.forEach(x=>TAL[x.k]={...x,tier:i}));
 const talRank=k=>S.tal[k]||0, talSpent=()=>Object.values(S.tal).reduce((a,n)=>a+n,0);
@@ -1798,8 +1798,9 @@ function showcase(img, title, desc, extra='', locked=false){
 }
 function renderTalents(m){
   const t=TAL[ui.talSel]||TAL.bounty, r=talRank(t.k), pts=talPoints(), open=talOpen(t.k), maxed=r>=t.max, spent=talSpent();
-  const now=r?`<span class="small boon">Now: ${boonText(talBoon(t.k,r))}</span>`:'';
-  const next=maxed?'':`<span class="small muted">${r?'Next':'Rank 1'}: ${boonText(talBoon(t.k,r+1))}</span>`;
+  const lines=b=>boonText(b).split(' · ').join('<br>');
+  const now=r?`<span class="small boon">Now: ${lines(talBoon(t.k,r))}</span>`:'';
+  const next=maxed?'':`<span class="small muted">${r?'Next':'Rank 1'}: ${lines(talBoon(t.k,r+1))}</span>`;
   const st=maxed?'MASTERED':!open?`LOCKED · SPEND ${TALENTS[t.tier].need} POINTS TO OPEN`:pts?'':'NO POINTS LEFT · LEVEL UP FOR MORE';
   m.classList.add('split');
   m.innerHTML=showcase(url(icon(t.ic)), t.n, t.d, `<span class="st">RANK ${r}/${t.max}</span>${now}${next}${st?`<span class="st">${st}</span>`:''}${!maxed&&open&&pts?'<button class="btn" id="learn">Learn</button>':''}`, !r)+`<div class="below wrap"><div class="stack">
@@ -1811,8 +1812,8 @@ function renderTalents(m){
     ${spent?'<button class="btn ghost" id="forget">Forget all talents (free)</button>':''}</div></div>`;
   const keep=fn=>()=>{ const sc=m.querySelector('.below').scrollTop; fn(); renderMain(); $('#main .below').scrollTop=sc; };
   m.querySelectorAll('.tal').forEach(b=>b.onclick=keep(()=>{ ui.talSel=b.dataset.k; }));
-  if ($('#learn')) $('#learn').onclick=keep(()=>{ S.tal[t.k]=r+1; save(); toast(`${t.n} rank ${r+1}: ${boonText(t.boon)}.`); });
-  if ($('#forget')) $('#forget').onclick=keep(()=>{ if(!confirm('Forget every talent and get all your points back?')) return; S.tal={}; save(); toast('Talents forgotten. Your points are back.'); });
+  if ($('#learn')) $('#learn').onclick=keep(()=>{ S.tal[t.k]=r+1; save(); renderTabs(); toast(`${t.n} rank ${r+1}: ${boonText(t.boon)}.`); });
+  if ($('#forget')) $('#forget').onclick=keep(()=>{ if(!confirm('Forget every talent and get all your points back?')) return; S.tal={}; save(); renderTabs(); toast('Talents forgotten. Your points are back.'); });
 }
 
 /* =========================================================
