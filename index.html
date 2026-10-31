@@ -457,6 +457,7 @@ const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
 const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own (and in solo mode)
 const LOOT=[6,8,10,12,15];             // default gold drop table
+const KICK_LOOT=[2,3,3,4,5];           // gold per quest finished after the kill (never tied to the quest's hidden damage)
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
 const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', quests:[]});
 const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||p.quests.length>0);
@@ -545,7 +546,9 @@ function gainExp(n){ S.exp+=n; let up=false; while(S.exp>=expNeed(S.level)){ S.e
 // one finished quest's hidden damage lands; returns true if this blow kills the mob
 function landHit(task){
   task.hit=true; S.pending=S.pending.filter(id=>id!==task.id);
-  const m=S.mob; if (m.state!=='alive'){ save(); return false; }
+  const m=S.mob;
+  if (m.state==='dead'){ const g=KICK_LOOT[Math.floor(Math.random()*KICK_LOOT.length)]; task.kick=g; S.gold+=g; }
+  if (m.state!=='alive'){ save(); return false; }
   m.dmg+=task.dmg;
   if (m.dmg < m.hp-1e-6){ save(); return false; }
   m.state='dead';
@@ -738,13 +741,16 @@ const SOLO=[{x:560,y:G+12,sc:1.5}], PACK=[{x:470,y:G+8,sc:1},{x:580,y:G-22,sc:1}
 const HIT_LAND=450, HIT_LEN=1500, KILL_LEN=3400;   // big hit: wind-up cut, then the impact cut
 const KO_FREEZE=700, KO_COLLECT=2300;              // the kill: K.O. freeze, then the burst and loot, then he scoops it up
 const HIT_WORDS=['SMASH!','KABOOM!','CRUNCH!','WALLOP!'];
+const KICK_LAND=400, KICK_BACK=750, KICK_LEN=1700, ACT_CYCLE=30000;   // kicking the dazed mob; activities swap every 30 s
+const KICK_WORDS=['BONK!','BOOT!','THWACK!','POP!'];
 let raf=0, ctx=null, cvs=null, enterT=0, combatT0=0, lastBeat=-1, shakeT=-9999, shakeDur=150, shakeAmp=1, beatKind='';
-let hit=null, booms=[], floats=[], parts=[], act=null, wob=[];
+let hit=null, booms=[], floats=[], parts=[], act=null, wob=[], vicT=-1e9, leaveT=0;
 
 const membersAlive=()=>S.mob.state!=='alive'?0:S.mob.group>1?Math.max(1,Math.ceil(S.mob.group*hpFrac()-1e-6)):1;
 const mobSpots=()=>S.mob.group>1?PACK:SOLO;
 const mobSlots=()=>mobSpots().slice(0,membersAlive());
 const taunts=()=>S.tasks.filter(t=>t.taunt&&!t.done).map(t=>t.taunt);
+const downField=()=>S.mob.state==='dead'&&(S.pending.length>0||S.tasks.some(t=>!t.done));
 const ACTIVITIES={ victory:'Celebrating a clear field', chop:'Chopping wood', camp:'Resting by the campfire', fish:'Fishing at the pond', nap:'Napping in the grass', sheep:'Watching the sheep', train:'Training on a dummy' };
 const IDLE_HINT='Finish quests to wear the mob down. Tap it to poke it.';
 
@@ -752,11 +758,11 @@ function renderIdle(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); }); return; }
   const st=S.mob.state, alive=st==='alive', pend=S.pending.length, tn=taunts();
   // no mob on the field (not here yet, resting, or beaten): he passes the time instead
-  if (st==='coming'||st==='rest'||(st==='dead'&&!pend)){ const keys=Object.keys(ACTIVITIES).filter(k=>k!=='victory'); const k=st==='rest'?(Math.random()<.5?'camp':'nap'):ui.justCleared?'victory':keys[Math.floor(Math.random()*keys.length)]; ui.justCleared=false; act={k,t0:performance.now(),flags:{}}; } else act=null;
-  const tod=getTod();
-  const hint=st==='coming'?`${ACTIVITIES[act.k]}. Today’s mob arrives at ${hm(S.spawnMin)}.${pend?' Quests you finish now land when it shows up.':''}`
-    : st==='rest'?`${ACTIVITIES[act.k]}. Rest day: your streak is safe.`
-    : pend?'Your finished quests are about to land…':alive?IDLE_HINT:ACTIVITIES[act.k]+'. The mob is down for today.';
+  const now0=performance.now(), down=downField(); vicT=-1e9; leaveT=0;
+  if (st==='coming'||st==='rest'||(st==='dead'&&!down)){ act={k:st==='rest'?(Math.random()<.5?'camp':'nap'):ui.justCleared?'victory':pickActivity(),t0:now0,flags:{}}; } else act=null;
+  if (down && ui.justCleared) vicT=now0;
+  ui.justCleared=false;
+  const tod=getTod(), hint=idleHint();
   const line=st==='coming'?'My mob is still lacing up its boots. Get a head start, if you dare.'
     : st==='rest'?'Rest, then. I’ll spend the day plotting something worse.'
     : alive?(tn[0]||'Run along, hero. My mob is hungry.'):'Hmph. Enjoy it while it lasts. Tomorrow I send worse.';
@@ -769,11 +775,27 @@ function renderIdle(m){
   renderQuestLog(); $('#inn-open').onclick=()=>{ ui.heroTab='inn'; ui.arrive=true; render(); $('#main').scrollTop=0; };
   cvs=$('#cv'); ctx=cvs.getContext('2d'); sceneCtx=ctx; ctx.imageSmoothingEnabled=false;
   cvs.addEventListener('pointerdown', onPoke);
-  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; hit=null; booms=[]; floats=[]; parts=[]; wob=[];
+  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; confetti.b=-1; hit=null; booms=[]; floats=[]; parts=[]; wob=[];
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
   // news from a day that ended while he was away
-  if (S.loot && !pend) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400);
+  if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400);
+}
+function pickActivity(not){ const keys=Object.keys(ACTIVITIES).filter(k=>k!=='victory'&&k!==not); return keys[Math.floor(Math.random()*keys.length)]; }
+function idleHint(){
+  const st=S.mob.state, pend=S.pending.length;
+  if (st==='coming') return `${ACTIVITIES[act.k]}. Today’s mob arrives at ${hm(S.spawnMin)}.${pend?' Quests you finish now land when it shows up.':''}`;
+  if (st==='rest') return `${ACTIVITIES[act.k]}. Rest day: your streak is safe.`;
+  if (pend) return 'Your finished quests are about to land…';
+  if (st==='alive') return IDLE_HINT;
+  if (downField()) return 'It’s down! Every quest you finish now kicks bonus gold out of it.';
+  return ACTIVITIES[act.k]+'. Every quest is done for today.';
+}
+// after victory, and every 30 s, he moves on to another pastime (a hard cut, like the combat)
+function nextActivity(now){
+  const k=S.mob.state==='rest'?(act.k==='camp'?'nap':'camp'):pickActivity(act.k);
+  act={k,t0:now,flags:{}}; floats=[]; parts=[];
+  const h=$('#hint'); if(h) h.textContent=idleHint();
 }
 function stopScene(){ if(raf) cancelAnimationFrame(raf); raf=0; ctx=null; if(shopRaf) cancelAnimationFrame(shopRaf); shopRaf=0; shopCtx=null; if(heroRaf) cancelAnimationFrame(heroRaf); heroRaf=0; }
 function loop(now){ if(!ctx) return; update(now); draw(now); raf=requestAnimationFrame(loop); }
@@ -787,10 +809,13 @@ function update(now){
     if (p.floor && p.y>p.floor){ p.y=p.floor; p.vy*=-0.45; p.vx*=0.6; }
     p.life--; return p.life>0; });
   booms=booms.filter(b=>now-b.t0<700);
-  if (!hit && S.pending.length && S.mob.state!=='coming' && now-enterT>500){
-    hit={t0:now, task:S.tasks.find(x=>x.id===S.pending[0]), from:hpFrac(), word:HIT_WORDS[Math.floor(Math.random()*HIT_WORDS.length)]};
-    const h=$('#hint'); if(h) h.textContent='A quest lands a big hit!';
+  if (!hit && !leaveT && S.pending.length && S.mob.state!=='coming' && now-enterT>500 && !document.querySelector('.overlay')){
+    const kick=S.mob.state==='dead';
+    hit={t0:now, kick, task:S.tasks.find(x=>x.id===S.pending[0]), from:hpFrac(), word:(kick?KICK_WORDS:HIT_WORDS)[Math.floor(Math.random()*4)]};
+    const h=$('#hint'); if(h) h.textContent=kick?'A quest lands a bonus kick!':'A quest lands a big hit!';
   }
+  if (leaveT && now-leaveT>900){ leaveT=0; if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); return; }
+  if (hit && hit.kick){ updateKick(now); return; }
   if (hit){
     const t=now-hit.t0;
     if (t>=HIT_LAND && !hit.landed){
@@ -807,12 +832,12 @@ function update(now){
     if (hit.killed && hit.landed) updateKill(now, now-hit.landed);
     if (t>=(hit.killed?KILL_LEN:HIT_LEN)){
       const killed=hit.killed; hit=null; combatT0=now; lastBeat=-1;
-      if (S.mob.state!=='alive'){ S.pending.slice().forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) landHit(t); }); renderQuestLog(); renderTabs(); }
-      if (!S.pending.length) afterHits(killed);
+      if (killed || !S.pending.length) afterHits(killed);
     }
     return;
   }
-  if (act) updateActivity(now);
+  if (act){ updateActivity(now); if (now-act.t0>(act.k==='victory'?6000:ACT_CYCLE)) nextActivity(now); }
+  else if (S.mob.state==='dead'){ if (now-vicT<4500) confetti(now, now-vicT, HERO_X); }
   else if (S.mob.state==='alive'){ const b=Math.floor((now-combatT0)/BEAT); if(b!==lastBeat){ lastBeat=b; shake(now,150,1); beatKind=b%2===0?'hero':'mobs'; } }
 }
 // after the K.O. freeze: the mob bursts, loot fountains out, then he scoops it all up
@@ -829,6 +854,26 @@ function updateKill(now, k){
     if (S.loot && S.loot.up){ floats.push({x:HERO_X-70,y:G-210,text:'LEVEL UP!',life:100,c:'#7fd36a'}); toast('Level up! You are now level '+S.level+'.'); }
   }
 }
+// a quest finished after the kill: he runs over and boots the dazed mob, and gold spills out
+function updateKick(now){
+  const t=now-hit.t0;
+  if (t>=KICK_LAND && !hit.landed){
+    hit.landed=now; shake(now,200,1.6);
+    if (hit.task) landHit(hit.task); else S.pending.shift();
+    const g=hit.task?.kick||0, s=mobSpots()[0];
+    for(let j=0;j<3+g*2;j++) parts.push({x:s.x+Math.random()*30-15, y:s.y-50, vx:-6+Math.random()*9, vy:-7-Math.random()*5, g:.38, floor:G+6+Math.random()*26, life:999, img:COIN()});
+    if (g) floats.push({x:s.x-40,y:s.y-150,text:'+'+g+'g',life:70,c:'#f6c445',size:16});
+    renderHud(); renderTabs(); renderQuestLog();
+  }
+  if (hit.landed && now-hit.landed>900 && !hit.collected){ hit.collected=1; parts.forEach(p=>{ if(p.img){ p.home=1; p.life=40; } }); }
+  if (t>=KICK_LEN){
+    hit=null;
+    // that was the last quest: the mob limps off in a puff and he goes back to his pastimes
+    if (!S.pending.length && !downField()){ leaveT=now; mobSpots().forEach(s=>booms.push({x:s.x, y:s.y, t0:now, sc:s.sc})); shake(now,200,1.4); }
+    else { const h=$('#hint'); if(h) h.textContent=idleHint(); }
+  }
+}
+function confetti(now, t, x){ const b=Math.floor(t/700); if(b===confetti.b) return; confetti.b=b; for(let k=0;k<26;k++){ const a=-Math.PI/2+(Math.random()-.5)*2.2; parts.push({x:x+Math.random()*40-20,y:G-120,vx:Math.cos(a)*(3+Math.random()*3),vy:Math.sin(a)*(4+Math.random()*3),g:.18,life:60,c:['#f6c445','#ffffff','#ff9ec2','#8fd4f4','#7fd36a'][k%5],sz:5}); } }
 function sparkle(x,y){ for(let k=0;k<4;k++){ const a=Math.random()*Math.PI*2; parts.push({x,y,vx:Math.cos(a)*2.4,vy:Math.sin(a)*2.4,g:0,life:12,c:k%2?'#ffffff':'#ffe066',sz:4}); } }
 function afterHits(killed){
   if (killed){ ui.justCleared=true; setTimeout(showReceipt,300); }
@@ -915,6 +960,38 @@ function mobDraw(i, s, pose, now, knock=0, fxo=''){
   if (crowned() && i===0){ const cr=CROWN(); ctx.drawImage(cr, Math.round(x-cr.width*3), Math.round(r.top-30), cr.width*6, cr.height*6); }
   return r;
 }
+function mobDown(s, now, bump){
+  const a=mobArt(S.mob,'idle'), sc=(a.scale||1)*s.sc, c=frame(a.name,0,a.fx), h=c.height*sc*1.5, w=c.width*sc*1.5;
+  shadow(s.x, s.y+2, h*0.55);
+  spr(ctx,a.name,0,s.x-h*0.5,s.y-w*0.42-bump,{flip:true, rot:Math.PI/2, fx:a.fx, scale:sc});
+  return {hx:s.x+h*0.35, hy:s.y-w*0.45-bump, lx:s.x-h*0.5};
+}
+function dazed(hx, hy, now){
+  const st=Math.floor(now/180)%4;
+  [0,1,2].forEach(k=>{ const a=(k/3+st/4)*Math.PI*2; burstStar(hx+Math.cos(a)*34, hy-46+Math.sin(a)*10, 9, '#ffe066'); });
+  ouch(hx+10, hy-96, 'x.x');
+}
+// the field after the kill: the dazed mob, the hero cheering on the left, and a kick for every bonus quest
+function drawDown(now){
+  const spots=mobSpots(), k=hit&&hit.kick?now-hit.t0:-1, landed=k>=KICK_LAND;
+  if (leaveT){ heroDraw('idle',now); return; }
+  const bump=landed&&k<KICK_LAND+240?16:0;
+  let head=null; spots.map((s,i)=>i).sort((a,b)=>spots[a].y-spots[b].y).forEach(i=>{ const r=mobDown(spots[i],now,i===0?bump:0); if(i===0) head=r; });
+  if (k>=0 && k<KICK_BACK){
+    // hard cut next to the mob: wind up, then the boot lands
+    const s=spots[0], hx=head.lx-50;
+    shadow(hx,G+2,40); heroSpr(ctx,landed?'strike':'windup',now,hx,G);
+    if (landed){ burstStar(head.lx+6,s.y-40,40,'#ffe066'); text(hit.word, head.lx+6-hit.word.length*8, s.y-50, '#e04a3c', 14, '#fff4c0'); }
+    ouch(head.hx+10, head.hy-96, landed?'@.@':'x.x');
+    return;
+  }
+  dazed(head.hx, head.hy, now);
+  // cheering: two hops, then a breather
+  const cy=now%2100, up=cy<1400&&Math.floor(cy/350)%2===0, foot=up?G-34:G;
+  shadow(HERO_X,G+2,40); heroSpr(ctx,cy<1400?(up?'up':'land'):'idle',now,HERO_X,foot);
+  ouch(HERO_X, foot-172, '^o^');
+}
+
 // HP bar in the sky above the mob. No numbers, ever
 function hpBar(now){
   if (S.mob.state!=='alive' && !hit) return;
@@ -983,7 +1060,8 @@ function draw(now){
   if (act){ drawActivity(now); }
   else {
     const spots=mobSlots(), order=spots.map((s,i)=>i).sort((a,b)=>spots[a].y-spots[b].y);
-    if (hit) drawBigHit(now, spots, order);
+    if (S.mob.state==='dead' && !(hit && !hit.kick)) drawDown(now);
+    else if (hit) drawBigHit(now, spots, order);
     else if (!spots.length) heroDraw('idle',now);
     else if (beatKind==='hero'){
       heroDraw('air',now);
@@ -1007,7 +1085,8 @@ function draw(now){
   const sk=SKIES[tod]; if (sk.overlay){ ctx.fillStyle=sk.overlay; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
   if (act && act.k==='camp') fireGlow(now,tod);
   floats.forEach(f=>text(f.text, Math.round(f.x+(f.drift?Math.sin(f.life/8)*6:0)), Math.round(f.y), f.c, f.size||16));
-  if (act && act.k==='victory' && now-act.t0<4500){ const t=now-act.t0, sz=t<120?52:t<240?42:32, bob=Math.floor(t/350)%2?0:-8;
+  const vt=act&&act.k==='victory'?now-act.t0:now-vicT;
+  if (vt>=0 && vt<4500){ const t=vt, sz=t<120?52:t<240?42:32, bob=Math.floor(t/350)%2?0:-8;
     text('VICTORY!', Math.round(W/2-sz*4), 60+bob+(32-sz)/2, '#f6c445', sz);
     if (t>300) text('FIELD CLEARED', W/2-104, 112+bob, '#ffffff', 16); }
   ctx.restore();
@@ -1016,7 +1095,7 @@ function draw(now){
 /* ---------- post-victory activities (nothing is counted or kept) ---------- */
 function updateActivity(now){
   const t=now-act.t0;
-  if (act.k==='victory'){ const b=Math.floor(t/700); if(b!==act.b){ act.b=b; for(let k=0;k<26;k++){ const a=-Math.PI/2+(Math.random()-.5)*2.2; parts.push({x:HERO_X+Math.random()*40-20,y:G-120,vx:Math.cos(a)*(3+Math.random()*3),vy:Math.sin(a)*(4+Math.random()*3),g:.18,life:60,c:['#f6c445','#ffffff','#ff9ec2','#8fd4f4','#7fd36a'][k%5],sz:5}); } } }
+  if (act.k==='victory') confetti(now, t, HERO_X+60);
   if (act.k==='nap'){ if(!act.z||now-act.z>1100){ act.z=now; floats.push({x:HERO_X+50,y:G-60,text:'z',life:80,c:'#ffffff',drift:1,size:18}); } }
   if (act.k==='camp'){ if(Math.random()<.2) parts.push({x:470+Math.random()*12-6,y:G-60,vx:(Math.random()-.5)*.3,vy:-.9,g:-.002,life:80,c:'rgba(230,230,240,0.55)',sz:5}); }
   if (act.k==='sheep'){ if(!act.h||now-act.h>2600){ act.h=now; floats.push({x:440+Math.random()*180,y:G-110,text:'♥',life:60,c:'#ff9ec2',size:20}); } }
@@ -1220,14 +1299,14 @@ function renderQuestLog(){
   const box=$('#qlog'); if(!box) return;
   const left=S.tasks.filter(t=>!t.done).length, m=S.mob, alive=m.state==='alive', pct=Math.round(hpFrac()*100);
   const head=alive?`<b>${esc(dailyName(m))}</b><div class="hpbar" role="img" aria-label="Mob health: ${pct>66?'still strong':pct>33?'wounded':'nearly beaten'}"><i style="width:${pct}%"></i></div>`
-    : m.state==='coming'?`<b>Today’s mob arrives at ${hm(S.spawnMin)}</b>` : m.state==='rest'?`<b>Rest day: the mob stayed home</b>` : `<b class="down">${esc(dailyName(m))}: defeated!</b>`;
+    : m.state==='coming'?`<b>Today’s mob arrives at ${hm(S.spawnMin)}</b>` : m.state==='rest'?`<b>Rest day: the mob stayed home</b>` : `<b class="down">${esc(dailyName(m))}: defeated!</b>${S.tasks.some(t=>!t.done)?'<div class="sub" style="margin:2px 0 0">Bonus quests kick gold out of it.</div>':''}`;
   box.innerHTML=`<div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'} · <span id="dayleft">${dayLeftText()}</span></p>
       <div class="mobhp">${head}</div>
       <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.hit?'killed':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.hit?-1:0}">
         <span class="box">${t.done?CHECK_SVG:''}</span><span class="txt"><span>${esc(t.name)}</span></span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
   ui.freshQuest=null;
   box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.hit) return; t.done=!t.done;
-      if (t.done && (S.mob.state==='dead'||S.mob.state==='rest')){ t.hit=true; ui.freshQuest=t.id; toast(S.mob.state==='rest'?'On a rest day? Show-off.':'The mob is already down. Pure glory, no extra loot.'); }
+      if (t.done && S.mob.state==='rest'){ t.hit=true; ui.freshQuest=t.id; toast('On a rest day? Show-off.'); }
       else if (t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuestLog(); };
     el.onclick=go; el.onkeydown=e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); go(); } }; });
 }

@@ -1,7 +1,7 @@
 // Service worker: lets the installed app open offline.
 // Network first, so a new deploy shows up the next time the app opens online; the cache is only a fallback.
-// build.py replaces 20261031-211038 with a timestamp so every build gets a fresh cache.
-const CACHE = 'qv-20261031-211038';
+// build.py replaces 20261031-211856 with a timestamp so every build gets a fresh cache.
+const CACHE = 'qv-20261031-211856';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
