@@ -199,6 +199,15 @@ main.has-orb .below{padding-bottom:56px}
 .selbar .t{flex:1;min-width:0}
 .selbar .t b{display:block;font-weight:600}
 .boon{color:var(--ok)}
+.plate .boon{font-size:13px}
+/* fine (tier 2) gear: a green corner gem and a small tag */
+.fine-t{font-style:normal;font-family:var(--f-display);font-size:6px;color:var(--ok);vertical-align:middle;margin-left:4px}
+.slot.fine,.inv button.fine{position:relative}
+.slot.fine::after,.inv button.fine::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;background:var(--ok);box-shadow:0 0 0 2px var(--line)}
+.hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.link{background:transparent;border:0;padding:0 0 10px;cursor:pointer;color:var(--gold);font-family:var(--f-display);font-size:7px}
+.vrow.off{opacity:.55}
+.vpanel.stats{gap:8px}
 
 /* showcase: big icon + description on the main screen (Talents, Bag) */
 .stage.show{background:repeating-linear-gradient(180deg,var(--wood) 0 14px,var(--line) 14px 16px,var(--wood2) 16px 30px,var(--line) 30px 32px);display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:14px 16px}
@@ -414,19 +423,21 @@ function frame(name, i=0, fx=''){
   return memo('f:'+name+':'+i+':'+fx, ()=>{
     const [x,y,w,h]=m.f[i], c=makeCanvas(w,h), g=c.getContext('2d');
     g.drawImage(atlasImg,x,y,w,h,0,0,w,h);
-    if (fx){
-      const d=g.getImageData(0,0,w,h), p=d.data;
-      const [kind,val]=fx.split(':');
-      if (kind==='hue'){ const a=(+val)*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a);
-        const M=[.213+cs*.787-sn*.213, .715-cs*.715-sn*.715, .072-cs*.072+sn*.928, .213-cs*.213+sn*.143, .715+cs*.285+sn*.140, .072-cs*.072-sn*.283, .213-cs*.213-sn*.787, .715-cs*.715+sn*.715, .072+cs*.928+sn*.072];
-        for(let k=0;k<p.length;k+=4){ const r=p[k],gg=p[k+1],b=p[k+2]; p[k]=M[0]*r+M[1]*gg+M[2]*b; p[k+1]=M[3]*r+M[4]*gg+M[5]*b; p[k+2]=M[6]*r+M[7]*gg+M[8]*b; } }
-      else if (kind==='mul'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ p[k]=p[k]*r/255; p[k+1]=p[k+1]*gg/255; p[k+2]=p[k+2]*b/255; } }
-      else if (kind==='solid'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ if(p[k+3]){ p[k]=r; p[k+1]=gg; p[k+2]=b; } } }
-      else if (kind==='tint'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ p[k]=(p[k]+r)/2; p[k+1]=(p[k+1]+gg)/2; p[k+2]=(p[k+2]+b)/2; } }
-      g.putImageData(d,0,0);
-    }
+    if (fx) recolor(c,fx);
     return c;
   });
+}
+// recolor a canvas in place: hue:deg, mul:#hex, tint:#hex, solid:#hex
+function recolor(c, fx){
+  const g=c.getContext('2d'), d=g.getImageData(0,0,c.width,c.height), p=d.data;
+  const [kind,val]=fx.split(':');
+  if (kind==='hue'){ const a=(+val)*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a);
+    const M=[.213+cs*.787-sn*.213, .715-cs*.715-sn*.715, .072-cs*.072+sn*.928, .213-cs*.213+sn*.143, .715+cs*.285+sn*.140, .072-cs*.072-sn*.283, .213-cs*.213-sn*.787, .715-cs*.715+sn*.715, .072+cs*.928+sn*.072];
+    for(let k=0;k<p.length;k+=4){ const r=p[k],gg=p[k+1],b=p[k+2]; p[k]=M[0]*r+M[1]*gg+M[2]*b; p[k+1]=M[3]*r+M[4]*gg+M[5]*b; p[k+2]=M[6]*r+M[7]*gg+M[8]*b; } }
+  else if (kind==='mul'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ p[k]=p[k]*r/255; p[k+1]=p[k+1]*gg/255; p[k+2]=p[k+2]*b/255; } }
+  else if (kind==='solid'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ if(p[k+3]){ p[k]=r; p[k+1]=gg; p[k+2]=b; } } }
+  else if (kind==='tint'){ const [r,gg,b]=HEX(val); for(let k=0;k<p.length;k+=4){ p[k]=(p[k]+r)/2; p[k+1]=(p[k+1]+gg)/2; p[k+2]=(p[k+2]+b)/2; } }
+  g.putImageData(d,0,0);
 }
 // draw a frame anchored at its feet (bottom-center of the original frame box)
 let sceneCtx=null;
@@ -623,6 +634,7 @@ function freshState(){
     cls:null, sex:null, heroName:'', gold:0, vcoins:0, exp:0, level:1, day:1, streak:0, best:0, infamy:0,
     taxRate:0.25, showValue:true, villName:'Lady Malvessa', tod:'auto',
     mode:null, solo:null, past:null, npcRecent:[],   // mode: 'solo' | 'duo' (picked on the title screen)
+    tally:{slain:0,fled:0,quests:0,kicks:0,rests:0},   // lifetime counts for the Hero tab
     tasks:[], pending:[], mob:null, plans:{}, loot:null, fled:null,
     // the clock: game date, spawn time and day end (minutes from midnight; end is -240..240 around midnight)
     date:null, spawnMin:420, dayEnd:0, endProp:null, endFor:null, skew:0,
@@ -638,7 +650,7 @@ const readSave=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ 
 function upgrade(S){
   if (S.cls==='fighter') S.cls='warrior';   // old saves: Fighter became Warrior, Lancer was dropped
   if (S.cls && !CLASSES[S.cls]) S.cls=null;
-  S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
+  S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{}; S.tally??={slain:0,fled:0,quests:0,kicks:0,rests:0};
   // saves from before the clock existed
   S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
   if (S.mob) S.mob.extra??=0;
@@ -685,7 +697,7 @@ const innKey=()=>S.date.slice(0,7);
 const innLeft=()=>Math.max(0,S.inn.per+(S.inn.extra[innKey()]||0)-(S.inn.used[innKey()]||0));
 const spendInn=()=>{ S.inn.used[innKey()]=(S.inn.used[innKey()]||0)+1; };
 // today becomes a rest day: the mob goes home, no bounty, the streak is safe
-function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; }
+function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++; }
 // bring back the streak that fell yesterday (Inn token or her revive)
 function revive(){ S.streak+=S.lost.streak; S.best=Math.max(S.best,S.streak); S.lost=null; S.rev=null; }
 
@@ -711,17 +723,17 @@ const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
 function gainExp(n){ S.exp+=n; let up=false; while(S.exp>=expNeed(S.level)){ S.exp-=expNeed(S.level); S.level++; up=true; } return up; }
 // one finished quest's hidden damage lands; returns true if this blow kills the mob
 function landHit(task){
-  task.hit=true; S.pending=S.pending.filter(id=>id!==task.id);
+  task.hit=true; S.pending=S.pending.filter(id=>id!==task.id); S.tally.quests++;
   const m=S.mob;
-  if (m.state==='dead'){ const g=KICK_LOOT[Math.floor(Math.random()*KICK_LOOT.length)]; task.kick=g; S.gold+=g; }
+  if (m.state==='dead'){ const g=KICK_LOOT[Math.floor(Math.random()*KICK_LOOT.length)]+heroBoons().kick; task.kick=g; S.gold+=g; S.tally.kicks++; }
   if (m.state!=='alive'){ save(); return false; }
   m.dmg+=task.dmg;
   if (m.dmg < m.hp-1e-6){ save(); return false; }
   m.state='dead';
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
-  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak);
-  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
+  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++;
+  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30+heroBoons().exp)};
   save(); return true;
 }
 function endDay(){
@@ -733,7 +745,7 @@ function endDay(){
   if (S.lost && S.lost.date<=S.date) S.lost=null;
   // a rest request she never answered is approved when the day ends
   if (m.state==='alive' && S.req && S.req.date===S.date && !S.req.no){ restDay(); S.fled={rest:true}; }
-  if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak}:null; S.streak=0; }
+  if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak}:null; S.streak=0; S.tally.fled++; }
   S.req=null; S.rev=null; S.endFor=null; S.day++;
   const hers=S.tasks.filter(t=>!t.npc&&t.repeat!=='daily'); if (hers.length) S.past=hers.map(({name,dmg,taunt})=>({name,dmg,taunt}));
   S.npcRecent=S.tasks.filter(t=>t.npc==='roll').map(t=>t.name);
@@ -752,7 +764,7 @@ function tick(){
 }
 
 let ui={role:'hero', heroTab:'idle', villTab:'lair', spellSel:'ambush', resetArm:false, justCleared:false, freshQuest:null,
-  shopRoom:'shop', arrive:false, gearSel:null, talSel:'bounty', bagSel:null,
+  shopRoom:'shop', arrive:false, gearSel:null, slotSel:null, eqFx:0, talSel:'bounty', bagSel:null,
   planDate:null, pdraft:{name:'',dmg:10,taunt:''},
   draft:{name:'',dmg:10,repeat:'once',taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1575,62 +1587,115 @@ function renderQuestLog(){
 const dayLeftText=()=>'day ends in '+dur(dayEndAt(S.date)-clock());
 
 /* =========================================================
-   Hero sheet + Talents (placeholders until gear and talents exist)
+   Hero sheet: 8 gear slots, the gear rack, boons and stats
    ========================================================= */
 const GEAR_SLOTS=[['head','Head'],['chest','Chest'],['pants','Pants'],['boots','Boots'],['weapon','Weapon'],['offhand','Off-hand'],['ring','Ring'],['amulet','Amulet']];
-// placeholder gear sold at the forge. Boons are small and never add damage (they kick in with the daily mob)
+// gear sold at the forge, two tiers per slot (t:2 = fine, recolored with fx). Boons are small: they never add damage,
+// lower the threshold, touch V.coins or override her settings. Weapon and off-hand are named for his class
+// (the sprite keeps its own weapon until matching art exists)
 const GEAR={
-  cap:{slot:'head', n:'Iron Cap', price:30, boon:{gold:1}, d:'Dented, but it has character.'},
-  vest:{slot:'chest', n:'Leather Vest', price:40, boon:{gold:1}, d:'Smells faintly of campfire. In a good way.'},
-  trousers:{slot:'pants', n:'Sturdy Trousers', price:30, boon:{min:5}, d:'Extra pockets for extra snacks.'},
-  boots:{slot:'boots', n:'Swift Boots', price:35, boon:{min:10}, d:'You won’t run faster, but you’ll feel like you do.'},
-  sword:{slot:'weapon', n:'Iron Sword', price:50, boon:{gold:2}, d:'Shiny and sharp. Mobs only fall to real quests, though.'},
-  shield:{slot:'offhand', n:'Oak Shield', price:40, boon:{min:5}, d:'Sturdy oak with a lucky knot in the middle.'},
-  ring:{slot:'ring', n:'Copper Ring', price:60, boon:{gold:3}, d:'Turns your finger a little green. Worth it.'},
-  amulet:{slot:'amulet', n:'Lucky Amulet', price:80, boon:{gold:2,min:5}, d:'A pendant that hums when gold is near.'}
+  cap:{slot:'head', price:30, boon:{gold:1}, n:'Iron Cap', d:'Dented, but it has character.'},
+  hat:{slot:'head', t:2, price:90, boon:{exp:5}, fx:'hue:250', n:'Feathered Hat', d:'The feather does all the work. Mostly.'},
+  vest:{slot:'chest', price:40, boon:{gold:1}, n:'Leather Vest', d:'Smells faintly of campfire. In a good way.'},
+  coat:{slot:'chest', t:2, price:110, boon:{gold:2,min:5}, fx:'hue:150', n:'Traveler’s Coat', d:'A pocket for every occasion, and one more for snacks.'},
+  trousers:{slot:'pants', price:30, boon:{min:5}, n:'Sturdy Trousers', d:'Extra pockets for extra snacks.'},
+  leggings:{slot:'pants', t:2, price:90, boon:{min:10,exp:3}, fx:'hue:240', n:'Ranger Leggings', d:'Quiet, comfy and suspiciously stain-proof.'},
+  boots:{slot:'boots', price:35, boon:{min:10}, n:'Swift Boots', d:'You won’t run faster, but you’ll feel like you do.'},
+  wings:{slot:'boots', t:2, price:120, boon:{min:15}, fx:'hue:180', n:'Winged Boots', d:'Tiny wings. Zero flight. Maximum style.'},
+  sword:{slot:'weapon', price:50, boon:{gold:2},
+    n:{warrior:'Iron Sword', archer:'Yew Bow', mage:'Oak Staff'},
+    d:{warrior:'Shiny and sharp. Mobs only fall to real quests, though.', archer:'Bendy in all the right places. Mobs only fall to real quests, though.', mage:'Knotted, humming, and a great walking stick.'}},
+  blade:{slot:'weapon', t:2, price:150, boon:{gold:2,kick:1}, fx:'hue:200',
+    n:{warrior:'Knight’s Blade', archer:'Silverwood Bow', mage:'Crystal Staff'},
+    d:{warrior:'So polished you can check your hair in it.', archer:'Sings a little note on every shot.', mage:'Glows when you’re about to finish a quest. Coincidence?'}},
+  shield:{slot:'offhand', price:40, boon:{min:5},
+    n:{warrior:'Oak Shield', archer:'Leather Quiver', mage:'Pocket Spellbook'},
+    d:{warrior:'Sturdy oak with a lucky knot in the middle.', archer:'Holds twelve arrows and one emergency cookie.', mage:'Mostly blank pages. Mostly.'}},
+  kite:{slot:'offhand', t:2, price:110, boon:{min:5,kick:1}, fx:'hue:160',
+    n:{warrior:'Kite Shield', archer:'Endless Quiver', mage:'Grand Grimoire'},
+    d:{warrior:'Tall, proud and only a little heavy.', archer:'It never runs out. Nobody knows why.', mage:'Every spell inside is about being on time.'}},
+  ring:{slot:'ring', price:60, boon:{gold:3}, n:'Copper Ring', d:'Turns your finger a little green. Worth it.'},
+  moon:{slot:'ring', t:2, price:140, boon:{gold:2,exp:5}, fx:'hue:200', n:'Moonstone Ring', d:'Cool to the touch, warm to the ego.'},
+  amulet:{slot:'amulet', price:80, boon:{gold:2,min:5}, n:'Lucky Amulet', d:'A pendant that hums when gold is near.'},
+  star:{slot:'amulet', t:2, price:180, boon:{gold:3,exp:5,kick:1}, fx:'hue:280', n:'Star Pendant', d:'A fallen star on a string. Wishes not included.'}
 };
+const byCls=v=>typeof v==='string'?v:v[S.cls]||v.warrior;
+const gName=k=>byCls(GEAR[k].n), gDesc=k=>byCls(GEAR[k].d);
 // her forge settings: price override and whether it's on the rack
 const forgeOf=k=>({price:S.forge[k]?.price??GEAR[k].price, off:!!S.forge[k]?.off});
-const boonText=b=>[b.gold&&`+${b.gold} gold when the daily mob falls`, b.min&&`+${b.min} minutes before the day ends`].filter(Boolean).join(' · ');
-function heroBoons(){ const t={gold:0,min:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g){ t.gold+=g.boon.gold||0; t.min+=g.boon.min||0; } }); return t; }
-// simple code-drawn gear icons until real gear art exists (sword and shield come from the icon sheet)
-function gearIcon(slot){
-  if (slot==='weapon') return icon('sword'); if (slot==='offhand') return icon('shield');
-  return memo('gear-'+slot,()=>{ const g=new Grid(16,16);
+// the four kinds of boon gear gives: [key, what it does, icon]
+const BOONS=[['gold','gold when the daily mob falls','coinbag'],['exp','EXP when the daily mob falls','star'],['min','minutes before the day ends','scroll'],['kick','gold per bonus kick','chest']];
+const boonText=b=>BOONS.filter(([k])=>b[k]).map(([k,t])=>`+${b[k]} ${t}`).join(' · ');
+function heroBoons(){ const t={gold:0,exp:0,min:0,kick:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g) for(const b in g.boon) t[b]+=g.boon[b]; }); return t; }
+// simple code-drawn gear icons until real gear art exists (sword, shield and book come from the icon sheet)
+function gearBase(slot){
+  if (slot==='weapon'&&S.cls!=='archer'&&S.cls!=='mage') return icon('sword');
+  if (slot==='offhand'&&S.cls==='mage') return icon('book');
+  if (slot==='offhand'&&S.cls!=='archer') return icon('shield');
+  const k=slot==='weapon'||slot==='offhand'?slot+'-'+S.cls:slot;
+  return memo('gear-'+k,()=>{ const g=new Grid(16,16);
     if (slot==='head'){ g.ell(8,9,6,5,'#a8b0c0',(x,y)=>y<=9); g.rect(2,9,13,2,'#7a8296'); g.rect(7,11,2,3,'#7a8296'); g.rect(5,6,2,2,'#e6ecf6'); }
     if (slot==='chest'){ g.rect(4,4,8,10,'#b86a3a'); g.rect(2,4,3,4,'#b86a3a'); g.rect(11,4,3,4,'#b86a3a'); g.rect(6,3,4,2,null); g.rect(4,10,8,1,'#5a3418'); g.px(8,10,'#f6c445'); g.rect(5,5,1,4,'#e08e5a'); }
     if (slot==='pants'){ g.rect(4,3,8,3,'#4a6aa8'); g.rect(4,6,3,8,'#4a6aa8'); g.rect(9,6,3,8,'#4a6aa8'); g.rect(4,3,8,1,'#5a3418'); g.rect(5,6,1,6,'#7a9ad8'); }
     if (slot==='boots'){ g.rect(2,5,4,7,'#7a4a28'); g.rect(2,11,6,3,'#7a4a28'); g.rect(9,4,4,7,'#7a4a28'); g.rect(9,10,6,3,'#7a4a28'); g.rect(2,5,4,1,'#c9925a'); g.rect(9,4,4,1,'#c9925a'); }
     if (slot==='ring'){ g.ell(8,10,5,4,'#f6c445'); g.ell(8,10,3,2,null); g.ell(8,5,2,2,'#e8508a'); g.px(7,4,'#ffd6e4'); g.px(5,9,'#ffe9a0'); }
     if (slot==='amulet'){ for(let i=0;i<6;i++){ g.px(3+i,2+i,'#c9a46a'); g.px(13-i,2+i,'#c9a46a'); } g.ell(8,11,3,3,'#8fd4f4'); g.px(7,10,'#ffffff'); }
+    if (k==='weapon-archer'){ for(let y=1;y<15;y++){ const x=4+Math.round(6*Math.sin(Math.PI*(y-1)/13)); g.px(x,y,'#9a6430'); g.px(x+1,y,'#c98a4a'); g.px(4,y,'#efe6d2'); } g.rect(9,6,2,4,'#5a3418'); }
+    if (k==='weapon-mage'){ for(let i=0;i<10;i++){ g.px(3+i,14-i,'#8a5a2a'); g.px(4+i,14-i,'#b07a40'); } g.ell(12,3,2.6,2.6,'#8fd4f4'); g.px(11,2,'#ffffff'); }
+    if (k==='offhand-archer'){ g.rect(5,5,6,10,'#8a5a2a'); g.rect(6,5,1,9,'#b07a40'); g.rect(5,9,6,1,'#5a3418'); [6,8,10].forEach((x,i)=>{ g.rect(x,1+i%2,1,4,'#efe6d2'); g.px(x,1+i%2,'#e04a3c'); }); }
     return g.outline().canvas(); });
 }
+const gearIcon=k=>{ const g=GEAR[k]; return memo('gi:'+k+':'+S.cls,()=>{ const b=gearBase(g.slot); if(!g.fx) return b; const c=makeCanvas(b.width,b.height); c.getContext('2d').drawImage(b,0,0); recolor(c,g.fx); return c; }); };
+const slotName=s=>GEAR_SLOTS.find(x=>x[0]===s)[1];
 let heroRaf=0;
 function renderHero(m){
-  const C=CLASSES[S.cls], b=heroBoons(), sel=GEAR[ui.gearSel]?ui.gearSel:null;
-  const slotBtn=([k,l])=>{ const g=S.equip[k]; return `<button class="slot" data-slot="${k}" aria-pressed="${!!g&&g===sel}" aria-label="${l}: ${g?esc(GEAR[g].n):'empty'}">${g?`<img alt="" src="${url(gearIcon(k))}">`:`<span>${l}</span>`}</button>`; };
-  const equipped=k=>S.equip[GEAR[k].slot]===k;
+  const C=CLASSES[S.cls], b=heroBoons(), T=S.tally, fs=ui.slotSel, sel=S.gear.includes(ui.gearSel)&&GEAR[ui.gearSel]?ui.gearSel:null;
+  const on=k=>S.equip[GEAR[k].slot]===k, fine=k=>GEAR[k].t>1;
+  const slotBtn=([s,l])=>{ const g=S.equip[s]; return `<button class="slot${g&&fine(g)?' fine':''}" data-slot="${s}" aria-pressed="${s===fs}" aria-label="${l}: ${g?esc(gName(g)):'empty'}">${g?`<img alt="" src="${url(gearIcon(g))}">`:`<span>${l}</span>`}</button>`; };
+  const order=Object.keys(GEAR), rack=S.gear.filter(k=>GEAR[k]&&(!fs||GEAR[k].slot===fs)).sort((a,c)=>order.indexOf(a)-order.indexOf(c));
+  const swap=sel&&!on(sel)&&S.equip[GEAR[sel].slot];   // what equipping it would replace
+  const short=BOONS.filter(([k])=>b[k]).map(([k])=>`+${b[k]}${{gold:'g',exp:' EXP',min:'m',kick:'g kick'}[k]}`).join(' · ');
+  const ln=(a,v)=>`<div class="switch"><span>${a}</span><b>${v}</b></div>`;
   m.classList.add('split');
-  m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="Your hero, level ${S.level} ${C.name}"></canvas>
+  m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="${esc(S.heroName)}, level ${S.level} ${C.name}"></canvas>
       <div class="doll-l">${GEAR_SLOTS.slice(0,4).map(slotBtn).join('')}</div><div class="doll-r">${GEAR_SLOTS.slice(4).map(slotBtn).join('')}</div>
-      <div class="plate"><b>LV ${S.level} ${C.name.toUpperCase()}</b><span>+${b.gold} gold drop · +${b.min} min</span></div></div>
+      <div class="plate"><b>${esc(S.heroName.toUpperCase())}</b><span>Lv ${S.level} ${C.name}</span><span class="small boon">${short||'No boons yet'}</span></div></div>
     <div class="below wrap"><div class="stack">
-      ${sel?`<div class="px selbar"><img alt="" src="${url(gearIcon(GEAR[sel].slot))}"><div class="t"><b>${esc(GEAR[sel].n)}</b><span class="small boon">${boonText(GEAR[sel].boon)}</span><br><span class="small muted">${esc(GEAR[sel].d)}</span></div><button class="btn${equipped(sel)?' ghost':''}" id="eq">${equipped(sel)?'Remove':'Equip'}</button></div>`
-        :`<p class="hint">${S.gear.length?'Tap gear to equip it. Gear gives small boons only.':'No gear yet. Visit the forge through the shop.'}</p>`}
-      <div><h3>Equipment</h3>${S.gear.length?`<div class="inv">${S.gear.map(k=>`<button data-g="${k}" aria-pressed="${k===sel}" aria-label="${esc(GEAR[k].n)}"><img alt="" src="${url(gearIcon(GEAR[k].slot))}">${equipped(k)?'<span class="tag">ON</span>':''}</button>`).join('')}</div>`:'<div class="px empty">Your gear rack is empty.</div>'}</div></div></div>`;
-  m.querySelectorAll('[data-g]').forEach(el=>el.onclick=()=>{ ui.gearSel=el.dataset.g; renderMain(); });
-  m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=()=>{ const g=S.equip[el.dataset.slot]; if(g){ ui.gearSel=g; renderMain(); } else toast(GEAR_SLOTS.find(s=>s[0]===el.dataset.slot)[1]+' slot is empty.'); });
-  if (sel) $('#eq').onclick=()=>{ const g=GEAR[sel]; if(equipped(sel)) delete S.equip[g.slot]; else S.equip[g.slot]=sel; save(); renderMain(); };
+      ${sel?`<div class="px selbar"><img alt="" src="${url(gearIcon(sel))}"><div class="t"><b>${esc(gName(sel))}${fine(sel)?' <i class="fine-t">FINE</i>':''}</b><span class="small boon">${boonText(GEAR[sel].boon)}</span><br><span class="small muted">${esc(gDesc(sel))}${swap?` Replaces your ${esc(gName(swap))}.`:''}</span></div><button class="btn${on(sel)?' ghost':''}" id="eq">${on(sel)?'Remove':'Equip'}</button></div>`
+        :`<p class="hint">${S.gear.length?'Tap a piece of gear to see it, or a slot to show only that slot.':'No gear yet. Visit the forge through the shop.'}</p>`}
+      <div><div class="hrow"><h3>Equipment${fs?' · '+slotName(fs):''}</h3>${fs?'<button class="link" id="all">Show all</button>':''}</div>
+        ${rack.length?`<div class="inv">${rack.map(k=>`<button class="${fine(k)?'fine':''}" data-g="${k}" aria-pressed="${k===sel}" aria-label="${esc(gName(k))}${on(k)?' (equipped)':''}"><img alt="" src="${url(gearIcon(k))}">${on(k)?'<span class="tag">ON</span>':''}</button>`).join('')}</div>`
+        :`<div class="px empty">${fs?`Nothing for your ${slotName(fs).toLowerCase()} slot yet. The forge has some.`:'Your gear rack is empty.'}</div>`}</div>
+      <div><h3>Boons</h3><div class="vlist">${BOONS.map(([k,t,ic])=>{ const from=Object.values(S.equip).filter(g=>GEAR[g]&&GEAR[g].boon[k]);
+        return `<div class="vrow px${b[k]?'':' off'}"><img alt="" src="${url(icon(ic))}"><div class="t"><b>+${b[k]} ${t}</b><span class="small muted">${from.length?from.map(g=>`${esc(gName(g))} +${GEAR[g].boon[k]}`).join(', '):'No gear gives this yet'}</span></div></div>`; }).join('')}</div>
+        <p class="small muted" style="margin:8px 0 0">Boons are small treats. They never add damage, and she still makes the rules.</p></div>
+      <div><h3>Stats</h3><div class="px vpanel stats">
+        ${ln('Level',`${S.level} · ${S.exp}/${expNeed(S.level)} EXP`)}${ln('Streak',`${S.streak} (best ${S.best})`)}
+        ${ln('Mobs defeated',T.slain)}${ln('Mobs that fled',T.fled)}${ln('Quests done',T.quests)}${ln('Bonus kicks',T.kicks)}${ln('Rest days',T.rests)}
+        ${ln('Gear owned',`${S.gear.length} of ${order.length}`)}</div></div></div></div>`;
+  const keep=fn=>()=>{ const sc=m.querySelector('.below').scrollTop; fn(); renderMain(); $('#main .below').scrollTop=sc; };
+  m.querySelectorAll('[data-g]').forEach(el=>el.onclick=keep(()=>{ ui.gearSel=el.dataset.g; }));
+  m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=keep(()=>{ const s=el.dataset.slot; ui.slotSel=fs===s?null:s; if(ui.slotSel) ui.gearSel=S.equip[s]||S.gear.find(k=>GEAR[k]?.slot===s)||null; }));
+  if ($('#all')) $('#all').onclick=keep(()=>{ ui.slotSel=null; });
+  if (sel) $('#eq').onclick=keep(()=>{ const g=GEAR[sel]; if(on(sel)){ delete S.equip[g.slot]; toast(`Took off: ${gName(sel)}.`); } else { S.equip[g.slot]=sel; ui.eqFx=performance.now(); toast(`Equipped: ${gName(sel)}.`); } save(); });
   stageLoop($('#herocv'), drawHeroStage);
 }
 function drawHeroStage(x,now){
-  const tod=getTod(), sk=SKIES[tod];
+  const tod=getTod(), sk=SKIES[tod], e=now-(ui.eqFx||-1e9);
   x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
   x.fillStyle=sk.bands[0]; x.fillRect(0,0,480,30); x.drawImage(background(tod),0,30,480,270);
   x.fillStyle='rgba(30,40,20,.28)'; x.beginPath(); x.ellipse(240,274,44,11,0,0,Math.PI*2); x.fill();
-  heroSpr(x,'idle',now,240,276,{scale:1.6});
+  // just equipped something: a little hop and a ring of sparkles, stepped (no tweening)
+  heroSpr(x,e<220?'up':e<380?'land':'idle',now,240,e<220?262:276,{scale:1.6});
+  if (e<700){ const st=Math.floor(e/100), r=56+st*10; x.globalAlpha=1-st/7;
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+st*0.3; x.fillStyle=i%2?'#ffffff':'#ffe066'; x.fillRect(Math.round(240+Math.cos(a)*r*1.2)-4,Math.round(196+Math.sin(a)*r)-4,8,8); }
+    x.globalAlpha=1; }
   if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,300); }
 }
+
+/* =========================================================
+   Talents (placeholder tree until talent points exist)
+   ========================================================= */
 // one tree for every class; boons are small and never add damage
 const TALENTS=[
   [{k:'bounty',ic:'coinbag',n:'Bounty Hunter',d:'The daily mob drops a little extra gold when it falls.'}],
@@ -1665,7 +1730,7 @@ function renderShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='shop') renderMain(); }); return; }
   const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
   const stock = forge
-    ? Object.entries(GEAR).filter(([k])=>!forgeOf(k).off||S.gear.includes(k)).map(([k,g])=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(g.slot))}" style="width:64px;height:64px"><span class="tagp">${esc(g.n)}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')
+    ? Object.entries(GEAR).filter(([k])=>!forgeOf(k).off||S.gear.includes(k)).map(([k,g])=>{ const own=S.gear.includes(k), price=forgeOf(k).price; return `<button class="crate ${!own&&S.gold<price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(k))}" style="width:64px;height:64px"><span class="tagp">${esc(gName(k))}${g.t>1?' <i class="fine-t">FINE</i>':''}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${price}`}</span></button>`; }).join('')
     : S.shop.map(it=>`<button class="crate ${S.vcoins<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price" style="color:var(--hex)"><img alt="" src="${url(VCOIN())}">${it.price}</span></button>`).join('');
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
@@ -1758,13 +1823,13 @@ function forgeRoom(x,r,now,FLOOR){
   r(206,FLOOR-24,70,10,'#4a4a56'); r(206,FLOOR-24,70,2,'#8a8a9a'); r(194,FLOOR-22,14,6,'#4a4a56'); r(226,FLOOR-14,30,14,'#3a3a44'); r(214,FLOOR-2,54,8,'#3a3a44');
 }
 function openGear(k){
-  const g=GEAR[k], own=S.gear.includes(k), price=forgeOf(k).price, short=price-S.gold;
+  const g=GEAR[k], n=gName(k), own=S.gear.includes(k), price=forgeOf(k).price, short=price-S.gold;
   const o=document.createElement('div'); o.className='overlay';
-  o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(g.n)}"><img alt="" src="${url(gearIcon(g.slot))}"><h3>${esc(g.n)}</h3><p>${esc(g.d)}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
+  o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(n)}"><img alt="" src="${url(gearIcon(k))}"><h3>${esc(n)}${g.t>1?' <i class="fine-t">FINE</i>':''}</h3><p>${esc(gDesc(k))}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
     <div class="price"><img alt="" src="${url(COIN())}">${price} gold</div>${own?'<span class="need" style="color:#5a3d26">Already on your gear rack.</span>':short>0?`<span class="need">You need ${short} more gold.</span>`:''}
     <div class="btnrow"><button class="btn ghost" id="it-x">Back</button><button class="btn" id="it-buy" ${own||short>0?'disabled':''}>Buy</button></div></div>`;
   $('#app').appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); $('#it-x').onclick=()=>o.remove();
-  $('#it-buy').onclick=()=>{ if(own||S.gold<price) return; S.gold-=price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${g.n}. Equip it on the Hero tab.`); };
+  $('#it-buy').onclick=()=>{ if(own||S.gold<price) return; S.gold-=price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${n}. Equip it on the Hero tab.`); };
 }
 function openItem(id){
   const it=S.shop.find(x=>x.id===id); if(!it) return; const short=it.price-S.vcoins;
@@ -1887,8 +1952,8 @@ function renderVShop(m){
       <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
     <div class="below wrap"><div class="stack">${forge?`
       <div><h2 style="color:var(--hex)">Run the forge</h2><p class="muted small">Gear costs gold, ${P.his} in-game currency. Set prices or take pieces off the rack. Boons are fixed and never add damage.</p></div>
-      <div class="vlist">${Object.entries(GEAR).map(([k,g])=>{ const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(g.slot))}"><div class="t"><b>${esc(g.n)}</b><span class="small muted">${boonText(g.boon)}${own?` · ${P.he} owns it`:''}</span></div>
-        <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${f.price}" aria-label="Price of ${esc(g.n)} in gold"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--hex);flex:none" data-sell="${k}" ${f.off?'':'checked'} aria-label="${esc(g.n)} for sale"></div>`; }).join('')}</div>
+      <div class="vlist">${Object.entries(GEAR).map(([k,g])=>{ const f=forgeOf(k), own=S.gear.includes(k); return `<div class="vrow px"><img alt="" src="${url(gearIcon(k))}"><div class="t"><b>${esc(gName(k))}${g.t>1?' <i class="fine-t">FINE</i>':''}</b><span class="small muted">${boonText(g.boon)}${own?` · ${P.he} owns it`:''}</span></div>
+        <input class="inp" style="width:70px;flex:none" type="number" min="0" max="9999" data-price="${k}" value="${f.price}" aria-label="Price of ${esc(gName(k))} in gold"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--hex);flex:none" data-sell="${k}" ${f.off?'':'checked'} aria-label="${esc(gName(k))} for sale"></div>`; }).join('')}</div>
       <div><h3>Gift ${P.him} gold</h3><div class="px vpanel"><div class="row2"><input class="inp" id="gift" type="number" min="1" max="999" value="20" aria-label="Gold to give"><button class="btn hex" id="gift-go">Give gold</button></div><p class="small muted">${P.He} has ${S.gold} gold.</p></div></div>`
     :`
       <div><h2 style="color:var(--hex)">Stock the shop</h2><p class="muted small">Treats only. You set the price and write what ${P.he} gets.</p></div>
@@ -1905,8 +1970,8 @@ function renderVShop(m){
   $('#go-room').onclick=()=>{ ui.shopRoom=forge?'shop':'forge'; renderMain(); };
   if (forge){
     const set=(k,o)=>{ S.forge[k]={...forgeOf(k),...o}; save(); };
-    m.querySelectorAll('[data-price]').forEach(el=>el.onchange=()=>{ set(el.dataset.price,{price:Math.max(0,Math.min(9999,parseInt(el.value,10)||0))}); toast(`${GEAR[el.dataset.price].n}: ${forgeOf(el.dataset.price).price} gold.`); });
-    m.querySelectorAll('[data-sell]').forEach(el=>el.onchange=()=>{ set(el.dataset.sell,{off:!el.checked}); toast(`${GEAR[el.dataset.sell].n} ${el.checked?'is back on the rack':'is off the rack'}.`); });
+    m.querySelectorAll('[data-price]').forEach(el=>el.onchange=()=>{ set(el.dataset.price,{price:Math.max(0,Math.min(9999,parseInt(el.value,10)||0))}); toast(`${gName(el.dataset.price)}: ${forgeOf(el.dataset.price).price} gold.`); });
+    m.querySelectorAll('[data-sell]').forEach(el=>el.onchange=()=>{ set(el.dataset.sell,{off:!el.checked}); toast(`${gName(el.dataset.sell)} ${el.checked?'is back on the rack':'is off the rack'}.`); });
     $('#gift-go').onclick=()=>{ const n=Math.max(1,Math.min(999,parseInt($('#gift').value,10)||0)); S.gold+=n; save(); renderHud(); rerender(); toast(`You gave ${P.him} ${n} gold. How generous.`); };
     return;
   }
