@@ -150,19 +150,54 @@ p{margin:0}
 .crate .price img{width:12px;height:12px;filter:none}
 .crate.poor .price{color:#a8957e}
 
-/* hero sheet */
-.doll{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px 12px}
-.slots{display:flex;flex-direction:column;gap:10px}
-.slot{display:flex;flex-direction:column;align-items:center;gap:5px}
-.slot i{width:50px;height:50px;display:block;background:#1e140d;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--wood-hi)}
-.slot span{font-family:var(--f-display);font-size:7px;color:var(--muted)}
-.doll .me{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}
-.doll .me img{width:100%;max-width:150px;image-rendering:pixelated}
-.doll .me b{font-family:var(--f-display);font-size:9px;text-align:center;line-height:1.6}
-.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.stat{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.stat span{font-family:var(--f-display);font-size:7px;color:var(--muted)}
-.stat b{font-family:var(--f-display);font-size:12px;color:var(--gold);text-shadow:2px 2px 0 var(--line)}
+/* main screen: pinned at the top of every hero tab, the part below scrolls */
+main.split{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.stage{position:relative;flex:none;aspect-ratio:16/10;background:var(--line);border-bottom:4px solid var(--line);overflow:hidden}
+.stage canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:manipulation;cursor:pointer}
+.below{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-block:14px 26px}
+main.has-orb .below{padding-bottom:56px}
+.stage .shopsign{position:absolute;top:6px;left:0;right:0;margin:0}
+.stage .shopsign span{font-size:9px;padding:6px 10px}
+.go{position:absolute;right:2%;bottom:3%;display:flex;align-items:center;gap:6px;border:0;cursor:pointer;background:var(--wood2);color:var(--gold);font-family:var(--f-display);font-size:8px;padding:7px 9px;box-shadow:0 0 0 3px var(--line),inset 0 3px 0 var(--wood-hi);text-shadow:1px 1px 0 var(--line);animation:nudge .9s steps(2) infinite}
+.go i{width:14px;height:14px;background:var(--gold);clip-path:polygon(0 30%,50% 30%,50% 0,100% 50%,50% 100%,50% 70%,0 70%);order:2}
+.go.back{right:auto;left:2%;animation-name:nudge-back}
+.go.back i{transform:scaleX(-1);order:0}
+@keyframes nudge{50%{transform:translateX(3px)}}
+@keyframes nudge-back{50%{transform:translateX(-3px)}}
+
+/* hero sheet: gear slots around the hero on the main screen */
+.doll-l,.doll-r{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+.doll-l{left:10px}.doll-r{right:10px}
+.slot{width:42px;height:42px;padding:0;border:0;cursor:pointer;background:rgba(20,12,6,.72);box-shadow:0 0 0 3px var(--line),inset 0 0 0 2px var(--wood-hi);display:grid;place-items:center}
+.slot img{width:32px;height:32px;image-rendering:pixelated}
+.slot span{font-family:var(--f-display);font-size:6px;color:var(--muted);line-height:1.3;text-align:center}
+.slot[aria-pressed="true"]{box-shadow:0 0 0 3px var(--line),inset 0 0 0 3px var(--gold)}
+.plate{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(20,12,6,.72);box-shadow:0 0 0 3px var(--line);padding:6px 10px;text-align:center;display:flex;flex-direction:column;gap:5px;white-space:nowrap}
+.plate b{font-family:var(--f-display);font-size:8px;color:var(--gold);text-shadow:1px 1px 0 var(--line)}
+.plate span{font-size:14px}
+.selbar{display:flex;gap:12px;align-items:center;padding:10px 12px}
+.selbar img{width:48px;height:48px;image-rendering:pixelated;flex:none}
+.selbar .t{flex:1;min-width:0}
+.selbar .t b{display:block;font-weight:600}
+.boon{color:var(--ok)}
+
+/* showcase: big icon + description on the main screen (Talents, Bag) */
+.stage.show{background:repeating-linear-gradient(180deg,var(--wood) 0 14px,var(--line) 14px 16px,var(--wood2) 16px 30px,var(--line) 30px 32px);display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;padding:14px 16px}
+.pedestal{width:104px;height:104px;display:grid;place-items:center;background:radial-gradient(circle,rgba(246,196,69,.35) 0 38%,transparent 70%)}
+.pedestal img{width:88px;height:88px;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 rgba(0,0,0,.45))}
+.pedestal.locked img{filter:grayscale(.6) drop-shadow(4px 4px 0 rgba(0,0,0,.45));opacity:.75}
+.show .info{display:flex;flex-direction:column;gap:8px;min-width:0;max-height:100%;overflow-y:auto}
+.show h2{margin:0;font-size:11px}
+.show p{font-size:16px;line-height:1.3}
+.show .st{font-family:var(--f-display);font-size:7px;color:var(--muted);line-height:1.6}
+.show .btn{align-self:flex-start}
+
+/* inventory grid (Hero gear, Bag items) */
+.inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:12px}
+.inv button{aspect-ratio:1;background:#1e140d;border:0;cursor:pointer;position:relative;display:grid;place-items:center;margin:5px;box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--wood-hi)}
+.inv button img{width:72%;image-rendering:pixelated}
+.inv button[aria-pressed="true"]{box-shadow:inset 0 3px 0 rgba(0,0,0,.45),0 0 0 3px var(--line),0 0 0 5px var(--gold)}
+.inv .tag{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-family:var(--f-display);font-size:6px;color:var(--gold);text-shadow:1px 1px 0 var(--line)}
 
 /* talent tree */
 .tree{padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:26px;position:relative}
@@ -172,6 +207,8 @@ p{margin:0}
 .tal i{width:56px;height:56px;display:grid;place-items:center;background:var(--wood2);box-shadow:0 0 0 4px var(--line),inset 0 3px 0 var(--wood-hi);transform:rotate(45deg)}
 .tal i img{width:32px;height:32px;image-rendering:pixelated;transform:rotate(-45deg);opacity:.5;filter:grayscale(.7)}
 .tal b{font-family:var(--f-display);font-size:7px;line-height:1.5;margin-top:6px;color:var(--muted)}
+.tal[aria-pressed="true"] i{box-shadow:0 0 0 4px var(--gold),inset 0 3px 0 var(--wood-hi)}
+.tal[aria-pressed="true"] b{color:var(--gold)}
 
 /* forms */
 label.f,.f{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--muted)}
@@ -232,7 +269,7 @@ input[type=range]{accent-color:var(--hex);width:100%}
 
 .toast{position:absolute;left:16px;right:16px;bottom:110px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
-@media (prefers-reduced-motion: reduce){.paper,.toast,.paper .stamp,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
+@media (prefers-reduced-motion: reduce){.go,.paper,.toast,.paper .stamp,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
 </style>
 
 <div class="app" id="app">
@@ -379,14 +416,16 @@ function freshState(){
       {id:nid(), name:'Gaming hour', price:35, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
       {id:nid(), name:'Breakfast in bed', price:60, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
     ],
-    bag:[]
+    bag:[], gear:[], equip:{}
   };
 }
 let S; try{ S=JSON.parse(localStorage.getItem(KEY))||freshState(); }catch(e){ S=freshState(); }
 if (S.cls && !CLASSES[S.cls]) S.cls=null;
+S.gear=S.gear||[]; S.equip=S.equip||{};
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
 
 let ui={role:'hero', heroTab:'idle', villTab:'mobs', resetArm:false, justCleared:false, freshQuest:null,
+  shopRoom:'shop', arrive:false, gearSel:null, talSel:'bounty', bagSel:null,
   draft:{name:'',gold:10,repeat:'once',mob:null,taunt:''}, shopDraft:{name:'',price:20,icon:'heart',desc:''}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=s=>document.querySelector(s);
@@ -421,20 +460,21 @@ function renderHud(){
 function bindRole(){ $('#r-hero').onclick=()=>{ ui.role='hero'; render(); }; $('#r-vill').onclick=()=>{ ui.role='vill'; render(); }; }
 function renderTabs(){
   const n=$('#tabs');
-  if (!S.cls && ui.role==='hero'){ n.hidden=true; $('#main').classList.remove('has-orb'); return; }
+  if (!S.cls && ui.role==='hero'){ n.hidden=true; return; }
   n.hidden=false;
   const hero=ui.role==='hero';
-  n.classList.toggle('hero',hero); $('#main').classList.toggle('has-orb',hero);
+  n.classList.toggle('hero',hero);
   // hero order follows the owner's sketch: Bag | Shop | (Idle) | Hero | Talents
   const tabs = hero ? [['bag','Bag','bag','side l1'],['shop','Shop','coinbag',''],['idle','Idle','sword','idle'],['hero','Hero','shield',''],['talents','Talents','star','side r2']] : [['mobs','Send mobs','shield'],['vshop','Shop','coinbag'],['rules','Rules','book']];
   const cur=hero?ui.heroTab:ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length;
   n.innerHTML=tabs.map(([id,label,ic,cls=''])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`;
     if (id==='idle') return `<button role="tab" class="idle" data-t="idle" aria-selected="${cur==='idle'}" aria-label="Idle"><span class="idle-orb"><i></i><b><img alt="" src="${url(icon(ic))}">${label}</b></span>${badge}</button>`;
     return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${url(icon(ic))}">${label}${badge}</button>`; }).join('');
-  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(ui.role==='hero') ui.heroTab=b.dataset.t; else ui.villTab=b.dataset.t; render(); $('#main').scrollTop=0; });
+  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(ui.role==='hero'){ ui.heroTab=b.dataset.t; if(b.dataset.t==='shop') ui.shopRoom='shop'; } else ui.villTab=b.dataset.t; render(); $('#main').scrollTop=0; });
 }
 function renderMain(){
   const m=$('#main'); stopScene();
+  m.className='wrap'+(ui.role==='hero'&&S.cls?' has-orb':''); // hero tabs add 'split' (pinned main screen)
   if (ui.role==='hero'){ if(!S.cls) return renderClassPick(m); ({idle:renderIdle,shop:renderShop,bag:renderBag,hero:renderHero,talents:renderTalents})[ui.heroTab](m); }
   else ({mobs:renderVMobs,vshop:renderVShop,rules:renderVRules})[ui.villTab](m);
 }
@@ -489,7 +529,8 @@ function background(tod){
 /* =========================================================
    Idle tab: cartoon "cuts" instead of smooth animation
    ========================================================= */
-const W=720, H=405, G=350;          // canvas size and ground line
+const W=720, H=405, G=350;          // scene size and ground line
+const TOP=45;                        // extra sky above the scene (the main screen is 16:10)
 const HERO_X=150;
 const BEAT=2300;                     // how long each cut is held
 const SLOTS=[{x:440,y:G+6},{x:536,y:G-26},{x:560,y:G+16},{x:640,y:G-20},{x:664,y:G+8}];
@@ -504,11 +545,11 @@ function renderIdle(m){
   const mobs=fieldMobs(), front=mobs[0], pend=S.pending.length;
   if (!mobs.length && !pend){ const keys=Object.keys(ACTIVITIES); const k=ui.justCleared?'victory':keys[Math.floor(Math.random()*keys.length)]; ui.justCleared=false; act={k,t0:performance.now(),flags:{}}; } else act=null;
   const tod=getTod();
-  m.innerHTML=`<div class="stack">
-    <div class="scene px"><canvas id="cv" width="480" height="270" aria-label="Battle scene, ${tod}" style="aspect-ratio:16/9"></canvas></div>
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="cv" width="480" height="300" aria-label="Battle scene, ${tod}"></canvas></div><div class="below wrap"><div class="stack">
     <p class="hint" id="hint">${pend?`${pend} defeated mob${pend>1?'s':''} incoming…`:mobs.length?'Check off quests to defeat mobs. Tap a mob to poke it.':ACTIVITIES[act.k]+'. The field is clear for today.'}</p>
     <div id="qlog"></div>
-    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(front&&front.taunt?front.taunt:mobs.length?'Run along, hero. My mobs are hungry.':'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div></div>`;
+    <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(front&&front.taunt?front.taunt:mobs.length?'Run along, hero. My mobs are hungry.':'Hmph. Enjoy it while it lasts. Tomorrow I send worse.')}</p></div></div></div></div>`;
   renderQuestLog();
   cvs=$('#cv'); ctx=cvs.getContext('2d'); sceneCtx=ctx; ctx.imageSmoothingEnabled=false;
   cvs.addEventListener('pointerdown', onPoke);
@@ -516,7 +557,7 @@ function renderIdle(m){
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
 }
-function stopScene(){ if(raf) cancelAnimationFrame(raf); raf=0; ctx=null; if(shopRaf) cancelAnimationFrame(shopRaf); shopRaf=0; }
+function stopScene(){ if(raf) cancelAnimationFrame(raf); raf=0; ctx=null; if(shopRaf) cancelAnimationFrame(shopRaf); shopRaf=0; shopCtx=null; if(heroRaf) cancelAnimationFrame(heroRaf); heroRaf=0; }
 function loop(now){ if(!ctx) return; update(now); draw(now); raf=requestAnimationFrame(loop); }
 
 function update(now){
@@ -559,7 +600,7 @@ function renderIdleText(){
   const tn=$('#taunt'); if(tn&&front) tn.textContent=front.taunt||'Run along, hero. My mobs are hungry.';
 }
 function onPoke(e){
-  const r=cvs.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*W, py=(e.clientY-r.top)/r.height*H;
+  const r=cvs.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*W, py=(e.clientY-r.top)/r.height*(H+TOP)-TOP;
   const mobs=fieldMobs().slice(0,SLOTS.length);
   for (let i=mobs.length-1;i>=0;i--){ const s=SLOTS[i];
     if (Math.abs(px-s.x)<62 && py>s.y-150 && py<s.y+10){
@@ -618,6 +659,7 @@ function draw(now){
   ctx.setTransform(2/3,0,0,2/3,0,0); ctx.imageSmoothingEnabled=false;
   ctx.save();
   if (now-shakeT<150){ ctx.translate(Math.round((Math.random()-.5)*10), Math.round((Math.random()-.5)*8)); }
+  ctx.fillStyle=SKIES[tod].bands[0]; ctx.fillRect(-10,-10,W+20,TOP+12); ctx.translate(0,TOP);
   drawScenery(tod, now);
   if (act){ drawActivity(now); }
   else {
@@ -645,7 +687,7 @@ function draw(now){
     booms.forEach(b=>{ const f=Math.min(7,Math.floor((now-b.t0)/85)); spr(ctx,'fx_boom',f,b.x,b.y+50,{scale:1}); });
   }
   parts.forEach(p=>rect(p.x,p.y,p.sz||4,p.sz||4,p.c));
-  const sk=SKIES[tod]; if (sk.overlay){ ctx.fillStyle=sk.overlay; ctx.fillRect(-10,-10,W+20,H+20); }
+  const sk=SKIES[tod]; if (sk.overlay){ ctx.fillStyle=sk.overlay; ctx.fillRect(-10,-TOP-10,W+20,H+TOP+20); }
   if (act && act.k==='camp') fireGlow(now,tod);
   floats.forEach(f=>text(f.text, Math.round(f.x+(f.drift?Math.sin(f.life/8)*6:0)), Math.round(f.y), f.c, f.size||16));
   if (act && act.k==='victory' && now-act.t0<4500) text('VICTORY!', 232, 60, '#f6c445', 32);
@@ -752,46 +794,162 @@ function renderQuestLog(){
    Hero sheet + Talents (placeholders until gear and talents exist)
    ========================================================= */
 const GEAR_SLOTS=[['head','Head'],['chest','Chest'],['pants','Pants'],['boots','Boots'],['weapon','Weapon'],['offhand','Off-hand'],['ring','Ring'],['amulet','Amulet']];
-function renderHero(m){
-  const C=CLASSES[S.cls], slot=([k,l])=>`<div class="slot"><i aria-label="${l} slot, empty"></i><span>${l}</span></div>`;
-  m.innerHTML=`<div class="stack"><div><h2>Hero</h2><p class="muted small">Gear gives small boons only. Nothing equipped yet.</p></div>
-    <div class="px doll"><div class="slots">${GEAR_SLOTS.slice(0,4).map(slot).join('')}</div>
-      <div class="me"><img alt="" src="${url(heroThumb(S.cls))}"><b>Lv ${S.level}<br>${C.name}</b></div>
-      <div class="slots">${GEAR_SLOTS.slice(4).map(slot).join('')}</div></div>
-    <div class="stats"><div class="px stat"><span>LEVEL</span><b>${S.level}</b></div><div class="px stat"><span>EXP</span><b>${S.exp}/${expNeed(S.level)}</b></div>
-      <div class="px stat"><span>GOLD</span><b>${S.gold}</b></div><div class="px stat"><span>DAY</span><b>${S.day}</b></div></div></div>`;
+// placeholder gear sold at the forge. Boons are small and never add damage (they kick in with the daily mob)
+const GEAR={
+  cap:{slot:'head', n:'Iron Cap', price:30, boon:{gold:1}, d:'Dented, but it has character.'},
+  vest:{slot:'chest', n:'Leather Vest', price:40, boon:{gold:1}, d:'Smells faintly of campfire. In a good way.'},
+  trousers:{slot:'pants', n:'Sturdy Trousers', price:30, boon:{min:5}, d:'Extra pockets for extra snacks.'},
+  boots:{slot:'boots', n:'Swift Boots', price:35, boon:{min:10}, d:'You won’t run faster, but you’ll feel like you do.'},
+  sword:{slot:'weapon', n:'Iron Sword', price:50, boon:{gold:2}, d:'Shiny and sharp. Mobs only fall to real quests, though.'},
+  shield:{slot:'offhand', n:'Oak Shield', price:40, boon:{min:5}, d:'Sturdy oak with a lucky knot in the middle.'},
+  ring:{slot:'ring', n:'Copper Ring', price:60, boon:{gold:3}, d:'Turns your finger a little green. Worth it.'},
+  amulet:{slot:'amulet', n:'Lucky Amulet', price:80, boon:{gold:2,min:5}, d:'A pendant that hums when gold is near.'}
+};
+const boonText=b=>[b.gold&&`+${b.gold} gold when the daily mob falls`, b.min&&`+${b.min} minutes before the day ends`].filter(Boolean).join(' · ');
+function heroBoons(){ const t={gold:0,min:0}; Object.values(S.equip).forEach(k=>{ const g=GEAR[k]; if(g){ t.gold+=g.boon.gold||0; t.min+=g.boon.min||0; } }); return t; }
+// simple code-drawn gear icons until real gear art exists (sword and shield come from the icon sheet)
+function gearIcon(slot){
+  if (slot==='weapon') return icon('sword'); if (slot==='offhand') return icon('shield');
+  return memo('gear-'+slot,()=>{ const g=new Grid(16,16);
+    if (slot==='head'){ g.ell(8,9,6,5,'#a8b0c0',(x,y)=>y<=9); g.rect(2,9,13,2,'#7a8296'); g.rect(7,11,2,3,'#7a8296'); g.rect(5,6,2,2,'#e6ecf6'); }
+    if (slot==='chest'){ g.rect(4,4,8,10,'#b86a3a'); g.rect(2,4,3,4,'#b86a3a'); g.rect(11,4,3,4,'#b86a3a'); g.rect(6,3,4,2,null); g.rect(4,10,8,1,'#5a3418'); g.px(8,10,'#f6c445'); g.rect(5,5,1,4,'#e08e5a'); }
+    if (slot==='pants'){ g.rect(4,3,8,3,'#4a6aa8'); g.rect(4,6,3,8,'#4a6aa8'); g.rect(9,6,3,8,'#4a6aa8'); g.rect(4,3,8,1,'#5a3418'); g.rect(5,6,1,6,'#7a9ad8'); }
+    if (slot==='boots'){ g.rect(2,5,4,7,'#7a4a28'); g.rect(2,11,6,3,'#7a4a28'); g.rect(9,4,4,7,'#7a4a28'); g.rect(9,10,6,3,'#7a4a28'); g.rect(2,5,4,1,'#c9925a'); g.rect(9,4,4,1,'#c9925a'); }
+    if (slot==='ring'){ g.ell(8,10,5,4,'#f6c445'); g.ell(8,10,3,2,null); g.ell(8,5,2,2,'#e8508a'); g.px(7,4,'#ffd6e4'); g.px(5,9,'#ffe9a0'); }
+    if (slot==='amulet'){ for(let i=0;i<6;i++){ g.px(3+i,2+i,'#c9a46a'); g.px(13-i,2+i,'#c9a46a'); } g.ell(8,11,3,3,'#8fd4f4'); g.px(7,10,'#ffffff'); }
+    return g.outline().canvas(); });
 }
-const TALENTS=[[['coinbag','Bounty Hunter','+ gold when the daily mob falls']],[['scroll','Night Owl','+ minutes before the day ends'],['potion','Lucky Find','Better odds on mob drops']],[['star','Hero’s Pride','+ EXP when the daily mob falls']]];
+let heroRaf=0;
+function renderHero(m){
+  const C=CLASSES[S.cls], b=heroBoons(), sel=GEAR[ui.gearSel]?ui.gearSel:null;
+  const slotBtn=([k,l])=>{ const g=S.equip[k]; return `<button class="slot" data-slot="${k}" aria-pressed="${!!g&&g===sel}" aria-label="${l}: ${g?esc(GEAR[g].n):'empty'}">${g?`<img alt="" src="${url(gearIcon(k))}">`:`<span>${l}</span>`}</button>`; };
+  const equipped=k=>S.equip[GEAR[k].slot]===k;
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="herocv" width="480" height="300" aria-label="Your hero, level ${S.level} ${C.name}"></canvas>
+      <div class="doll-l">${GEAR_SLOTS.slice(0,4).map(slotBtn).join('')}</div><div class="doll-r">${GEAR_SLOTS.slice(4).map(slotBtn).join('')}</div>
+      <div class="plate"><b>LV ${S.level} ${C.name.toUpperCase()}</b><span>+${b.gold} bounty gold · +${b.min} min</span></div></div>
+    <div class="below wrap"><div class="stack">
+      ${sel?`<div class="px selbar"><img alt="" src="${url(gearIcon(GEAR[sel].slot))}"><div class="t"><b>${esc(GEAR[sel].n)}</b><span class="small boon">${boonText(GEAR[sel].boon)}</span><br><span class="small muted">${esc(GEAR[sel].d)}</span></div><button class="btn${equipped(sel)?' ghost':''}" id="eq">${equipped(sel)?'Remove':'Equip'}</button></div>`
+        :`<p class="hint">${S.gear.length?'Tap gear to equip it. Gear gives small boons only.':'No gear yet. Visit the forge through the shop.'}</p>`}
+      <div><h3>Equipment</h3>${S.gear.length?`<div class="inv">${S.gear.map(k=>`<button data-g="${k}" aria-pressed="${k===sel}" aria-label="${esc(GEAR[k].n)}"><img alt="" src="${url(gearIcon(GEAR[k].slot))}">${equipped(k)?'<span class="tag">ON</span>':''}</button>`).join('')}</div>`:'<div class="px empty">Your gear rack is empty.</div>'}</div></div></div>`;
+  m.querySelectorAll('[data-g]').forEach(el=>el.onclick=()=>{ ui.gearSel=el.dataset.g; renderMain(); });
+  m.querySelectorAll('[data-slot]').forEach(el=>el.onclick=()=>{ const g=S.equip[el.dataset.slot]; if(g){ ui.gearSel=g; renderMain(); } else toast(GEAR_SLOTS.find(s=>s[0]===el.dataset.slot)[1]+' slot is empty.'); });
+  if (sel) $('#eq').onclick=()=>{ const g=GEAR[sel]; if(equipped(sel)) delete S.equip[g.slot]; else S.equip[g.slot]=sel; save(); renderMain(); };
+  if (!atlasReady) return;
+  const hx=$('#herocv').getContext('2d'); hx.imageSmoothingEnabled=false;
+  const lp=now=>{ if(!heroRaf) return; drawHeroStage(hx,now); heroRaf=requestAnimationFrame(lp); }; heroRaf=requestAnimationFrame(lp);
+}
+function drawHeroStage(x,now){
+  const tod=getTod(), sk=SKIES[tod], C=CLASSES[S.cls];
+  x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
+  x.fillStyle=sk.bands[0]; x.fillRect(0,0,480,30); x.drawImage(background(tod),0,30,480,270);
+  x.fillStyle='rgba(30,40,20,.28)'; x.beginPath(); x.ellipse(240,274,44,11,0,0,Math.PI*2); x.fill();
+  spr(x,C.idle,Math.floor(now/120),240,276,{scale:1.6});
+  if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,300); }
+}
+// one tree for every class; boons are small and never add damage
+const TALENTS=[
+  [{k:'bounty',ic:'coinbag',n:'Bounty Hunter',d:'The daily mob drops a little extra gold when it falls.'}],
+  [{k:'owl',ic:'scroll',n:'Night Owl',d:'A few extra minutes before the day ends, for those late-night quests.'},{k:'lucky',ic:'potion',n:'Lucky Find',d:'Slightly better odds on the gold the mob drops.'}],
+  [{k:'pride',ic:'star',n:'Hero’s Pride',d:'A little extra EXP whenever the daily mob falls.'}]
+];
+function showcase(img, title, desc, extra='', locked=false){
+  return `<div class="stage show planks"><div class="pedestal${locked?' locked':''}"><img alt="" src="${img}"></div><div class="info"><h2>${esc(title)}</h2><p>${esc(desc)}</p>${extra}</div></div>`;
+}
 function renderTalents(m){
-  m.innerHTML=`<div class="stack"><div><h2>Talents</h2><p class="muted small">One tree for every class. Talents give small boons and never help you hit harder. Coming soon.</p></div>
-    <div class="px tree">${TALENTS.map(tier=>`<div class="tier">${tier.map(([ic,n,d])=>`<button class="tal" data-d="${esc(d)}" aria-label="${esc(n)}: ${esc(d)} (locked)"><i><img alt="" src="${url(icon(ic))}"></i><b>${esc(n)}</b></button>`).join('')}</div>`).join('')}</div>
-    <p class="hint">Talent points: 0</p></div>`;
-  m.querySelectorAll('.tal').forEach(b=>b.onclick=()=>toast(b.querySelector('b').textContent+': '+b.dataset.d+'. Locked for now.'));
+  const all=TALENTS.flat(), t=all.find(x=>x.k===ui.talSel)||all[0];
+  m.classList.add('split');
+  m.innerHTML=showcase(url(icon(t.ic)), t.n, t.d, '<span class="st">LOCKED · NEEDS 1 TALENT POINT</span>', true)+`<div class="below wrap"><div class="stack">
+    <p class="hint">One tree for every class. Talent points: 0</p>
+    <div class="px tree">${TALENTS.map(tier=>`<div class="tier">${tier.map(x=>`<button class="tal" data-k="${x.k}" aria-pressed="${x===t}" aria-label="${esc(x.n)} (locked)"><i><img alt="" src="${url(icon(x.ic))}"></i><b>${esc(x.n)}</b></button>`).join('')}</div>`).join('')}</div></div></div>`;
+  m.querySelectorAll('.tal').forEach(b=>b.onclick=()=>{ ui.talSel=b.dataset.k; const sc=m.querySelector('.below').scrollTop; renderMain(); $('#main .below').scrollTop=sc; });
 }
 
 /* =========================================================
    Shop + Bag
    ========================================================= */
-let shopRaf=0, shopCtx=null, shopT0=0;
+let shopRaf=0, shopCtx=null, shopT0=0, swap=null, npcAt=0, popT=0;
 const SHOP_LINES=['Welcome, traveler! I am a perfectly ordinary merchant.','Villainess? Never heard of her. Lovely mustache, though, isn’t it?','Gold first, questions never.','Everything here was priced by… a stranger. A kind stranger.','Browse all you like. I have nowhere else to be. Certainly no lair.'];
+const FORGE_LINES=['Welcome to the forge! I am the blacksmith. We have never met before.','The shopkeeper? Different person. Completely different. Look at this beard.','This beard is real. Please stop looking at it.','No crown under these goggles. That’s just a very shiny… helmet.','Gear gives small boons. It will never help you hit harder. I made sure of that.'];
+// the running gag: every NPC is her, and she has to change costumes behind the counter
+const SWAP_LINES={shop:'The forge? Ah, yes, my… colleague. Wait right there!', forge:'Back to the shop? Off you go. I’ll just… tidy up back here.'};
+const ARRIVE_LINES={forge:'*huff* *puff* Welcome to the forge! I was here the whole time.', shop:'Welcome back, traveler! Hm? Soot? What soot?'};
+// placeholder blacksmith: the shopkeeper sprite with a leather apron, goggles and a huge fake beard drawn on
+function smithSprite(){
+  return memo('smith',()=>{ const b=villSprite(true,true), c=makeCanvas(b.width,b.height), g=c.getContext('2d'); g.drawImage(b,0,0);
+    const d=g.getImageData(0,0,c.width,c.height), p=d.data;
+    for(let y=84;y<106;y++) for(let x=38;x<72;x++){ const k=(y*c.width+x)*4; if(p[k+3]&&p[k]>130&&p[k]-p[k+2]>20&&p[k+1]>80){ const l=(p[k]+p[k+1]+p[k+2])/765; p[k]=165*l; p[k+1]=100*l; p[k+2]=58*l; } }
+    g.putImageData(d,0,0);
+    const G=new Grid(c.width,c.height);
+    G.ell(59,66,13,9,'#8a5228',(x,y)=>y>=59); G.rect(53,62,2,9,'#b0703a'); G.rect(62,63,2,10,'#b0703a'); G.ell(59,76,4,3,'#8a5228');
+    G.rect(32,20,40,2,'#3a2414'); G.ell(53,20,3,3,'#7fc8e8'); G.ell(62,20,3,3,'#7fc8e8'); G.px(52,19,'#ffffff'); G.px(61,19,'#ffffff');
+    G.outline(); g.drawImage(G.canvas(),0,0); return c; });
+}
+const smithFace=()=>memo('smithface',()=>{ const c=makeCanvas(52,52); c.getContext('2d').drawImage(smithSprite(),-28,-6); return c; });
+
 function renderShop(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='hero'&&ui.heroTab==='shop') renderMain(); }); return; }
-  m.innerHTML=`<div class="stack"><div><div class="shopsign"><span>Ye Olde Shoppe</span></div><div class="scene px"><canvas id="shopcv" width="480" height="260" aria-label="Your hero inside the shop, with the shopkeeper behind the counter" style="aspect-ratio:480/260"></canvas></div></div>
-    <div class="px speech"><img alt="" src="${url(villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">The Shopkeeper</div><p id="shopline">${SHOP_LINES[Math.floor(Math.random()*SHOP_LINES.length)]}</p></div></div>
-    <p class="hint">You have <b style="color:var(--gold)">${S.gold} gold</b>. Tap a crate to look closer.</p>
-    ${S.shop.length?`<div class="crates">${S.shop.map(it=>`<button class="crate ${S.gold<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price"><img alt="" src="${url(COIN())}">${it.price}</span></button>`).join('')}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div>`;
+  const forge=ui.shopRoom==='forge', lines=forge?FORGE_LINES:SHOP_LINES, arriving=ui.arrive, coin=url(COIN()); ui.arrive=false;
+  const stock = forge
+    ? Object.entries(GEAR).map(([k,g])=>{ const own=S.gear.includes(k); return `<button class="crate ${!own&&S.gold<g.price?'poor':''}" data-g="${k}"><img alt="" src="${url(gearIcon(g.slot))}" style="width:64px;height:64px"><span class="tagp">${esc(g.n)}</span><span class="price">${own?'OWNED':`<img alt="" src="${coin}">${g.price}`}</span></button>`; }).join('')
+    : S.shop.map(it=>`<button class="crate ${S.gold<it.price?'poor':''}" data-id="${it.id}"><img alt="" src="${url(icon(it.icon))}" style="width:64px;height:64px"><span class="tagp">${esc(it.name)}</span><span class="price"><img alt="" src="${coin}">${it.price}</span></button>`).join('');
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="${forge?'Your hero in the forge, with the blacksmith behind the workbench':'Your hero inside the shop, with the shopkeeper behind the counter'}"></canvas>
+      <div class="shopsign"><span>${forge?'The Forge':'Ye Olde Shoppe'}</span></div>
+      <button class="go${forge?' back':''}" id="go-room" aria-label="${forge?'Back to the shop':'Go to the forge'}"><i></i>${forge?'SHOP':'FORGE'}</button></div>
+    <div class="below wrap"><div class="stack">
+      <div class="px speech"><img alt="" src="${url(forge?smithFace():villSprite(true))}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">${forge?'The Blacksmith':'The Shopkeeper'}</div><p id="shopline">${arriving?'…':lines[Math.floor(Math.random()*lines.length)]}</p></div></div>
+      <p class="hint">You have <b style="color:var(--gold)">${S.gold} gold</b>. ${forge?'Gear gives small boons, never extra damage.':'Tap a crate to look closer.'}</p>
+      ${stock?`<div class="crates">${stock}</div>`:'<div class="px empty">The shelves are empty. Ask your Villainess to stock them.</div>'}</div></div>`;
   const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false; shopT0=performance.now();
-  let li=0; cv.onclick=()=>{ li=(li+1)%SHOP_LINES.length; $('#shopline').textContent=SHOP_LINES[li]; };
-  const lp=now=>{ if(!shopCtx) return; drawShop(now); shopRaf=requestAnimationFrame(lp); }; shopRaf=requestAnimationFrame(lp);
-  m.querySelectorAll('.crate').forEach(b=>b.onclick=()=>openItem(b.dataset.id));
+  swap=null; popT=0; npcAt=arriving?shopT0+1500:0;
+  let li=0; cv.onclick=()=>{ if(swap||npcAt) return; li=(li+1)%lines.length; $('#shopline').textContent=lines[li]; };
+  $('#go-room').onclick=()=>{ if(swap||npcAt) return; swap={t0:performance.now()}; $('#shopline').textContent=SWAP_LINES[ui.shopRoom]; };
+  const lp=now=>{ if(!shopCtx) return;
+    if (npcAt && now>=npcAt){ npcAt=0; popT=now; const l=$('#shopline'); if(l) l.textContent=ARRIVE_LINES[ui.shopRoom]; }
+    drawShop(now);
+    if (swap && now-swap.t0>1500){ ui.shopRoom=forge?'shop':'forge'; ui.arrive=true; renderMain(); return; }
+    shopRaf=requestAnimationFrame(lp); };
+  shopRaf=requestAnimationFrame(lp);
+  m.querySelectorAll('.crate').forEach(b=>b.onclick=()=>b.dataset.g?openGear(b.dataset.g):openItem(b.dataset.id));
 }
 function drawShop(now){
-  const x=shopCtx; x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
+  const x=shopCtx; x.setTransform(1,0,0,1,0,40); x.imageSmoothingEnabled=false; // 40px of extra wall above the old 480x260 room
   const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),c,d); };
-  const FLOOR=214, sk=SKIES[getTod()];
+  const FLOOR=214, sk=SKIES[getTod()], forge=ui.shopRoom==='forge';
+  if (forge) forgeRoom(x,r,now,FLOOR); else shopRoom(x,r,FLOOR,sk);
+  // the NPC behind the counter: ducks down to change costumes, pops back up as someone "else"
+  const ducked = (npcAt && now<npcAt) || (swap && now-swap.t0>600);
+  if (!ducked){
+    const v=forge?smithSprite():villSprite(true,true), bob=Math.round(Math.sin(now/500));
+    x.save(); x.translate(420+Math.round(v.width/2), 48+bob); x.scale(-1,1); x.drawImage(v,0,0); x.restore();
+    if (swap && now-swap.t0<600){ x.font='20px "Press Start 2P", monospace'; x.textBaseline='top'; x.fillStyle='#1a100a'; x.fillText('!',424,24); x.fillStyle='#ffe066'; x.fillText('!',422,22); }
+  }
+  // counter (shop) or workbench (forge)
+  if (forge){ r(316,150,164,FLOOR-150+6,'#4a4652'); r(316,150,164,8,'#7a7484'); r(316,158,164,2,'#2e2a36'); for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#3a3644');
+    r(340,128,4,22,'#8a5530'); r(330,122,24,10,'#5a5a66'); r(330,122,24,2,'#9a9aaa'); x.drawImage(icon('sword'),440,120); }
+  else { r(316,150,164,FLOOR-150+6,'#8a5530'); r(316,150,164,8,'#b07a44'); r(316,158,164,2,'#5a3418'); for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#6b4226');
+    x.drawImage(icon('coinbag'),324,122); x.drawImage(icon('chest'),448,122); }
+  // costume-change dust behind the counter
+  const dustT = swap && now-swap.t0>600 ? now-swap.t0-600 : popT && now-popT<500 ? now-popT : -1;
+  if (dustT>=0 && dustT<500){ spr(x,'fx_dust',Math.min(7,Math.floor(dustT/60)),400,160); spr(x,'fx_dust',Math.min(7,Math.floor(dustT/60)),450,156,{flip:true}); }
+  if (swap && now-swap.t0>650){ x.font='10px "Press Start 2P", monospace'; x.textBaseline='top'; x.fillStyle='#ffffff'; x.fillText(Math.floor(now/180)%2?'*rustle*':'*clank*',350,118); }
+  // the hero hops in through the door on the left, then stands still
+  if (S.cls){
+    const C=CLASSES[S.cls], t=now-shopT0, dur=1300;
+    const k=Math.min(1,t/dur), e=1-Math.pow(1-k,2);
+    const cx=20+(160-20)*e, hop=k<1?Math.round(Math.abs(Math.sin(t/110))*6):0;
+    x.fillStyle='rgba(20,10,5,.3)'; x.beginPath(); x.ellipse(cx,FLOOR+20,28,6,0,0,Math.PI*2); x.fill();
+    spr(x,C.idle,Math.floor(now/(k<1?70:120)),cx,FLOOR+22-hop);
+    if (k>=1 && t<dur+500){ const f=Math.min(7,Math.floor((t-dur)/60)); spr(x,'fx_dust',f,cx-24,FLOOR+22); }
+  }
+  if (!forge && sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,-40,480,300); }
+  if (swap && now-swap.t0>1150){ x.fillStyle='#000'; x.fillRect(0,-40,480,300); } // hard cut to the other room
+}
+function shopRoom(x,r,FLOOR,sk){
   // back wall planks
-  for(let y=0;y<FLOOR;y+=20){ r(0,y,480,20,'#6b4428'); r(0,y+18,480,2,'#4e301b'); r(0,y,480,2,'#7d5232'); }
-  for(let i=0;i<480;i+=96) r(i+(Math.floor(i/96)%2)*40,0,2,FLOOR,'#5a3820');
+  for(let y=-40;y<FLOOR;y+=20){ r(0,y,480,20,'#6b4428'); r(0,y+18,480,2,'#4e301b'); r(0,y,480,2,'#7d5232'); }
+  for(let i=0;i<480;i+=96) r(i+(Math.floor(i/96)%2)*40,-40,2,FLOOR+40,'#5a3820');
   // floor boards
   r(0,FLOOR,480,260-FLOOR,'#8a5a34'); r(0,FLOOR,480,4,'#a8703f');
   for(let y=FLOOR+12;y<260;y+=12) r(0,y,480,2,'#6b4226');
@@ -813,23 +971,36 @@ function drawShop(now){
   // hanging sign
   r(330,0,2,12,'#4e301b'); r(440,0,2,12,'#4e301b'); r(320,10,132,22,'#7a4a28'); r(320,10,132,3,'#9a6a3a');
   x.font='10px "Press Start 2P", monospace'; x.textBaseline='middle'; x.fillStyle='#f6c445'; x.fillText('ALL SALES', 334, 22);
-  // shopkeeper on the right, facing left, behind the counter
-  const v=villSprite(true,true), bob=Math.round(Math.sin(now/500));
-  x.save(); x.translate(420+Math.round(v.width/2), 48+bob); x.scale(-1,1); x.drawImage(v,0,0); x.restore();
-  // counter
-  r(316,150,164,FLOOR-150+6,'#8a5530'); r(316,150,164,8,'#b07a44'); r(316,158,164,2,'#5a3418');
-  for(let i=336;i<480;i+=36) r(i,160,2,FLOOR-154,'#6b4226');
-  x.drawImage(icon('coinbag'),324,122); x.drawImage(icon('chest'),448,122);
-  // the hero walks in through the door, then stands on the rug
-  if (S.cls){
-    const C=CLASSES[S.cls], t=now-shopT0, dur=1300;
-    const k=Math.min(1,t/dur), e=1-Math.pow(1-k,2);
-    const cx=20+(160-20)*e, hop=k<1?Math.round(Math.abs(Math.sin(t/110))*6):0;
-    x.fillStyle='rgba(20,10,5,.3)'; x.beginPath(); x.ellipse(cx,FLOOR+20,28,6,0,0,Math.PI*2); x.fill();
-    spr(x,C.idle,Math.floor(now/(k<1?70:120)),cx,FLOOR+22-hop);
-    if (k>=1 && t<dur+500){ const f=Math.min(7,Math.floor((t-dur)/60)); spr(x,'fx_dust',f,cx-24,FLOOR+22); }
-  }
-  if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,260); }
+}
+function forgeRoom(x,r,now,FLOOR){
+  // stone wall
+  r(0,-40,480,FLOOR+40,'#5e5868');
+  for(let y=-40,row=0;y<FLOOR;y+=18,row++){ r(0,y,480,2,'#706a7a'); r(0,y+16,480,2,'#403c4a'); for(let i=(row%2)*24;i<480;i+=48) r(i,y,2,16,'#403c4a'); }
+  // packed-earth floor
+  r(0,FLOOR,480,260-FLOOR,'#6b5a4a'); r(0,FLOOR,480,4,'#857060');
+  for(let y=FLOOR+14;y<260;y+=14) r(0,y,480,2,'#54463a');
+  // doorway back to the shop: warm wood planks through the arch
+  r(8,70,70,FLOOR-70,'#2a1c13'); for(let y=76;y<FLOOR;y+=20){ r(14,y,58,20,'#6b4428'); r(14,y+18,58,2,'#4e301b'); }
+  r(4,66,78,6,'#403c4a'); r(4,66,6,FLOOR-66,'#403c4a'); r(76,66,6,FLOOR-66,'#403c4a');
+  // the furnace with its chimney, glowing
+  r(196,-40,52,60,'#7a3f2a'); r(196,-40,4,60,'#5a2c1c');
+  r(160,20,124,FLOOR-20,'#8a4a32'); for(let y=20;y<FLOOR;y+=14){ r(160,y+12,124,2,'#5a2c1c'); for(let i=160+((y/14)%2)*14;i<284;i+=28) r(i,y,2,12,'#5a2c1c'); }
+  r(184,110,76,64,'#1a0c08'); r(184,110,76,4,'#3a1a10');
+  spr(x,'fx_fire',Math.floor(now/90),222,178,{scale:2});
+  x.save(); x.globalCompositeOperation='lighter'; x.globalAlpha=.16+.05*Math.sin(now/90); x.fillStyle='#ff8a3a'; x.beginPath(); x.arc(222,150,110,0,Math.PI*2); x.fill(); x.restore();
+  // weapon rack on the wall
+  r(300,46,8,70,'#4a2c18'); x.drawImage(icon('shield'),312,40); x.drawImage(icon('sword'),312,80);
+  // anvil in front of the furnace
+  r(206,FLOOR-24,70,10,'#4a4a56'); r(206,FLOOR-24,70,2,'#8a8a9a'); r(194,FLOOR-22,14,6,'#4a4a56'); r(226,FLOOR-14,30,14,'#3a3a44'); r(214,FLOOR-2,54,8,'#3a3a44');
+}
+function openGear(k){
+  const g=GEAR[k], own=S.gear.includes(k), short=g.price-S.gold;
+  const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML=`<div class="paper detail" role="dialog" aria-label="${esc(g.n)}"><img alt="" src="${url(gearIcon(g.slot))}"><h3>${esc(g.n)}</h3><p>${esc(g.d)}</p><p class="small" style="color:#3f7a2a">${boonText(g.boon)}</p>
+    <div class="price"><img alt="" src="${url(COIN())}">${g.price} gold</div>${own?'<span class="need" style="color:#5a3d26">Already on your gear rack.</span>':short>0?`<span class="need">You need ${short} more gold.</span>`:''}
+    <div class="btnrow"><button class="btn ghost" id="it-x">Back</button><button class="btn" id="it-buy" ${own||short>0?'disabled':''}>Buy</button></div></div>`;
+  $('#app').appendChild(o); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); $('#it-x').onclick=()=>o.remove();
+  $('#it-buy').onclick=()=>{ if(own||S.gold<g.price) return; S.gold-=g.price; S.gear.push(k); ui.gearSel=k; save(); o.remove(); render(); toast(`Forged: ${g.n}. Equip it on the Hero tab.`); };
 }
 function openItem(id){
   const it=S.shop.find(x=>x.id===id); if(!it) return; const short=it.price-S.gold;
@@ -841,10 +1012,15 @@ function openItem(id){
   $('#it-buy').onclick=()=>{ if(S.gold<it.price) return; S.gold-=it.price; S.bag.push({id:nid(),name:it.name,icon:it.icon,desc:it.desc||'',used:false,delivered:false,day:S.day}); save(); o.remove(); render(); toast(`Bought: ${it.name}. It’s in your Bag.`); };
 }
 function renderBag(m){
-  const items=S.bag.filter(b=>!b.delivered);
-  m.innerHTML=`<div class="stack"><div><h2>Bag</h2><p class="muted small">Use a reward to tell ${esc(S.villName)} you’re cashing it in.</p></div>
-    ${items.length?`<div class="vlist">${items.map(b=>`<div class="vrow px"><img alt="" src="${url(icon(b.icon))}"><div class="t"><b>${esc(b.name)}</b><span class="small muted">${b.used?'Waiting for her to deliver':esc(b.desc||'Bought on day '+b.day)}</span></div>${b.used?'<span class="lbl" style="color:var(--gold)">USED</span>':`<button class="btn" data-id="${b.id}">Use</button>`}</div>`).join('')}</div>`:'<div class="px empty">Your bag is empty. Defeat mobs, earn gold, visit the shop.</div>'}</div>`;
-  m.querySelectorAll('button[data-id]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.id); it.used=true; save(); render(); toast('Request sent. She has been notified (in spirit).'); });
+  const items=S.bag.filter(b=>!b.delivered), sel=items.find(b=>b.id===ui.bagSel)||items[0];
+  m.classList.add('split');
+  m.innerHTML=(sel
+      ? showcase(url(icon(sel.icon)), sel.name, sel.desc||'Bought on day '+sel.day, sel.used?'<span class="st">USED · WAITING FOR HER TO DELIVER</span>':'<button class="btn" id="bag-use">Use</button>')
+      : showcase(url(icon('bag')), 'Your bag is empty', 'Defeat mobs, earn gold, then visit the shop.'))
+    +`<div class="below wrap"><div class="stack"><p class="hint">Use a reward to tell ${esc(S.villName)} you’re cashing it in.</p>
+      <div><h3>Items</h3>${items.length?`<div class="inv">${items.map(b=>`<button data-id="${b.id}" aria-pressed="${b===sel}" aria-label="${esc(b.name)}"><img alt="" src="${url(icon(b.icon))}">${b.used?'<span class="tag">USED</span>':''}</button>`).join('')}</div>`:'<div class="px empty">Nothing here yet.</div>'}</div></div></div>`;
+  m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.bagSel=b.dataset.id; renderMain(); });
+  if (sel && !sel.used) $('#bag-use').onclick=()=>{ sel.used=true; save(); render(); toast('Request sent. She has been notified (in spirit).'); };
 }
 
 /* =========================================================
