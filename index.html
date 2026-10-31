@@ -277,6 +277,22 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .dice{padding:8px 10px;flex:none}
 .dice img{width:30px;height:30px;image-rendering:pixelated;display:block}
 .title-card{text-align:center;padding-block:8px 4px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.title-screen #titlecv{width:100%;max-width:480px;aspect-ratio:16/9;image-rendering:pixelated;box-shadow:0 0 0 4px var(--line)}
+.title-card h1.logo{font-size:20px}
+.title-card h1.logo span{color:var(--hex);font-size:12px;vertical-align:middle}
+.cls[disabled],.btn[disabled]{opacity:.55;cursor:default}
+.quiz h3{margin:4px 0 -4px}
+.quiz-head{gap:6px}
+.quiz-head .speech.q{align-self:stretch;text-align:left;padding:10px 12px}
+.quiz-head .speech.q p{margin:4px 0 0}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;background:var(--line)}
+.dots i.on{background:var(--hex)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.col{flex-direction:column}
+.chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border:0;color:var(--ink);font:inherit;font-size:16px;cursor:pointer;text-align:left}
+.chip img{width:24px;height:24px;image-rendering:pixelated;flex:none}
+.chip[aria-pressed="true"]{background:#5a2a40;box-shadow:inset 0 3px 0 var(--hex),0 -4px 0 0 var(--hex),0 4px 0 0 var(--hex),-4px 0 0 0 var(--hex),4px 0 0 0 var(--hex)}
 .title-card h1{font-family:var(--f-display);font-size:16px;line-height:1.6;margin:0;color:var(--gold);text-wrap:balance;text-shadow:3px 3px 0 var(--line)}
 
 /* overlays */
@@ -452,6 +468,8 @@ const NAMES = {
 };
 const randName = sex => { const l=NAMES[sex]; return l[Math.floor(Math.random()*l.length)]; };
 const heroReady = () => !!(S.cls && S.sex && S.heroName);
+// the whole setup: title screen (solo or duo), the hero, and in solo mode her questions
+const setupDone = () => heroReady() && !!S.mode && (S.mode==='duo' || !!S.solo);
 
 const COLORS=['red','purple','black','yellow'];
 const MOB_BASES = [
@@ -492,37 +510,124 @@ const KISS = () => strSprite('kiss2',["....rrrr....rrrr....","..rrRRRRr..rRRRRrr
 const KEY='qv-proto-v4';
 let uid=Date.now(); const nid=()=>(uid++).toString(36);
 const DEF={threshold:80, bounty:25};   // used whenever she doesn't set her own (and in solo mode)
-const LOOT=[6,8,10,12,15];             // default gold drop table
+const LOOT=[6,8,8,10,10,12,12,15,18,25];   // default gold drop table: mostly modest, now and then a lucky big drop
 const KICK_LOOT=[2,3,3,4,5];           // gold per quest finished after the kill (never tied to the quest's hidden damage)
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
 const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', quests:[]});
 const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||p.quests.length>0);
-// the NPC Villainess's list: the starting quests, and the fallback when nothing is assigned by spawn time
-const NPC_TASKS=[
-  {name:'Drink 2 liters of water', dmg:5, repeat:'daily', taunt:'Hydrate, little hero. Dry heroes crumble.'},
-  {name:'30-minute walk outside', dmg:10, repeat:'daily', taunt:'The sun is out. You are not. Fix that.'},
-  {name:'Read 20 pages', dmg:8, repeat:'daily', taunt:'My orc can read. Can you?'},
-  {name:'Tidy the desk', dmg:6, repeat:'once', taunt:'My miner found three mugs under your papers.'},
-  {name:'Deep-clean the bathroom', dmg:18, repeat:'once', taunt:'This one bites. Bring gloves.'}
+/* ---- Solo mode: the NPC Villainess runs his days. Her lists are also the fallback when a real Villainess sets nothing ---- */
+const SIZE_DMG=[0,5,10,18];   // hidden damage by quest size: 1 quick (~10 min), 2 half an hour, 3 big (an hour or more)
+const GOALS={
+  body:{n:'Health & fitness', ic:'apple'}, home:{n:'Home & chores', ic:'key'}, mind:{n:'Learning & reading', ic:'book'},
+  calm:{n:'Rest & self-care', ic:'cocoa'}, work:{n:'Work & focus', ic:'scroll'}, people:{n:'Friends & family', ic:'heart'},
+  make:{n:'Creative hobbies', ic:'music'}
+};
+// [quest, size, her taunt, 1 = works as a daily habit]
+const NPC_POOL={
+  body:[['Drink 2 liters of water',1,'Hydrate, little hero. Dry heroes crumble.',1],['10 minutes of stretching',1,'Stiff heroes snap. I’ve seen it.',1],
+    ['20 push-ups, any style',1,'Knees count. I won’t tell.',1],['30-minute walk outside',2,'The sun is out. You are not. Fix that.',1],
+    ['A 30-minute workout',2,'Sweat now, gloat later.'],['Cook a real meal with a vegetable in it',2,'Cereal is not a meal. I checked.'],
+    ['Meal-prep tomorrow’s lunch',2,'Future you will be fed. Annoyingly well.'],['Go for a run, a swim or a bike ride',3,'Run, hero. Something is chasing you. It’s me.']],
+  home:[['Make your bed',1,'A hero who sleeps in a nest is no hero.',1],['Do the dishes',1,'My miner refuses to dig through that sink.',1],
+    ['A 15-minute speed clean',1,'Set a timer. Panic accordingly.',1],['Tidy the desk',1,'My miner found three mugs under your papers.'],
+    ['Take out the trash and recycling',1,'Even my lair takes out its trash. Weekly. Mostly.'],['Do a load of laundry, folded too',2,'Folded. Not on the chair. Not on the floor.'],
+    ['Vacuum the floors',2,'The dust bunnies have formed a union.'],['Clean out the fridge',2,'Something in there just blinked at me.'],
+    ['Declutter one drawer or shelf',2,'If you haven’t touched it in a year, it’s mine now.'],['Deep-clean the bathroom',3,'This one bites. Bring gloves.']],
+  mind:[['Read 20 pages',2,'My orc can read. Can you?',1],['15 minutes on a language app',1,'Learn to say “I surrender” in three languages.',1],
+    ['Do a puzzle or a crossword',1,'Exercise that brain. It’s looking soft.',1],['Learn one new thing and explain it to someone',1,'Teach it or it didn’t happen.'],
+    ['Watch a lecture or how-to video and take notes',2,'Notes, hero. Not vibes.'],['Practice a skill for 30 minutes',2,'Talent is overrated. Repetition is cruel and effective.'],
+    ['Finish a chapter of your book',2,'The book misses you. It told me.'],['An hour of a course or deep study',3,'One hour. No other tabs. I will know.']],
+  calm:[['5 minutes of breathing or meditation',1,'Breathe in my villainy. Breathe out your fear.',1],['Write three lines in a journal',1,'Dear diary, the Villainess was right again.',1],
+    ['10 minutes of fresh air',1,'Touch grass. Literally. I’ll wait.',1],['Plan tomorrow in 5 minutes',1,'A plan! How very unheroic of you.',1],
+    ['Go to bed on time tonight',1,'Sleep, hero. Tired heroes are boring to torment.'],['An hour with no phone',2,'Put it down. The memes will survive without you.'],
+    ['A long shower or bath, no rushing',2,'Scrub off the defeat. Oh wait, you’re winning. Ugh.'],['Do something nice just for you',2,'Treat yourself. Not with my treats.']],
+  work:[['One 25-minute focus session',1,'Twenty-five minutes. No snacks. Go.',1],['Write tomorrow’s to-do list',1,'Write it before I write it for you.',1],
+    ['Pay a bill or handle one piece of paperwork',1,'Paperwork: the true final boss.'],['Tidy your files or desktop',1,'Forty files called “final”. Choose one.'],
+    ['Get your inbox under control',2,'Your inbox is my favorite dungeon.'],['Do the task you’ve been dodging',2,'Yes, that one. I can see you squirming.'],
+    ['Check your budget and spending',2,'Where did the gold go, hero? Where?'],['Two hours of deep work',3,'Heroes have done less and gotten statues.']],
+  people:[['Text a friend you haven’t talked to in a while',1,'They miss you. Ugh, how sweet.',1],['Give someone a real compliment',1,'Say something nice. It won’t kill you. Probably.',1],
+    ['Make plans to see someone',1,'An actual plan, with a date. Not “we should hang out sometime”.'],['Write a thank-you message',1,'Gratitude. Disgusting. Do it anyway.'],
+    ['Call your family',2,'Call home. Even villains call their mothers.'],['Help someone with something',2,'Heroics, hero. Look it up.'],
+    ['Spend an hour with someone, phones away',3,'Real faces. No screens. Terrifying, I know.']],
+  make:[['Draw, write or make something for 15 minutes',1,'Make something. Anything. Even a mess.',1],['Practice your instrument for 20 minutes',2,'My sheep have asked for earplugs.',1],
+    ['Take a photo of something beautiful',1,'Find beauty. I’ll allow it, today.'],['Share something you made',1,'Show the world. Brace for compliments.'],
+    ['Learn one new technique',2,'A new trick for an old hero.'],['Finish something you started',2,'Half-finished things fear me. Finish them first.'],
+    ['Work on your project for an hour',3,'The project gathers dust. The dust gathers me.']]
+};
+// his answers to her questions: how many quests a day, how many big ones, and how hard she pushes (the kill threshold)
+const TIME={short:{n:3, big:0, l:'About 15 minutes'}, some:{n:4, big:1, l:'30 to 60 minutes'}, lots:{n:5, big:2, l:'An hour or more'}};
+const PACE={gentle:{th:70, l:'Go easy on me'}, steady:{th:80, l:'Keep me honest'}, hard:{th:90, l:'Show no mercy'}};
+const SOLO_TREATS=[
+  {name:'Fancy coffee', price:15, icon:'coffee', desc:'A café drink, the fancy kind, with whatever silly syrup you like.'},
+  {name:'Gaming hour', price:30, icon:'trophy', desc:'One hour of guilt-free gaming. No chores while the timer runs.'},
+  {name:'Sweet treat', price:20, icon:'cupcake', desc:'A cake, a pastry or an ice cream. Your call.'},
+  {name:'Movie night', price:35, icon:'orb', desc:'Pick any movie and watch it, snacks included.'},
+  {name:'Takeout dinner', price:60, icon:'meat', desc:'Order in from your favorite place. No cooking, no dishes.'},
+  {name:'Episode binge', price:15, icon:'star', desc:'One more episode, totally guilt-free.'},
+  {name:'Lazy morning', price:50, icon:'cocoa', desc:'Sleep in, then do nothing at all until noon.'},
+  {name:'New book', price:80, icon:'books', desc:'Buy one book you’ve had your eye on.'},
+  {name:'Little splurge', price:120, icon:'gem', desc:'Buy yourself something small you’ve wanted for a while.'},
+  {name:'Day trip', price:200, icon:'key', desc:'A day out somewhere fun: a museum, the beach, a new town.'}
 ];
+const DUO_SHOP=[
+  {name:'Movie', price:20, icon:'orb', desc:'You get to pick a movie to watch for us tonight, 2 hours or shorter.'},
+  {name:'Bubble tea', price:25, icon:'cocoa', desc:'One bubble tea of your choice, any size, toppings included. I’ll go get it.'},
+  {name:'Back rub', price:40, icon:'heart', desc:'A 15-minute back rub, whenever you want it. No questions asked.'},
+  {name:'Gaming hour', price:35, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
+  {name:'Breakfast in bed', price:60, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
+];
+const solo=()=>S.mode!=='duo';
+const POOL_ALL=Object.entries(NPC_POOL).flatMap(([g,l])=>l.map(e=>({name:e[0], size:e[1], taunt:e[2], habit:!!e[3], g})));
+const POOL_NAMES=new Set(POOL_ALL.map(e=>e.name));
+const npcThreshold=()=>solo()&&S.solo?PACE[S.solo.pace].th:DEF.threshold;
+const npcQuest=(e,kind='roll')=>({name:e.name, dmg:SIZE_DMG[e.size], repeat:kind==='habit'?'daily':'once', taunt:e.taunt, npc:kind, id:nid(), done:false, hit:false});
+const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+// her picks for one day: spread across his goals, never yesterday's, no more big ones than his free time allows
+function npcRoll(n){
+  const pro=S.solo||{goals:Object.keys(GOALS), time:'some', pace:'steady'}, T=TIME[pro.time];
+  const have=new Set(S.tasks.map(t=>t.name)), recent=new Set(S.npcRecent||[]);
+  let pool=POOL_ALL.filter(e=>pro.goals.includes(e.g)&&!have.has(e.name));
+  const fresh=pool.filter(e=>!recent.has(e.name)); if (fresh.length>=n) pool=fresh;
+  shuffle(pool);
+  if (pro.pace==='hard'&&T.big) pool.sort((a,b)=>(b.size===3)-(a.size===3));   // no mercy: a big one if he has the time
+  const out=[], per={}, cap=Math.ceil(n/pro.goals.length); let big=0;
+  for (const pass of [0,1]) for (const e of pool){
+    if (out.length>=n) break;
+    if (out.includes(e) || (e.size===3&&big>=T.big) || (!pass&&(per[e.g]||0)>=cap)) continue;
+    out.push(e); per[e.g]=(per[e.g]||0)+1; if(e.size===3) big++;
+  }
+  return out.map(e=>npcQuest(e));
+}
+// nothing assigned by spawn time? Solo: the NPC fills his day. Paired: her past quests, then the NPC's list
+function fillQuests(){
+  const open=S.tasks.filter(t=>!t.done).length;
+  if (solo()){ const want=TIME[(S.solo||{}).time||'some'].n; S.tasks.push(...npcRoll(Math.max(1,want-open))); return; }
+  if (open) return;
+  if (S.past&&S.past.length) S.tasks.push(...S.past.map(q=>({...q, repeat:'once', id:nid(), done:false, hit:false})));
+  else S.tasks.push(...npcRoll(TIME.some.n));
+}
+// after her questions: today's NPC quests are swapped for ones that fit his answers (finished ones stay)
+function applySolo(){
+  const H=S.solo.habits;
+  S.tasks=S.tasks.filter(t=>t.done||t.hit||S.pending.includes(t.id)||!(t.npc||POOL_NAMES.has(t.name)))
+    .map(t=>t.npc==='habit'&&!H.includes(t.name)?{...t, repeat:'once', npc:'roll'}:t);
+  POOL_ALL.filter(e=>H.includes(e.name)&&!S.tasks.some(t=>t.name===e.name)).forEach(e=>S.tasks.push(npcQuest(e,'habit')));
+  const m=S.mob;
+  if (m&&m.state==='alive'&&!m.dmg&&!S.pending.length){ fillQuests(); m.threshold=npcThreshold(); m.hp=S.tasks.reduce((a,t)=>a+t.dmg,0)*m.threshold/100; }
+  else if (m&&m.state==='alive') fillQuests();   // already hit today: new quests only add damage
+}
 // solo mode: the NPC Villainess scribbles one of these on the decree (a real Villainess writes her own, or nothing)
-const NPC_NOTES=['Don’t spend it all on snacks. Actually, do.','Fine. You win today. Enjoy it, peasant.','I let you win. Obviously.','Tomorrow’s mob has your name on it.','Not bad, hero. Not good either.','Hmph. Lucky swing.'];
-const newTasks=()=>NPC_TASKS.map(t=>({...t, id:nid(), done:false, hit:false}));
+const NPC_NOTES=['Don’t spend it all on snacks. Actually, do.','Fine. You win today. Enjoy it, peasant.','I let you win. Obviously.','Tomorrow’s mob has your name on it.','Not bad, hero. Not good either.','Hmph. Lucky swing.','Same time tomorrow. I’ll bring a bigger mob.','You call that a fight? …Fine. It was a fight.'];
 function freshState(){
   return {
     cls:null, sex:null, heroName:'', gold:0, vcoins:0, exp:0, level:1, day:1, streak:0, best:0, infamy:0,
     taxRate:0.25, showValue:true, villName:'Lady Malvessa', tod:'auto',
-    tasks:newTasks(), pending:[], mob:null, plans:{}, loot:null, fled:null,
+    mode:null, solo:null, past:null, npcRecent:[],   // mode: 'solo' | 'duo' (picked on the title screen)
+    tasks:[], pending:[], mob:null, plans:{}, loot:null, fled:null,
     // the clock: game date, spawn time and day end (minutes from midnight; end is -240..240 around midnight)
     date:null, spawnMin:420, dayEnd:0, endProp:null, endFor:null, skew:0,
     inn:{per:3, used:{}, extra:{}}, req:null, rev:null, lost:null,   // req = his rest-day ask, rev = his revive ask
-    shop:[
-      {id:nid(), name:'Movie', price:20, icon:'orb', desc:'You get to pick a movie to watch for us tonight, 2 hours or shorter.'},
-      {id:nid(), name:'Bubble tea', price:25, icon:'cocoa', desc:'One bubble tea of your choice, any size, toppings included. I’ll go get it.'},
-      {id:nid(), name:'Back rub', price:40, icon:'heart', desc:'A 15-minute back rub, whenever you want it. No questions asked.'},
-      {id:nid(), name:'Gaming hour', price:35, icon:'trophy', desc:'One hour of guilt-free gaming. I won’t mention chores while the timer runs.'},
-      {id:nid(), name:'Breakfast in bed', price:60, icon:'donut', desc:'Breakfast brought to you in bed on a weekend morning of your choice.'}
-    ],
+    shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
     bag:[], gear:[], equip:{}, forge:{}
   };
 }
@@ -533,6 +638,7 @@ S.gear=S.gear||[]; S.equip=S.equip||{}; S.forge=S.forge||{};
 // saves from before the clock existed
 S.plans=S.plans||{}; S.inn=S.inn||{per:3, used:{}, extra:{}}; S.spawnMin??=420; S.dayEnd??=0; S.skew??=0;
 if (S.mob) S.mob.extra??=0;
+S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;   // saves from before the title screen pick a mode once, then keep everything
 const LIM={hero:14, vill:30, mob:30, quest:80, taunt:140, note:90, reward:40, desc:200, price:9999, coins:999};
 const clip=(v,n)=>typeof v==='string'?[...v].slice(0,n).join(''):v;   // by characters, so emoji never split
 const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
@@ -586,9 +692,9 @@ function startDay(date){
 function spawnMob(){
   const p=S.plans[S.date]||newPlan(), m=S.mob;
   p.quests.forEach(q=>S.tasks.push({...q, id:nid(), repeat:'once', done:false, hit:false}));
-  if (!S.tasks.length) S.tasks=newTasks();
+  if (!p.quests.length) fillQuests();
   if (p.mob){ m.b=p.mob.b; m.v=p.mob.v; }
-  const total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??DEF.threshold;
+  const total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??npcThreshold();
   Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', state:'alive'});
   delete S.plans[S.date];
 }
@@ -606,7 +712,7 @@ function landHit(task){
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
   S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak);
-  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(S.paired?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
+  S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(30)};
   save(); return true;
 }
 function endDay(){
@@ -620,7 +726,9 @@ function endDay(){
   if (m.state==='alive' && S.req && S.req.date===S.date && !S.req.no){ restDay(); S.fled={rest:true}; }
   if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak}:null; S.streak=0; }
   S.req=null; S.rev=null; S.endFor=null; S.day++;
-  S.tasks=S.tasks.filter(t=>t.repeat==='daily'||!t.done).map(t=>t.repeat==='daily'?{...t,done:false,hit:false}:t);
+  const hers=S.tasks.filter(t=>!t.npc&&t.repeat!=='daily'); if (hers.length) S.past=hers.map(({name,dmg,taunt})=>({name,dmg,taunt}));
+  S.npcRecent=S.tasks.filter(t=>t.npc==='roll').map(t=>t.name);
+  S.tasks=S.tasks.filter(t=>t.repeat==='daily'||(!t.done&&t.npc!=='roll')).map(t=>t.repeat==='daily'?{...t,done:false,hit:false}:t);
   S.pending=[]; startDay(addDays(S.date,1));
 }
 // catch the game up with the clock: end finished days, spawn the mob when it's time. Returns true if anything changed
@@ -658,7 +766,7 @@ function render(){ renderHud(); renderTabs(); renderMain(); }
 function renderHud(){
   const h=$('#hud'), coin=url(COIN());
   const roleSw=`<div class="role" role="group" aria-label="View as"><button id="r-hero" aria-pressed="${ui.role==='hero'}">Hero</button><button id="r-vill" class="v" aria-pressed="${ui.role==='vill'}">Villainess</button></div>`;
-  if (!heroReady() && ui.role==='hero'){ h.innerHTML=`<div class="hud-row"><div class="who"><div class="nm">New game</div></div>${roleSw}</div>`; bindRole(); return; }
+  if (!setupDone() && ui.role==='hero'){ h.innerHTML=`<div class="hud-row"><div class="who"><div class="nm">New game</div></div>${S.mode?roleSw:''}</div>`; if(!S.mode) return; bindRole(); return; }
   if (ui.role==='hero'){
     const need=expNeed(S.level), pct=Math.min(100,S.exp/need*100);
     h.innerHTML=`<div class="hud-row"><div class="who"><img alt="" src="${url(avatar())}"><div style="min-width:0"><div class="nm">${esc(S.heroName)}</div><div class="sub">Lv ${S.level} ${CLASSES[S.cls].name} · Day ${S.day} · Streak ${S.streak}</div></div></div>${roleSw}</div>
@@ -671,7 +779,7 @@ function renderHud(){
 function bindRole(){ $('#r-hero').onclick=()=>{ ui.role='hero'; render(); }; $('#r-vill').onclick=()=>{ ui.role='vill'; render(); }; }
 function renderTabs(){
   const n=$('#tabs');
-  if (!heroReady() && ui.role==='hero'){ n.hidden=true; return; }
+  if (!setupDone() && ui.role==='hero'){ n.hidden=true; return; }
   n.hidden=false;
   const hero=ui.role==='hero';
   n.classList.add('five'); n.classList.toggle('vill',!hero);
@@ -688,8 +796,8 @@ function renderTabs(){
 }
 function renderMain(){
   const m=$('#main'); stopScene();
-  m.className='wrap'+(ui.role==='vill'||heroReady()?' has-orb':''); // tabs add 'split' (pinned main screen)
-  if (ui.role==='hero'){ if(!heroReady()) return renderClassPick(m); ({idle:renderIdle,inn:renderInn,shop:renderShop,bag:renderBag,hero:renderHero,talents:renderTalents})[ui.heroTab](m); }
+  m.className='wrap'+(ui.role==='vill'||setupDone()?' has-orb':''); // tabs add 'split' (pinned main screen)
+  if (ui.role==='hero'){ if(!setupDone()) return renderSetup(m); ({idle:renderIdle,inn:renderInn,shop:renderShop,bag:renderBag,hero:renderHero,talents:renderTalents})[ui.heroTab](m); }
   else ({mobs:renderVMobs,vshop:renderVShop,lair:renderLair,spells:renderSpells,rules:renderVRules})[ui.villTab](m);
 }
 // re-render the current tab but keep the scroll position of the part below the main screen
@@ -734,10 +842,74 @@ function renderClassPick(m){
   $('#dice').onclick=()=>{ let n; do n=randName(nh.sex); while(n===inp.value && NAMES[nh.sex].length>1); inp.value=n; sync(); };
   $('#np-back').onclick=()=>{ nh.sex=null; render(); };
   $('#nameform').onsubmit=e=>{ e.preventDefault(); const name=inp.value.trim().slice(0,14); if(!name) return;
-    S.cls=nh.cls; S.sex=nh.sex; S.heroName=name; ui.newHero=null; save(); ui.heroTab='idle'; render(); toast(`Welcome, ${name} the ${CLASSES[S.cls].name}. Your quests await.`); };
+    S.cls=nh.cls; S.sex=nh.sex; S.heroName=name; ui.newHero=null; save(); ui.heroTab='idle'; render(); if(setupDone()) toast(`Welcome, ${name} the ${CLASSES[S.cls].name}. Your quests await.`); };
   stageLoop($('#newcv'), (x,now)=>{ x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,160,150);
     x.fillStyle='rgba(20,10,5,.3)'; x.beginPath(); x.ellipse(80,140,34,7,0,0,Math.PI*2); x.fill();
     heroSpr(x,'idle',now,80,142,{key:heroKey(nh.cls,nh.sex), scale:1.2}); });
+}
+
+// setup, in order: the title screen (solo or with a partner), the hero, then (solo) the NPC Villainess's questions
+function renderSetup(m){
+  if (!S.mode) return renderTitle(m);
+  if (!heroReady()) return renderClassPick(m);
+  renderQuiz(m);
+}
+function renderTitle(m){
+  m.innerHTML=`<div class="stack title-screen">
+    <div class="title-card"><canvas id="titlecv" width="480" height="270" aria-label="A hero faces the Villainess"></canvas>
+      <h1 class="logo">HERO <span>vs</span> VILLAINESS</h1><p class="muted">Real-life quests. Pixel monsters. A villainess who sets the rules.</p></div>
+    <button class="cls px row" id="tm-solo"><span class="pair"><img alt="" src="${url(heroThumb('warrior','m'))}"></span><span class="t"><b>Single player</b><span>${esc(S.villName)}, an NPC Villainess, sends your mobs and builds your quests from a few questions.</span></span></button>
+    <button class="cls px row" id="tm-duo"><span class="pair"><img alt="" src="${url(heroThumb('archer','f'))}"><img alt="" src="${url(villSprite(false,true))}"></span><span class="t"><b>Multiplayer</b><span>Pair up with a real Villainess. For now you both play on this phone.</span></span></button>
+    <button class="btn ghost block" disabled>Sign in</button>
+    <p class="small muted" style="text-align:center">Accounts and pairing two phones come later. Your progress is saved on this phone.</p></div>`;
+  const pick=mode=>{ S.mode=mode; if(mode==='duo'&&!S.shop.length) S.shop=DUO_SHOP.map(r=>({...r, id:nid()})); ui.setup=null; save(); render(); };
+  $('#tm-solo').onclick=()=>pick('solo'); $('#tm-duo').onclick=()=>pick('duo');
+  const k=heroKey(['warrior','archer','mage'][S.day%3], S.sex||'m');
+  stageLoop($('#titlecv'), (x,now)=>{ x.setTransform(1,0,0,1,0,0); x.drawImage(background(getTod()),0,0,480,270);
+    x.fillStyle='rgba(20,10,5,.3)'; x.beginPath(); x.ellipse(140,236,36,7,0,0,Math.PI*2); x.ellipse(340,236,36,7,0,0,Math.PI*2); x.fill();
+    heroSpr(x,'idle',now,140,238,{key:k, scale:1.4});
+    const v=villSprite(false,true), bob=Math.round(Math.sin(now/600)*1.5);
+    x.save(); x.translate(Math.round(340+v.width*.7),0); x.scale(-1.4,1.4); x.drawImage(v,0,Math.round((238-v.height*1.4+bob)/1.4)); x.restore(); });
+}
+// her questions (solo): what he's fighting for, his free time, how hard she pushes, daily habits, and the treats in her shop
+const QUIZ_STEPS=4;
+function renderQuiz(m){
+  const q=ui.setup=ui.setup||{step:0, goals:[], time:'some', pace:'steady', habits:[], treats:SOLO_TREATS.slice(0,5).map(t=>t.name)};
+  q.step=q.step||0;
+  const head=(t,sub)=>`<div class="title-card quiz-head"><img alt="" src="${url(villSprite(false,true))}" style="width:58px;height:72px;image-rendering:pixelated"><div class="px speech q"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p>${t}</p></div></div>${sub?`<p class="small muted">${sub}</p>`:''}<div class="dots">${[...Array(QUIZ_STEPS)].map((_,i)=>`<i class="${i<=q.step?'on':''}"></i>`).join('')}</div></div>`;
+  const chip=(k,label,on,ic)=>`<button class="chip px" data-k="${esc(k)}" aria-pressed="${on}">${ic?`<img alt="" src="${url(icon(ic))}">`:''}${esc(label)}</button>`;
+  const nav=(ok,last)=>`<div class="row2"><button class="btn ghost" id="qz-back">Back</button><button class="btn" id="qz-next" ${ok?'':'disabled'}>${last?'Begin your quest':'Next'}</button></div>`;
+  let html='';
+  if (q.step===0) html=head(`So, ${esc(S.heroName)}. What are you fighting for? Pick up to three.`, 'I’ll build your quests around these.')
+    +`<div class="chips">${Object.entries(GOALS).map(([k,g])=>chip(k,g.n,q.goals.includes(k),g.ic)).join('')}</div>`
+    +nav(q.goals.length>0)+`<button class="btn ghost block" id="qz-mix">Skip: surprise me with a bit of everything</button>`;
+  if (q.step===1) html=head('How much time can you spare on a normal day? And how hard should I push?', 'Hard days need more of your quests done before the mob falls.')
+    +`<h3>Free time</h3><div class="chips col">${Object.entries(TIME).map(([k,t])=>chip('t:'+k,t.l,q.time===k)).join('')}</div>`
+    +`<h3>How hard</h3><div class="chips col">${Object.entries(PACE).map(([k,t])=>chip('p:'+k,t.l,q.pace===k)).join('')}</div>`+nav(true);
+  if (q.step===2){ const hab=POOL_ALL.filter(e=>e.habit&&q.goals.includes(e.g)); q.habits=q.habits.filter(n=>hab.some(e=>e.name===n));
+    html=head('Any habits you want on your list every single day? Up to three.', 'Everything else changes daily, so you never get bored. You can skip this.')
+      +`<div class="chips col">${hab.map(e=>chip(e.name,e.name,q.habits.includes(e.name),GOALS[e.g].ic)).join('')}</div>`+nav(true); }
+  if (q.step===3) html=head('Last thing. What will you spend your V.coins on? I’ll stock my shop.', 'You can rename, reprice or add your own on her Shop tab.')
+    +`<div class="chips">${SOLO_TREATS.map(t=>chip(t.name,`${t.name} · ${t.price}`,q.treats.includes(t.name),t.icon)).join('')}</div>`+nav(q.treats.length>0,true);
+  m.innerHTML=`<div class="stack quiz">${html}</div>`;
+  const toggle=(list,k,max)=>{ const i=list.indexOf(k); if(i>=0) list.splice(i,1); else if(list.length<max) list.push(k); else toast(`Up to ${max}, greedy hero.`); };
+  m.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ const k=b.dataset.k;
+    if (q.step===0) toggle(q.goals,k,3);
+    if (q.step===1){ if(k.startsWith('t:')) q.time=k.slice(2); else q.pace=k.slice(2); }
+    if (q.step===2) toggle(q.habits,k,3);
+    if (q.step===3) toggle(q.treats,k,SOLO_TREATS.length);
+    renderMain(); });
+  $('#qz-back').onclick=()=>{ if(q.step) q.step--; else { S.mode=null; save(); render(); return; } renderMain(); };
+  if ($('#qz-mix')) $('#qz-mix').onclick=()=>{ q.goals=Object.keys(GOALS); q.step=1; renderMain(); };
+  $('#qz-next').onclick=()=>{ if(q.step<QUIZ_STEPS-1){ q.step++; renderMain(); $('#main').scrollTop=0; return; } finishQuiz(q); };
+}
+function finishQuiz(q){
+  S.solo={goals:q.goals.slice(), time:q.time, pace:q.pace, habits:q.habits.slice()};
+  // her shop: the treats he picked, plus anything custom already on the shelves
+  const stock=new Set([...SOLO_TREATS,...DUO_SHOP].map(t=>t.name));
+  S.shop=S.shop.filter(r=>!stock.has(r.name)).concat(SOLO_TREATS.filter(t=>q.treats.includes(t.name)).map(t=>S.shop.find(r=>r.name===t.name)||{...t, id:nid()}));
+  ui.setup=null; applySolo(); save(); ui.heroTab='idle'; render();
+  toast(`Very well, ${S.heroName}. Your quests are on the board.`);
 }
 
 /* =========================================================
@@ -1591,10 +1763,10 @@ function renderBag(m){
   m.innerHTML=(sel
       ? showcase(url(icon(sel.icon)), sel.name, sel.desc||'Bought on day '+sel.day, sel.used?'<span class="st">USED · WAITING FOR HER TO DELIVER</span>':'<button class="btn" id="bag-use">Use</button>')
       : showcase(url(icon('bag')), 'Your bag is empty', 'Defeat the daily mob, earn V.coins, then visit the shop.'))
-    +`<div class="below wrap"><div class="stack"><p class="hint">Use a reward to tell ${esc(S.villName)} you’re cashing it in.</p>
+    +`<div class="below wrap"><div class="stack"><p class="hint">${solo()?'Use a reward when you treat yourself to it.':`Use a reward to tell ${esc(S.villName)} you’re cashing it in.`}</p>
       <div><h3>Items</h3>${items.length?`<div class="inv">${items.map(b=>`<button data-id="${b.id}" aria-pressed="${b===sel}" aria-label="${esc(b.name)}"><img alt="" src="${url(icon(b.icon))}">${b.used?'<span class="tag">USED</span>':''}</button>`).join('')}</div>`:'<div class="px empty">Nothing here yet.</div>'}</div></div></div>`;
   m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.bagSel=b.dataset.id; renderMain(); });
-  if (sel && !sel.used) $('#bag-use').onclick=()=>{ sel.used=true; save(); render(); toast('Request sent. She has been notified (in spirit).'); };
+  if (sel && !sel.used) $('#bag-use').onclick=()=>{ sel.used=true; if(solo()) sel.delivered=true; save(); ui.bagSel=null; render(); toast(solo()?`Enjoy your ${sel.name}. You earned it. Barely.`:'Request sent. She has been notified (in spirit).'); };
 }
 
 /* =========================================================
@@ -1814,7 +1986,7 @@ function renderVRules(m){
       <button class="btn ghost block" id="pc-day">Jump to day ${S.day+1}’s spawn</button><button class="btn ghost block" id="pc-hour">Jump ahead 1 hour</button>
       <p class="small muted">Moves the game clock forward (it can’t go back, except with Reset). When a day ends with the mob alive, it flees and ${P.his} streak resets.</p>
       <label class="f">Time of day in scenes<select class="inp" id="pc-tod">${todOpts.map(([v,l])=>`<option value="${v}" ${S.tod===v?'selected':''}>${l}</option>`).join('')}</select></label>
-      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>
+      <button class="btn ghost block" id="pc-gold">Give ${P.him} 50 gold and 50 V.coins</button><button class="btn ghost block" id="pc-cls">Let ${P.him} pick a new class</button>${solo()?`<button class="btn ghost block" id="pc-quiz">Retake the solo questions</button>`:''}<button class="btn ghost block" id="pc-title">Back to the title screen (keeps progress)</button>
       <button class="btn ghost block" id="pc-reset" style="${ui.resetArm?'background:var(--bad);color:#fff':''}">${ui.resetArm?'Tap again to erase everything':'Reset the prototype'}</button></div></div></div></div>`;
   $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); rerender(); };
   $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
@@ -1833,6 +2005,8 @@ function renderVRules(m){
   $('#pc-hour').onclick=()=>jump(clock()+3600e3);
   $('#pc-gold').onclick=()=>{ S.gold+=50; S.vcoins+=50; save(); renderHud(); toast('50 gold and 50 V.coins granted. How generous.'); };
   $('#pc-cls').onclick=()=>{ S.cls=null; S.sex=null; ui.newHero=null; save(); ui.role='hero'; render(); };
+  if ($('#pc-quiz')) $('#pc-quiz').onclick=()=>{ ui.setup={...S.solo, step:0}; S.solo=null; save(); ui.role='hero'; render(); };
+  $('#pc-title').onclick=()=>{ S.mode=null; ui.setup=null; save(); ui.role='hero'; render(); };
   $('#pc-reset').onclick=()=>{ if(!ui.resetArm){ ui.resetArm=true; rerender(); setTimeout(()=>{ ui.resetArm=false; if(ui.role==='vill'&&ui.villTab==='rules') rerender(); },3000); return; } ui.resetArm=false; S=freshState(); tick(); ui.role='hero'; hit=null; render(); toast('Prototype reset.'); };
 }
 
