@@ -512,6 +512,49 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .toast{position:absolute;left:16px;right:16px;bottom:110px;margin:0 auto;background:var(--wood2);border:3px solid var(--gold);padding:10px 14px;font-size:16px;z-index:40;max-width:400px;text-align:center;animation:drop .25s steps(4) both;box-shadow:4px 4px 0 var(--line)}
 .empty{padding:22px 14px;text-align:center;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){.go,.paper,.toast,.decree *,.tapon,.qi.fresh .txt span,.qi.fresh .box path{animation:none}}
+/* cutscenes: a slideshow with hard cuts, a dialogue box under the picture (never hiding it), lines on black between pictures */
+.cut-ov{background:#000;padding:0;cursor:pointer;align-content:center}
+.cut{position:relative;width:100%;padding-bottom:14px}
+.cut canvas{display:block;width:100%;aspect-ratio:16/10;image-rendering:pixelated}
+.cut.cutin{animation:cutin .2s steps(3) backwards}
+@keyframes cutin{from{filter:brightness(0)}to{filter:none}}
+.cbox{position:relative;margin:14px 12px 0;min-height:124px;background:rgba(22,12,26,.94);box-shadow:0 0 0 3px var(--line),0 0 0 6px var(--hex);display:flex;gap:10px;padding:10px 12px 14px;align-items:flex-start}
+.cbox img{width:44px;height:44px;image-rendering:pixelated;object-fit:contain;object-position:top;flex:none;background:rgba(255,255,255,.07);box-shadow:0 0 0 2px var(--line)}
+.cbox b,.cblack b{display:block;font-family:var(--f-display);font-size:8px;color:var(--hex);margin-bottom:6px;text-shadow:1px 1px 0 var(--line);font-style:normal}
+.cbox p,.cblack p{margin:0;color:#fff;font-size:17px;line-height:1.3;min-width:0}
+.cbox.narr{box-shadow:0 0 0 3px var(--line),0 0 0 6px #8a7a6a}
+.cbox.narr p,.cblack.narr p{font-style:italic;color:#eadfca}
+.cblack{position:absolute;top:0;left:0;right:0;aspect-ratio:16/10;display:grid;place-items:center;padding:0 12%;text-align:center}
+.cbox[hidden]{visibility:hidden}
+.cblack[hidden],.cbox img[hidden],.cbox b[hidden],.cblack b[hidden]{display:none}
+.cblack p{font-size:19px;line-height:1.5}
+.cnext{position:absolute;right:24px;bottom:24px;color:var(--gold);font-style:normal;font-size:12px;visibility:hidden;text-shadow:1px 1px 0 var(--line)}
+.cut-ov.ready .cnext{visibility:visible;animation:blink 1s steps(2) infinite}
+.cskip{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:12px;border:0;cursor:pointer;background:rgba(255,255,255,.1);color:#cfc2b0;font-family:var(--f-display);font-size:8px;padding:8px 10px;box-shadow:0 0 0 2px #3a3030}
+/* her theater */
+.csnav{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:44px;border:0;cursor:pointer;background:rgba(20,12,6,.72);color:var(--gold);font-size:14px;box-shadow:0 0 0 3px var(--line)}
+.csnav.l{left:8px}.csnav.r{right:8px}
+.csnav:disabled{opacity:.3;cursor:default}
+.csgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.csgrid button{border:3px solid var(--line);background:rgba(0,0,0,.22);padding:0 0 7px;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;gap:4px;text-align:center;min-width:0;font:inherit}
+.csgrid img{width:100%;aspect-ratio:16/10;image-rendering:pixelated;display:block}
+.csgrid b{font-size:14px;font-weight:600;padding:0 4px;line-height:1.15}
+.csgrid span{font-size:12px;color:var(--muted);padding:0 4px}
+.csgrid button[aria-pressed="true"]{border-color:var(--hex);background:#3a1a2a}
+.cs-script{display:flex;flex-direction:column;gap:10px}
+.cs-spot{display:flex;flex-direction:column;gap:6px}
+.cs-slot{display:flex;align-items:center;gap:10px;padding:8px 10px;width:100%;border:0;text-align:left;color:var(--ink);font:inherit}
+.cs-slot.black{background:#000;box-shadow:0 0 0 2px var(--line)}
+.cs-slot.black b{font-family:var(--f-display);font-size:7px;color:#cfc2b0;letter-spacing:.04em}
+.cs-slot.art{background:rgba(0,0,0,.25);cursor:pointer;box-shadow:0 0 0 2px var(--line),inset 4px 0 0 var(--hex-dk)}
+.cs-slot.art.on{box-shadow:0 0 0 2px var(--hex),inset 4px 0 0 var(--hex)}
+.cs-slot.art img{width:84px;aspect-ratio:16/10;image-rendering:pixelated;flex:none}
+.cs-slot.art b{display:block;font-family:var(--f-display);font-size:8px;margin-bottom:4px}
+.cs-line{display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:6px;padding-left:14px;border-left:2px dashed rgba(255,255,255,.12);margin-left:6px}
+.cs-line textarea{grid-column:1/-1;min-height:50px}
+.cs-line .x{background:transparent;border:2px solid var(--line);color:var(--muted);width:32px;height:100%;min-height:32px;cursor:pointer;font-family:var(--f-display);font-size:10px}
+.cs-add{font-size:8px;padding:8px;margin-left:20px;align-self:flex-start}
+.cs-add:disabled{opacity:.4;cursor:default}
 </style>
 
 <div class="app" id="app">
@@ -696,6 +739,116 @@ const CROWN_IN = col => strSprite('crown'+col,["g.....g.....g","g....ggg....g","
 const KISS = () => strSprite('kiss2',["....rrrr....rrrr....","..rrRRRRr..rRRRRrr..",".rRRRhRRRrrRRRhRRRr.","rRRcRRRRRRRRRRRRcRRr","rddRRRRRRRRRRRRRRddr",".rddddddddddddddddr.","rRRRRRRRRRRRRRRRRRRr",".rRcRRcRRcRRcRRcRRr.","..rRRRRhhRRRRRRRRr..","....rrrrrrrrrrrr...."],{r:'#a8183a',R:'#e0335a',h:'#ff8aa6',c:'#f0a0b4',d:'#7a0f28'});
 
 /* =========================================================
+   Cutscene library (Nov 1): 15 templates, each 2–5 still art pieces ("panels") built from the game's own sprites and
+   played like a slideshow with hard cuts. She writes the lines: on a black screen before or after any panel, or in a
+   dialogue box over one. A panel is plain data (background + actors + effects), so a mix-and-match builder can reuse
+   them later. Canvas 480×300, ground at y 263 on the field
+   ========================================================= */
+const CS_MAX=24, CS_SLOT=6;   // safeguards: lines in one cutscene, lines in one spot (LIM.cline characters per line)
+const CS_WHO={her:'Her', hero:'Hero', mob:'The mob', narr:'Narrator'};
+const CS_CATS={boss:'Boss days', event:'Special events', fall:'When it falls'};
+const aHero=(p,x,y,s,o)=>({k:'hero',p,x,y,s,...o}), aVill=(v,x,y,s,o)=>({k:'vill',v,x,y,s,...o}), aMob=(x,y,s,o)=>({k:'mob',x,y,s,...o}),
+  aSay=(t,x,y)=>({k:'say',t,x,y}), aWord=(t,x,y)=>({k:'word',t,x,y}), aIcon=(ic,x,y,s)=>({k:'icon',ic,x,y,s}),
+  aChest=(open,x,y,s)=>({k:'chest',open,x,y,s}), aScroll=(x,y,s)=>({k:'scroll',x,y,s}), aCircle=(x,y)=>({k:'circle',x,y});
+const FACE=(o)=>aVill('vill_face',240,262,4,o);   // her close-up
+// lines: [spot, speaker, text]; spot b0..bN = black screen before panel N (bN after the last one), p0.. = over a panel.
+// {hero}, {mob} and {me} fill in his name, that day's mob and her name
+const CUTSCENES=[
+  {k:'boss', cat:'boss', n:'A boss approaches', d:'The ground shakes, a huge shape crests the hill, and she introduces her champion.', panels:[
+    {bg:'storm', a:[aMob(240,250,1.7,{n:1,sil:1})], fx:['rain','vig']},
+    {bg:'red', a:[aMob(240,345,3.4,{n:1,p:'atk'})], fx:['speed']},
+    {bg:'field', a:[aHero('ouch',220,263,1.4), aSay('>.<',230,92)]},
+    {bg:'lair', a:[FACE()], fx:['vig']}],
+   lines:[['b0','narr','The ground shakes. Birds flee. Somewhere, a sandwich falls over.'],['p0','narr','Something huge is coming over the hill…'],
+    ['p1','mob','ROOOAAAR!'],['p1','narr','{mob} has arrived!'],['p2','hero','That’s… a lot bigger than yesterday’s.'],
+    ['p3','her','Meet today’s champion, {hero}. I picked it out just for you.'],['b4','narr','Defeat it before the day ends!']]},
+  {k:'summon', cat:'boss', n:'The summoning', d:'She calls her finest servant up through a magic circle. Lightning, then it’s on the field.', panels:[
+    {bg:'lair', a:[aCircle(240,244), aVill('vill',240,244,1.7)], fx:['spark','vig']},
+    {bg:'storm', a:[aWord('KRA-KOOM!',240,120)], fx:['bolt','flash']},
+    {bg:'field', a:[aCircle(340,266), aMob(340,264,1.3), aHero('idle',120,263,1.2), aSay('!',120,128)]}],
+   lines:[['p0','her','By crown and fan, I call upon my finest servant…'],['p0','her','RISE!'],['p2','mob','Reporting for duty, my lady.'],['p2','hero','Oh no.']]},
+  {k:'duel', cat:'boss', n:'Face-off', d:'Hero versus mob, then a close-up of each. A classic.', panels:[
+    {bg:'red', a:[aHero('idle',120,250,1.4), aMob(360,252,1.4), aWord('VS',240,110)], fx:['speed']},
+    {bg:'blue', a:[aHero('idle',240,400,3.6)], fx:['speed']},
+    {bg:'red', a:[aMob(240,345,3.2,{n:1,p:'atk'})], fx:['speed']}],
+   lines:[['b0','narr','High noon.'],['p0','narr','{hero} versus {mob}.'],['p1','hero','Let’s settle this.'],['p2','mob','Bring it, tiny hero.'],['b3','narr','FIGHT!']]},
+  {k:'storm', cat:'boss', n:'Dark skies', d:'The sky goes black at midday, lightning strikes, and a shape stands in the rain.', panels:[
+    {bg:'storm', a:[aHero('idle',160,263,1)], fx:['rain','vig']},
+    {bg:'storm', a:[], fx:['rain','bolt','flash']},
+    {bg:'storm', a:[aMob(330,266,1.5,{sil:1}), aSay('!',330,96)], fx:['rain','bolt']}],
+   lines:[['p0','narr','The sky turns dark in the middle of the day.'],['p0','hero','Is it… raining?'],['p1','narr','CRACK!'],['p2','her','Did you miss me, {hero}?']]},
+  {k:'horde', cat:'boss', n:'The horde arrives', d:'Dust on the horizon, then a whole pack charges in. Always shows three of the day’s mob.', panels:[
+    {bg:'dusk', a:[aMob(250,196,.55,{n:3,sil:1})], fx:['vig']},
+    {bg:'field', a:[aMob(320,266,1.15,{n:3,p:'atk'})], fx:['speed']},
+    {bg:'field', a:[aHero('ouch',220,263,1.4), aSay('>.<',230,92)]}],
+   lines:[['p0','narr','Dust on the horizon. Lots of it.'],['p1','mob','CHAAARGE!'],['p2','hero','There are SO many of them!'],['b3','her','Strength in numbers, darling.']]},
+  {k:'birthday', cat:'event', n:'Happy birthday', d:'Confetti, a suspicious cake, and a birthday wish she’ll deny later.', panels:[
+    {bg:'pink', a:[aHero('up',240,262,1.6)], fx:['conf']},
+    {bg:'lair', a:[aVill('vill',200,244,1.7), aIcon('cupcake',300,196,2.4)], fx:['spark']},
+    {bg:'pink', a:[aHero('idle',150,262,1.4), aVill('vill',330,262,1.4), aIcon('heart',240,92,1.6)], fx:['hearts','conf']}],
+   lines:[['b0','narr','Today is a very special day…'],['p0','narr','It’s {hero}’s birthday!'],['p1','her','I baked you a cake. It is NOT poisoned.'],['p1','her','Probably.'],
+    ['p2','her','Happy birthday, {hero}. Don’t let it go to your head.']]},
+  {k:'proud', cat:'event', n:'She’s impressed', d:'She’s been watching, and has to admit it: he’s doing well.', panels:[
+    {bg:'lair', a:[FACE()], fx:['vig']},
+    {bg:'rays', a:[aHero('up',240,262,1.6)], fx:['spark']},
+    {bg:'pink', a:[FACE(), aSay('///',330,64)], fx:['hearts']}],
+   lines:[['p0','her','Hmph. I’ve been watching you, {hero}.'],['p1','narr','{hero} has been on a roll lately.'],['p2','her','Fine! You’re… doing well. There. I said it.'],['p2','her','Don’t look at me like that.']]},
+  {k:'gift', cat:'event', n:'A royal gift', d:'Her royal chest, opened just for him.', panels:[
+    {bg:'lair', a:[aVill('vill',190,244,1.7), aChest(0,310,240,3)]},
+    {bg:'rays', a:[aChest(1,240,236,6)], fx:['spark']},
+    {bg:'field', a:[aHero('up',240,262,1.6), aSay('^o^',250,72)], fx:['conf']}],
+   lines:[['p0','her','A little something from my royal treasury.'],['p1','narr','It sparkles!'],['p2','hero','For me?!'],['b3','her','Don’t get used to it.']]},
+  {k:'letter', cat:'event', n:'A letter from her', d:'A sealed scroll drifts onto the field. Write whatever you like in it.', panels:[
+    {bg:'field', a:[aHero('idle',190,263,1.3), aScroll(320,150,1.2)]},
+    {bg:'parch', a:[aScroll(240,150,2.6)]}],
+   lines:[['p0','narr','A scroll drifts down onto the field.'],['p1','her','Dear {hero}, this is a reminder that I am always watching.'],['p1','her','Always. Yours wickedly, {me}.']]},
+  {k:'restday', cat:'event', n:'A quiet day', d:'He naps, she tiptoes in (in disguise, crown showing), and leaves a warning.', panels:[
+    {bg:'night', a:[aHero('nap',200,262,1.3), aSay('Zzz',280,150)]},
+    {bg:'night', a:[aHero('nap',140,262,1.1), aVill('vill_inn',370,264,1.1)], fx:['vig']},
+    {bg:'night', a:[FACE(), aSay('…',330,64)], fx:['vig']}],
+   lines:[['b0','narr','Even heroes need a day off.'],['p0','hero','Zzz…'],['p1','narr','Someone is tiptoeing closer…'],['p2','her','Sleep well, {hero}. Tomorrow I won’t be so kind.']]},
+  {k:'welcome', cat:'event', n:'Welcome back', d:'He walks back onto the field after a while away. She was NOT waiting.', panels:[
+    {bg:'morning', a:[aHero('walk',200,263,1.3)]},
+    {bg:'morning', a:[aHero('idle',130,263,1.3), aVill('vill',330,263,1.4), aSay('!',330,104)]},
+    {bg:'rays', a:[aHero('up',150,262,1.4), aVill('vill',330,262,1.4)], fx:['spark']}],
+   lines:[['p0','narr','A familiar face returns to the field.'],['p1','her','Oh. It’s you. I wasn’t waiting or anything.'],['p2','her','Welcome back, {hero}. The mobs missed you.']]},
+  {k:'sweet', cat:'event', n:'Just because', d:'No mob, no quest. Just the two of them for a moment.', panels:[
+    {bg:'pink', a:[aHero('idle',160,262,1.4), aVill('vill',320,262,1.4)], fx:['hearts']},
+    {bg:'pink', a:[FACE(), aSay('///',330,64)], fx:['hearts']}],
+   lines:[['p0','narr','No mob. No quest. Just a moment.'],['p1','her','I just wanted to say… you’re doing great.'],['p1','her','Now go away before anyone sees this.']]},
+  {k:'defeat', cat:'fall', n:'You win… this time', d:'The mob is down, and she is NOT happy about it.', panels:[
+    {bg:'field', a:[aMob(330,262,1.3,{n:1,down:1}), aSay('x.x',330,176), aHero('up',140,252,1.3)], fx:['spark']},
+    {bg:'lair', a:[FACE(), aSay('#!',330,64)], fx:['vig']},
+    {bg:'dusk', a:[aVill('vill',240,198,.8,{sil:1})], fx:['vig']}],
+   lines:[['p0','narr','{mob} is down!'],['p1','her','WHAT?! Impossible!'],['p1','her','You win… this time, {hero}.'],['b3','narr','The field is clear. For now.']]},
+  {k:'vow', cat:'fall', n:'I’ll be back', d:'A figure on the hill, a close-up vow of revenge, and she’s gone.', panels:[
+    {bg:'dusk', a:[aVill('vill',240,198,.8,{sil:1})], fx:['vig']},
+    {bg:'red', a:[FACE()], fx:['speed']},
+    {bg:'dusk', a:[], fx:['spark']}],
+   lines:[['p0','narr','A figure watches from the hill.'],['p1','her','Enjoy your little victory.'],['p1','her','Tomorrow, I send something WORSE.'],['p2','narr','…and with a swish of her fan, she was gone.']]},
+  {k:'rival', cat:'fall', n:'The real villain', d:'Her mobs keep falling, so he sets his sights on her.', panels:[
+    {bg:'lair', a:[aVill('vill',240,244,1.7)], fx:['vig']},
+    {bg:'field', a:[aHero('walk',200,263,1.3)]},
+    {bg:'red', a:[aHero('idle',120,250,1.4), aVill('vill',360,252,1.4), aWord('VS',240,110)], fx:['speed']},
+    {bg:'lair', a:[FACE()], fx:['vig']}],
+   lines:[['p0','her','My mobs keep falling. How tiresome.'],['p1','hero','I’m coming for you next!'],['p2','narr','{hero} versus {me}!'],['p3','her','Cute. Come back when you’re level 99.']]}
+];
+const csTpl=k=>CUTSCENES.find(c=>c.k===k);
+// a script: {gaps:[n+1 lists], on:[n lists]}, each line {w, t}. gaps[i] = black screen before panel i, on[i] = over it
+function csDefault(T){ const n=T.panels.length, sc={gaps:[...Array(n+1)].map(()=>[]), on:[...Array(n)].map(()=>[])};
+  T.lines.forEach(([spot,w,t])=>(spot[0]==='b'?sc.gaps:sc.on)[+spot.slice(1)].push({w,t})); return sc; }
+const csOrder=sc=>sc.on.flatMap((l,i)=>[sc.gaps[i],l]).concat([sc.gaps[sc.on.length]]);   // every spot, in play order
+const csCount=sc=>csOrder(sc).reduce((a,l)=>a+l.length,0);
+// the safeguards, also run on every save: ≤ LIM.cline characters a line, ≤ CS_SLOT lines in one spot, ≤ CS_MAX in all
+function csTidy(sc,T){
+  const n=T.panels.length, fix=l=>(Array.isArray(l)?l:[]).filter(x=>x&&typeof x.t==='string').slice(0,CS_SLOT).map(x=>({w:CS_WHO[x.w]?x.w:'narr', t:clip(x.t,LIM.cline)}));
+  const out={gaps:[...Array(n+1)].map((_,i)=>fix(sc&&sc.gaps&&sc.gaps[i])), on:[...Array(n)].map((_,i)=>fix(sc&&sc.on&&sc.on[i]))};
+  let left=CS_MAX; csOrder(out).forEach(l=>{ const keep=Math.min(l.length,left); left-=keep; l.length=keep; });
+  return out;
+}
+const csScript=k=>JSON.parse(JSON.stringify((S.cs&&S.cs[k])||csDefault(csTpl(k))));   // her lines, or the template's
+
+/* =========================================================
    State
    ========================================================= */
 const KEY='qv-proto-v4';
@@ -710,8 +863,8 @@ const EXP_KILL=50;                     // EXP when the daily mob falls (before b
 // EXP for the next level, gentle early (first kill levels him up, talents at level 10 in ~2 weeks), ~13 kills for 49→50
 const expNeed=lv=>Math.round((25+lv*7+lv*lv/5)/5)*5;
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
-const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, horde:null, name:'', note:'', taunt:'', quests:[]});
-const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||p.horde!=null||!!p.name||!!p.note||!!p.taunt||p.quests.length>0);
+const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, horde:null, name:'', note:'', taunt:'', csA:null, csK:null, quests:[]});   // csA/csK: cutscene when it arrives / falls
+const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||p.horde!=null||!!p.name||!!p.note||!!p.taunt||!!p.csA||!!p.csK||p.quests.length>0);
 /* ---- Solo mode: the NPC Villainess runs his days. Her lists are also the fallback when a real Villainess sets nothing ---- */
 const SIZE_DMG=[0,5,10,20];   // hidden damage by quest size: 1 quick (~10 min), 2 half an hour, 3 big (an hour or more)
 const GOALS={
@@ -836,7 +989,8 @@ function freshState(){
     miles:null, mileV:2, mileGot:[], mileNew:null,   // her streak milestone treats, the ones reached this run, news to show him
     shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
     bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2, econ:1,
-    amb:null, news:[], reports:[], reportNew:null   // today's ambusher, spell news for him, her end-of-day scouting reports
+    amb:null, news:[], reports:[], reportNew:null,   // today's ambusher, spell news for him, her end-of-day scouting reports
+    cs:{}, csQ:[]   // her cutscene lines per template, cutscenes waiting to play for him
   };
 }
 // two separate saves, one per mode (solo / duo), plus the mode last played. KEY alone = a save that hasn't picked a mode yet
@@ -862,13 +1016,14 @@ function upgrade(S){
   S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;
   S.news??=[]; S.reports??=[]; S.amb??=null;
   S.lib??={}; S.dex??={};   // her mob library edits, his bestiary
+  S.cs??={}; S.csQ??=[];
   if (S.mob && (S.mob.state==='alive'||S.mob.state==='dead')) S.dex[mobId(S.mob)]??={met:1, slain:0, fled:0};   // the mob already out when the bestiary arrived   // saves from before the title screen pick a mode once, then keep everything
   return S;
 }
 // a save made before the split moves into its mode's slot
 (()=>{ const old=readSave(KEY); try{ if(old&&old.mode&&!localStorage.getItem(slotKey(old.mode))){ localStorage.setItem(slotKey(old.mode),JSON.stringify(old)); localStorage.setItem(LAST,old.mode); localStorage.removeItem(KEY); } }catch(e){} })();
 let S=upgrade(readSave(slotKey(localStorage.getItem(LAST)))||readSave(KEY)||freshState());
-const LIM={hero:14, vill:30, mob:30, lore:160, quest:80, taunt:140, note:90, reward:40, desc:200, price:9999, coins:999};
+const LIM={hero:14, vill:30, mob:30, lore:160, quest:80, taunt:140, note:90, reward:40, desc:200, price:9999, coins:999, cline:120};
 const clip=(v,n)=>typeof v==='string'?[...v].slice(0,n).join(''):v;   // by characters, so emoji never split
 const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
 function tidyText(){
@@ -881,6 +1036,8 @@ function tidyText(){
   (S.miles||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
   Object.values(S.lib||{}).forEach(e=>{ e.name=clip(e.name,LIM.mob); e.horde=clip(e.horde,LIM.mob); e.lore=clip(e.lore,LIM.lore); });
   if (S.loot){ S.loot.name=clip(S.loot.name,LIM.mob+20); S.loot.note=clip(S.loot.note,LIM.note); }
+  Object.keys(S.cs||{}).forEach(k=>{ const T=csTpl(k); if(T) S.cs[k]=csTidy(S.cs[k],T); else delete S.cs[k]; });
+  S.csQ=(S.csQ||[]).filter(c=>c&&csTpl(c.k)&&c.mob).slice(-5).map(c=>({...c, sc:csTidy(c.sc,csTpl(c.k)), mob:{...c.mob, name:clip(c.mob.name,LIM.mob+20)}}));
 }
 tidyText();
 function save(){ tidyText(); try{ if(S.mode){ localStorage.setItem(slotKey(S.mode),JSON.stringify(S)); localStorage.setItem(LAST,S.mode); localStorage.removeItem(KEY); } else localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
@@ -982,7 +1139,8 @@ function spawnMob(){
   const total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??npcThreshold();
   // her taunt for the day pops up on his field; the NPC Villainess borrows one of her quest taunts
   const qt=S.tasks.filter(t=>t.taunt).map(t=>t.taunt), taunt=p.taunt||m.taunt||(solo()&&qt.length?qt[Math.floor(Math.random()*qt.length)]:'');
-  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', taunt, state:'alive'});
+  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', taunt, state:'alive', csK:p.csK||null});
+  if (p.csA) queueCut(p.csA,'arrive');   // her cutscene for its arrival plays the next time he opens the Idle tab
   delete S.plans[S.date];
 }
 const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
@@ -1003,6 +1161,7 @@ function landHit(task){
   const gold=((m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold)*(m.bless?2:1);   // Blessing doubles the drop
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
   S.vcoins+=m.bounty; S.gold+=gold; m.eg=(m.eg||0)+gold; m.ev=m.bounty; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++; dexOf(m).slain++; checkMiles(S.streak-1);
+  if (m.csK) queueCut(m.csK,'fall');   // plays before the decree
   S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(EXP_KILL+heroBoons().exp)};
   save(); return true;
 }
@@ -1054,7 +1213,8 @@ function endDay(){
   // repeating quests come back fresh with the new day (only on their days); her unfinished one-offs carry over
   // (ambush quests and ones that burned up under Haste go with the day)
   S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll'&&!t.amb&&!t.burnt); S.tasks.forEach(t=>{ delete t.haste; delete t.pf; delete t.pfWhy; });
-  S.pending=[]; S.amb=null; startDay(addDays(S.date,1));
+  S.pending=[]; S.amb=null; S.csQ=(S.csQ||[]).filter(c=>c.when!=='arrive');   // a boss intro he never saw goes with its day
+  startDay(addDays(S.date,1));
   // photos left behind by an old save or a reset are never kept
   try{ Object.keys(localStorage).filter(k=>k.startsWith(PROOF)&&!proofsWaiting().some(t=>PROOF+t.id===k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
 }
@@ -1125,7 +1285,7 @@ function renderTabs(){
   n.innerHTML=tabs.map(([id,label,src,cls])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`; if(id==='talents'&&talPoints()) badge=`<span class="badge" style="background:var(--gold);color:var(--line)">${talPoints()}</span>`; if(id==='lair'&&deliver) badge=`<span class="badge" style="background:var(--hex)">${deliver}</span>`;
     if (cls==='idle') return `<button role="tab" class="idle" data-t="${id}" aria-selected="${cur===id}" aria-label="${label}"><span class="idle-orb"><i></i><b><img alt="" src="${src}">${label}</b></span>${badge}</button>`;
     return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${src}">${label}${badge}</button>`; }).join('');
-  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const t=b.dataset.t; if(t==='shop'||t==='vshop') ui.shopRoom='shop'; if(t==='mobs') ui.mobRoom='field'; if(hero) ui.heroTab=t; else ui.villTab=t; render(); $('#main').scrollTop=0; });
+  n.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const t=b.dataset.t; if(t==='shop'||t==='vshop') ui.shopRoom='shop'; if(t==='mobs') ui.mobRoom='field'; if(t==='lair') ui.lairRoom='lair'; if(hero) ui.heroTab=t; else ui.villTab=t; render(); $('#main').scrollTop=0; });
 }
 function renderMain(){
   const m=$('#main'); stopScene();
@@ -1352,7 +1512,7 @@ function renderIdle(m){
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
   // news from a day that ended while he was away
-  if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400); else if (S.mileNew) setTimeout(showMile,400);
+  if (S.csQ.length) setTimeout(playCuts,400); else if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400); else if (S.mileNew) setTimeout(showMile,400);
 }
 // her pop-up bubble over the field (spell news, taunts). It never blocks the field: tap it to skip
 let tpopQ=[], tpopT=0, tauntT=0;
@@ -1808,12 +1968,123 @@ function drawActivity(now){
 function fireGlow(now,tod){ const a=tod==='night'?.3:tod==='evening'?.2:.08; ctx.save(); ctx.globalCompositeOperation='lighter'; [[150,a*.5],[90,a*.8],[50,a]].forEach(([r,al])=>{ ctx.globalAlpha=al*(0.9+0.1*Math.sin(now/90)); ctx.fillStyle='#ff9a3a'; ctx.beginPath(); ctx.arc(468,G-30,r,0,Math.PI*2); ctx.fill(); }); ctx.restore(); }
 
 /* =========================================================
+   Cutscenes: drawing a panel, and the player (a slideshow: hard cuts, tap to advance, the panel holds until its
+   lines are read). The library and the safeguards are under "Cutscene library" near the top
+   ========================================================= */
+const CW=480, CH=300, CS_RAYS={rays:['#f6c445','#ff9a3a'], pink:['#ffd6e6','#ff9ec2'], red:['#a8183a','#3a0812'], blue:['#8fd4f4','#3a6ab4']};
+const csSky=bg=>({field:getTod(), morning:'morning', dusk:'evening', night:'night', storm:'night'})[bg];
+// one still panel. mob = the day's mob {b, v, group, sil}
+function csDraw(x, pan, mob){
+  const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),Math.round(c),Math.round(d)); };
+  let seed=7; const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+  x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false; x.globalAlpha=1;
+  const bg=pan.bg, sky=csSky(bg), fx=pan.fx||[];
+  if (bg==='lair') drawLair(x,0,true);
+  else if (sky){ r(0,0,CW,30,SKIES[sky].bands[0]); x.drawImage(background(sky),0,30,CW,270); }
+  else if (CS_RAYS[bg]){ const [a,b]=CS_RAYS[bg]; r(0,0,CW,CH,b); x.fillStyle=a;
+    for (let i=0;i<20;i+=2){ const a0=i/20*Math.PI*2, a1=(i+1)/20*Math.PI*2; x.beginPath(); x.moveTo(240,150); x.lineTo(240+Math.cos(a0)*420,150+Math.sin(a0)*420); x.lineTo(240+Math.cos(a1)*420,150+Math.sin(a1)*420); x.fill(); } }
+  else if (bg==='parch'){ r(0,0,CW,CH,'#3a2418'); for(let i=0;i<CW;i+=24) r(i,0,2,CH,'#2e1c12'); }
+  else r(0,0,CW,CH,'#000');
+  if (bg==='storm') r(0,0,CW,CH,'rgba(40,14,64,.5)');
+  if (fx.includes('rain')){ x.strokeStyle='rgba(170,190,255,.45)'; x.lineWidth=2; for(let i=0;i<70;i++){ const a=rnd()*CW, b=rnd()*CH; x.beginPath(); x.moveTo(a,b); x.lineTo(a-6,b+18); x.stroke(); } }
+  if (fx.includes('bolt')){ let bx=150+rnd()*180, by=0; const pts=[[bx,by]]; while(by<230){ by+=24+rnd()*20; bx+=(rnd()-.5)*70; pts.push([bx,by]); }
+    [[12,'rgba(255,240,160,.5)'],[6,'#fff6c0'],[2,'#ffffff']].forEach(([w,c])=>{ x.strokeStyle=c; x.lineWidth=w; x.lineJoin='miter'; x.beginPath(); pts.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b)); x.stroke(); }); }
+  if (fx.includes('speed')){ for(let i=0;i<16;i++){ const y=20+rnd()*260, a=rnd()*200; r(i%2?a:CW-a-160,y,120+rnd()*80,2,'rgba(255,255,255,.7)'); } }
+  pan.a.forEach(a=>csActor(x,a,mob));
+  if (sky && SKIES[sky].overlay) r(0,0,CW,CH,SKIES[sky].overlay);
+  if (fx.includes('flash')) r(0,0,CW,CH,'rgba(255,255,255,.45)');
+  if (fx.includes('spark')) for(let i=0;i<12;i++){ const a=20+rnd()*440, b=24+rnd()*200, c=i%2?'#ffffff':'#ffe066', z=3+Math.round(rnd()*2); r(a-z*2,b,z*5,z,c); r(a,b-z*2,z,z*5,c); }
+  if (fx.includes('conf')) for(let i=0;i<70;i++) r(rnd()*CW,rnd()*CH,6,6,['#f6c445','#ffffff','#e8508a','#4a9cff','#7fd36a'][i%5]);
+  if (fx.includes('hearts')) for(let i=0;i<7;i++){ const h=icon('heart'), s=1+rnd(); x.globalAlpha=.85; x.drawImage(h,Math.round(20+rnd()*420),Math.round(20+rnd()*160),Math.round(32*s),Math.round(32*s)); x.globalAlpha=1; }
+  if (fx.includes('vig')){ const g=x.createRadialGradient(240,150,90,240,150,300); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.7)'); x.fillStyle=g; x.fillRect(0,0,CW,CH); }
+  r(0,0,CW,10,'#000'); r(0,CH-10,CW,10,'#000');   // letterbox
+}
+function csText(x,t,cx,cy,size,col){ x.font=size+'px "Press Start 2P", monospace'; x.textAlign='center'; x.textBaseline='middle';
+  x.fillStyle='#1a100a'; for(const [dx,dy] of [[-4,0],[4,0],[0,-4],[0,4],[4,4]]) x.fillText(t,cx+dx,cy+dy); x.fillStyle=col; x.fillText(t,cx,cy); x.textAlign='left'; }
+function csActor(x,a,mob){
+  const r=(p,q,w,h,col)=>{ x.fillStyle=col; x.fillRect(Math.round(p),Math.round(q),Math.round(w),Math.round(h)); };
+  const sh=(cx,cy,w)=>{ if(cy>CH) return; x.fillStyle='rgba(30,40,20,.28)'; x.beginPath(); x.ellipse(cx,cy,w,w*.28,0,0,Math.PI*2); x.fill(); };
+  if (a.k==='hero'){ if(a.p!=='nap') sh(a.x,a.y+2,30*a.s); heroSpr(x,a.p,0,a.x,a.y,{scale:a.s, flip:a.f, key:S.cls?undefined:heroKey('warrior','m')}); }
+  else if (a.k==='vill'){ if(!a.sil&&a.v!=='vill_face') sh(a.x,a.y+2,32*a.s); spr(x,a.v,0,a.x,a.y,{scale:a.s, flip:a.f, fx:a.sil?'solid:#1c1226':''}); }
+  else if (a.k==='mob'){ const n=a.n||mob.group||1, art=mobArt(mob,a.p==='atk'?'atk':'idle'), fx=a.sil||mob.sil?'solid:#1c1226':art.fx, gap=96*a.s;
+    const fit=80/(frame(mobArt(mob,'idle').name).height*(art.scale||1));   // every mob about hero height, so close-ups fill the frame
+    (n>1?[[0,-18],[-1,6],[1,12]]:[[0,0]]).forEach(([dx,dy])=>{ const X=a.x+dx*gap, Y=a.y+dy*a.s; if(!a.sil&&!a.down) sh(X,Y+2,30*a.s);
+      spr(x,art.name,0,X,Y,{flip:true, fx, scale:(art.scale||1)*a.s*fit, rot:a.down?-1.45:0}); }); }
+  else if (a.k==='say'){ x.font='14px "Press Start 2P", monospace'; const w=Math.max(36,x.measureText(a.t).width+20);
+    r(a.x-w/2-3,a.y-3,w+6,34,'#1a100a'); r(a.x-w/2,a.y,w,28,'#ffffff'); r(a.x-5,a.y+31,10,6,'#1a100a'); r(a.x-3,a.y+28,6,5,'#ffffff');
+    x.fillStyle='#1a100a'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(a.t,a.x,a.y+15); x.textAlign='left'; }
+  else if (a.k==='word'){ x.fillStyle='#ffe066'; x.strokeStyle='#1a100a'; x.lineWidth=4; x.beginPath();
+    for(let i=0;i<20;i++){ const t=i/20*Math.PI*2, rr=i%2?50:86; x.lineTo(a.x+Math.cos(t)*rr*1.5,a.y+Math.sin(t)*rr*.8); } x.closePath(); x.fill(); x.stroke();
+    csText(x,a.t,a.x,a.y,a.t.length>4?18:30,'#e8508a'); }
+  else if (a.k==='icon'){ const c=icon(a.ic); x.drawImage(c,Math.round(a.x-16*a.s),Math.round(a.y-16*a.s),Math.round(32*a.s),Math.round(32*a.s)); }
+  else if (a.k==='chest'){ const c=mileChest(!!a.open); x.drawImage(c,Math.round(a.x-c.width*a.s/2),Math.round(a.y-c.height*a.s),Math.round(c.width*a.s),Math.round(c.height*a.s)); }
+  else if (a.k==='scroll'){ const w=120*a.s, h=70*a.s, L=a.x-w/2, T=a.y-h/2;
+    r(L+4*a.s,T,w-8*a.s,h,'#e9d2a0'); r(L+4*a.s,T,w-8*a.s,3*a.s,'#f6e4bc');
+    for(let i=0;i<4;i++) r(L+18*a.s,T+(16+i*11)*a.s,(i===3?50:84)*a.s,2*a.s,'#8a6a46');
+    [T-5*a.s,T+h-3*a.s].forEach(y=>{ r(L-2*a.s,y,w+4*a.s,8*a.s,'#6b3f22'); r(L-2*a.s,y,w+4*a.s,2*a.s,'#a8703e'); });
+    const c=CROWN_IN('#7a1424'), cs=Math.max(2,Math.round(2*a.s)); x.fillStyle='#b8283a'; x.beginPath(); x.arc(L+w-24*a.s,T+h-18*a.s,12*a.s,0,Math.PI*2); x.fill();
+    x.drawImage(c,Math.round(L+w-24*a.s-c.width*cs/2),Math.round(T+h-18*a.s-c.height*cs/2),c.width*cs,c.height*cs); }
+  else if (a.k==='circle'){ x.save(); x.globalCompositeOperation='lighter'; x.fillStyle='rgba(232,80,138,.28)'; x.beginPath(); x.ellipse(a.x,a.y,100,24,0,0,Math.PI*2); x.fill(); x.restore();
+    x.strokeStyle='#ff9ec2'; x.lineWidth=4; [[96,22],[72,16]].forEach(([rx,ry])=>{ x.beginPath(); x.ellipse(a.x,a.y,rx,ry,0,0,Math.PI*2); x.stroke(); });
+    for(let i=0;i<8;i++){ const t=i/8*Math.PI*2; r(a.x+Math.cos(t)*84-3,a.y+Math.sin(t)*19-3,6,6,'#ffe066'); } }
+}
+// the mob a cutscene shows: today's, or a snapshot of the day it was sent for
+const csMobNow=()=>({b:S.mob.b, v:S.mob.v, group:S.mob.group, name:dailyName(S.mob)});
+const csFill=(t,mob)=>t.replace(/\{hero\}/g,S.heroName||'Hero').replace(/\{me\}/g,S.villName).replace(/\{mob\}/g,mob.sil?'???':mob.name);
+// a small picture of one panel (her library and editor)
+const csThumb=(k,i,mob)=>memo(`csth:${k}:${i}:${mobId(mob)}:${mob.group}:${getTod()}:${S.cls}:${S.sex}`,()=>{
+  const big=makeCanvas(CW,CH); csDraw(big.getContext('2d'),csTpl(k).panels[i],mob);
+  const c=makeCanvas(160,100), g=c.getContext('2d'); g.imageSmoothingEnabled=true; g.drawImage(big,0,0,160,100); return c.toDataURL(); });
+// a cutscene waits in S.csQ with a snapshot of her lines and the day's mob, so later edits never change one already sent
+function queueCut(k, when){ const T=csTpl(k); if (!T||!S.mob) return;
+  S.csQ=[...(S.csQ||[]), {id:nid(), k, when, date:S.date, sc:csTidy(csScript(k),T), mob:csMobNow()}].slice(-5); }
+// his side: play what's waiting (from the Idle tab, and before the decree), then the day's other news
+function playCuts(){
+  if (!(S.csQ||[]).length || ui.role!=='hero' || !atlasReady || document.querySelector('.overlay')) return;
+  const c=S.csQ.shift(); save();
+  showCut(c, ()=>{ if(S.csQ.length) return playCuts(); if(S.loot) showReceipt(); else if(S.fled) showFled(); else showMile(); });
+}
+function showCut(c, done){
+  const T=csTpl(c.k); if (!T){ done&&done(); return; }
+  const n=T.panels.length, sc=csTidy(c.sc,T), steps=[], mob={...c.mob, sil:c.when==='arrive'&&c.date===S.date&&fogged()};
+  for (let i=0;i<=n;i++){ sc.gaps[i].forEach(l=>steps.push({p:-1,l})); if(i<n){ if(sc.on[i].length) sc.on[i].forEach(l=>steps.push({p:i,l})); else steps.push({p:i,l:null}); } }
+  const o=document.createElement('div'); o.className='overlay cut-ov';
+  o.innerHTML=`<div class="cut" role="dialog" aria-label="Cutscene: ${esc(T.n)}"><canvas width="${CW}" height="${CH}"></canvas>
+    <div class="cblack" hidden><div><b></b><p></p></div></div>
+    <div class="cbox" hidden><img alt=""><div><b></b><p aria-live="polite"></p></div></div><i class="cnext" aria-hidden="true">▼</i></div>
+    <button class="cskip" type="button">SKIP &gt;&gt;</button>`;
+  $('#app').appendChild(o);
+  const cut=o.querySelector('.cut'), x=o.querySelector('canvas').getContext('2d'), blk=o.querySelector('.cblack'), box=o.querySelector('.cbox');
+  let i=-1, shown=-2, typing=0, held=0;
+  const who=w=>w==='her'?[S.villName,url(villSprite(false))]:w==='hero'?[S.heroName||'Hero',S.cls?url(avatar()):'']:w==='mob'?[mob.sil?'???':mob.name,url(mob.sil?mobShade(mob):mobThumb(mob))]:['',''];
+  const finish=()=>{ clearInterval(typing); typing=0; o.classList.add('ready'); };
+  const type=(el,t)=>{ const ch=[...t]; let k=0; el.textContent=''; o.classList.remove('ready'); clearInterval(typing);
+    typing=setInterval(()=>{ k+=1; el.textContent=ch.slice(0,k).join(''); if(k>=ch.length){ el.textContent=t; finish(); } },28); el.dataset.full=t; };
+  const show=()=>{ const s=steps[i];
+    if (s.p!==shown){ shown=s.p; if(s.p>=0) csDraw(x,T.panels[s.p],mob); else { x.setTransform(1,0,0,1,0,0); x.fillStyle='#000'; x.fillRect(0,0,CW,CH); }
+      cut.classList.remove('cutin'); void cut.offsetWidth; cut.classList.add('cutin'); }
+    blk.hidden=box.hidden=true; held=performance.now();
+    if (!s.l){ o.classList.remove('ready'); setTimeout(()=>{ if(steps[i]===s) o.classList.add('ready'); },600); return; }
+    const [nm,pic]=who(s.l.w), t=csFill(s.l.t,mob), el=s.p<0?blk:box;
+    el.hidden=false; el.classList.toggle('narr',s.l.w==='narr'); el.querySelector('b').textContent=nm; el.querySelector('b').hidden=!nm;
+    if (s.p>=0){ const im=box.querySelector('img'); im.hidden=!pic; if(pic) im.src=pic; }
+    type(el.querySelector('p'),t); };
+  const close=()=>{ clearInterval(typing); o.remove(); done&&done(); };
+  const next=()=>{ if (i>=steps.length) return; if (typing){ const p=o.querySelector(steps[i].p<0?'.cblack p':'.cbox p'); p.textContent=p.dataset.full; finish(); return; }
+    if (i>=0 && !steps[i].l && performance.now()-held<400) return;   // a held panel needs a deliberate tap
+    if (++i>=steps.length) return close(); show(); };
+  o.onclick=next; o.querySelector('.cskip').onclick=e=>{ e.stopPropagation(); close(); };
+  const go=()=>next(); document.fonts&&document.fonts.load('14px "Press Start 2P"').then(go,go)||go();
+}
+
+/* =========================================================
    Daily royal decree (the cosmetic tax receipt): once, when the daily mob dies; taxes the V.coin bounty.
    A sealed scroll unrolls, the lines appear, her note writes itself, and a random sign-off lands
    ========================================================= */
 const MARKS=['kiss','sign','stamp'];
 function showReceipt(){
   const L=S.loot; if (!L || document.querySelector('.overlay')) return;
+  if ((S.csQ||[]).length && ui.role==='hero') return playCuts();   // her cutscene for the kill plays first
   const tax=L.gross-L.bounty, V=`<img alt="V.coins" src="${url(VCOIN())}">`, Gd=`<img alt="gold" src="${url(COIN())}">`;
   S.loot=null; save();
   const d=n=>` style="--d:${n}"`, nt=2.9, mt=L.note?4.1:3.1, tt=mt+2.35;   // seconds: note, mark, "tap anywhere"
@@ -2490,6 +2761,7 @@ function renderVMobs(m){
         ${room<120?`<span class="small muted">${room<30?'No more time to give:':'Only so much:'} tomorrow’s mob arrives at ${clockHm(spawnAt(addDays(S.date,1)))}.</span>`:''}</div>
       ${alive?`<div class="row2"><label class="f">Today’s bounty<input class="inp" id="td-bounty" type="number" min="0" max="999" value="${mb.bounty}"></label><label class="f">Today’s gold drop<input class="inp" id="td-gold" type="number" min="0" max="999" placeholder="Loot table" value="${mb.gold??''}"></label></div>`:''}
       <label class="f">Today’s taunt (optional)<textarea class="inp" id="td-taunt" maxlength="${LIM.taunt}" placeholder="Pops up on ${P.his} field the next time ${P.he} looks">${esc(mb.taunt||'')}</textarea></label>
+      ${alive?`<label class="f">Cutscene when it falls${csSel('td-csk',mb.csK)}</label>`:''}
       ${alive?`<label class="f">Note on today’s decree (optional)<textarea class="inp" id="td-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(mb.note||'')}</textarea></label>`:''}
       <button class="btn ghost block" id="td-rest">Give ${P.him} a free rest day</button>
       <p class="small muted">Extra time and rest days are gifts: they never cost ${P.him} an Inn token. Ending the day earlier needs ${P.his} OK (Rules tab).</p></div>`:''}
@@ -2514,6 +2786,8 @@ function renderVMobs(m){
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
       <label class="f">Taunt for that day’s mob (optional)<textarea class="inp" id="np-taunt" maxlength="${LIM.taunt}" placeholder="Pops up on ${P.his} field when it arrives">${esc(p.taunt||'')}</textarea></label>
       <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
+      <div class="row2"><label class="f">Cutscene when it arrives${csSel('np-csa',p.csA)}</label><label class="f">Cutscene when it falls${csSel('np-csk',p.csK)}</label></div>
+      <span class="small muted" style="margin-top:-6px">Write their lines in your Lair’s THEATER.</span>
       <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span>
         <div class="pick mobpick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${favs.map(mobBtn).join('')}</div>
         <span class="small muted">${favs.length?'★ Your favorites, pinned for quick picks. ':'Star mobs in your Bestiary to pin them here. '}Random days skip banned mobs and bring favorites more often. A hand-picked mob always comes.</span>
@@ -2553,6 +2827,9 @@ function renderVMobs(m){
   $('#np-gold').onchange=e=>{ sync(); plan().gold=num(e.target.value); tidy(); rerender(); };
   $('#np-note').onchange=e=>{ sync(); plan().note=e.target.value.trim(); tidy(); rerender(); };
   $('#np-taunt').onchange=e=>{ sync(); plan().taunt=e.target.value.trim(); tidy(); rerender(); };
+  $('#np-csa').onchange=e=>{ sync(); plan().csA=e.target.value||null; tidy(); rerender(); };
+  $('#np-csk').onchange=e=>{ sync(); plan().csK=e.target.value||null; tidy(); rerender(); };
+  if ($('#td-csk')) $('#td-csk').onchange=e=>{ mb.csK=e.target.value||null; save(); toast(mb.csK?`“${csTpl(mb.csK).n}” plays when the mob falls.`:'No cutscene when it falls.'); };
   $('#np-horde').onchange=e=>{ sync(); plan().horde=e.target.value==='any'?null:+e.target.value; tidy(); rerender(); };
   $('#go-lib').onclick=()=>{ sync(); ui.mobRoom='lib'; renderMain(); $('#main').scrollTop=0; };
   $('#np-all').ontoggle=e=>{ ui.allMobs=e.target.open; };
@@ -2709,7 +2986,7 @@ function showReport(){
   $('#app').appendChild(o); $('#rp-ok').onclick=()=>o.remove();
 }
 // her home tab: the lair, with deliveries and the scouting report
-function drawLair(x,now){
+function drawLair(x,now,empty){   // empty: the throne room without her (cutscene backdrops)
   const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),c,d); }, FL=232, sk=SKIES[getTod()];
   x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
   // stone wall
@@ -2725,6 +3002,7 @@ function drawLair(x,now){
   [140,340].forEach(cx=>{ const f=Math.floor(now/140+cx)%2; r(cx-3,FL-52,6,52,'#c9a46a'); r(cx-12,FL-54,24,4,'#c9a46a'); r(cx-3,FL-64,6,10,'#fff0d0');
     r(cx-4,FL-74,8,10,'#ff8a2a'); r(cx-2+f,FL-80,4,10,'#ffd25a'); r(cx-1,FL-72,2,4,'#fff6c0'); });
   x.save(); x.globalCompositeOperation='lighter'; [140,340].forEach(cx=>{ x.globalAlpha=.08+.03*Math.sin(now/90+cx); x.fillStyle='#ff9a3a'; x.beginPath(); x.arc(cx,FL-72,34,0,Math.PI*2); x.fill(); }); x.restore();
+  if (empty) return;
   // her, undisguised for once, in front of the throne
   const v=villSprite(false,true), bob=Math.round(Math.sin(now/600)*1.5);
   x.fillStyle='rgba(0,0,0,.3)'; x.beginPath(); x.ellipse(240,FL+6,34,7,0,0,Math.PI*2); x.fill();
@@ -2732,11 +3010,13 @@ function drawLair(x,now){
 }
 function renderLair(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
+  if (ui.lairRoom==='theater') return renderTheater(m);
   const mb=S.mob, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), unused=S.bag.filter(b=>!b.used), done=S.tasks.filter(t=>t.done).length, proofs=proofsWaiting();
   const ln=(a,b)=>`<div class="switch"><span>${a}</span><b>${b}</b></div>`;
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="laircv" width="480" height="300" aria-label="Your lair"></canvas>
-      <div class="plate hex"><b>LAIR OF ${esc(S.villName.toUpperCase())}</b><span>Infamy ${S.infamy}</span></div></div>
+      <div class="plate hex"><b>LAIR OF ${esc(S.villName.toUpperCase())}</b><span>Infamy ${S.infamy}</span></div>
+      <button class="go" id="go-th" aria-label="Open your cutscene theater"><i></i>THEATER</button></div>
     <div class="below wrap"><div class="stack">
       ${proofs.length?`<div><h3 style="color:var(--hex)">Proof to review</h3><div class="vlist">${proofs.map(t=>{ const pic=proofPic(t.id); return `<div class="px vpanel">
         <b>${esc(t.name)}</b>${pic?`<div class="proofpic"><img alt="${P.His} photo for ${esc(t.name)}" src="${pic}"></div>`:'<span class="small muted">The photo is gone. Judge on trust.</span>'}
@@ -2757,6 +3037,7 @@ function renderLair(m){
         :'<p class="small muted">Your raven reports at the end of each day.</p>'}</div>
       <div class="px empty">Building and decorating your lair is coming soon.</div></div></div>`;
   stageLoop($('#laircv'), drawLair);
+  $('#go-th').onclick=()=>{ ui.lairRoom='theater'; renderMain(); $('#main').scrollTop=0; };
   m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); renderTabs(); rerender(); toast('Marked as delivered.'); });
   m.querySelectorAll('[data-pf-ok],[data-pf-no]').forEach(b=>b.onclick=()=>{ const ok=!!b.dataset.pfOk, t=S.tasks.find(x=>x.id===(b.dataset.pfOk||b.dataset.pfNo)); if(!t) return;
     sealProof(t,ok,$('#pf-why-'+t.id)?.value||''); save(); renderHud(); renderTabs(); rerender(); toast(ok?'Sealed. The hit lands when '+P.he+' looks.':'Refused. It’s back on '+P.his+' list.'); });
@@ -2768,6 +3049,61 @@ function renderLair(m){
     'end-ok':()=>{ acceptEnd(); return `From tomorrow, the day ends at ${hm(S.dayEnd)}.`; },
     'end-no':()=>{ S.endProp.no=true; return 'Declined. The day stays as it is.'; }};
   m.querySelectorAll('[data-rq]').forEach(b=>b.onclick=()=>{ const msg=answer[b.dataset.rq](); save(); renderTabs(); rerender(); toast(msg); });
+}
+// a cutscene picker for her day plans
+const csSel=(id,v)=>`<select class="inp" id="${id}"><option value="">None</option>${Object.entries(CS_CATS).map(([c,l])=>`<optgroup label="${l}">${CUTSCENES.filter(t=>t.cat===c).map(t=>`<option value="${t.k}" ${v===t.k?'selected':''}>${esc(t.n)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+const CS_WHEN={arrive:'when today’s mob arrives', fall:'when today’s mob falls', now:'the next time '+'{he}'+' opens the app'};
+/* Her cutscene theater (THEATER on the Lair): the library, the selected one's art on the main screen, and its script,
+   spot by spot in play order: black screen, art 1, black screen, art 2 ... black screen */
+function renderTheater(m){
+  const T=csTpl(ui.csSel)||CUTSCENES[0], n=T.panels.length; ui.csSel=T.k; ui.csPan=Math.min(ui.csPan||0,n-1);
+  const sc=csScript(T.k), used=csCount(sc), full=used>=CS_MAX, mob=csMobNow(), pan=ui.csPan;
+  const whoSel=(id,w)=>`<select class="inp" data-who="${id}" aria-label="Who says it">${Object.entries(CS_WHO).map(([k,l])=>`<option value="${k}" ${w===k?'selected':''}>${k==='her'?esc(S.villName):k==='hero'?esc(S.heroName||'Hero'):l}</option>`).join('')}</select>`;
+  const spot=(kind,i,lines)=>{ const id=kind+i, head=kind==='b'
+      ? `<div class="cs-slot black"><b>${i===0?'BLACK SCREEN · BEFORE IT STARTS':i===n?'BLACK SCREEN · AT THE END':'BLACK SCREEN'}</b></div>`
+      : `<button type="button" class="cs-slot art${i===pan?' on':''}" data-pan="${i}" aria-label="Show art ${i+1} above"><img alt="" src="${csThumb(T.k,i,mob)}"><span><b>ART ${i+1} OF ${n}</b><span class="small muted">${lines.length?'Lines in a box over the picture':`Holds until ${P.he} taps`}</span></span></button>`;
+    return `<div class="cs-spot">${head}${lines.map((l,j)=>`<div class="cs-line">${whoSel(id+':'+j,l.w)}<button class="x" type="button" data-rm="${id}:${j}" aria-label="Remove this line">X</button>
+        <textarea class="inp" data-t="${id}:${j}" maxlength="${LIM.cline}" rows="2" aria-label="Line">${esc(l.t)}</textarea></div>`).join('')}
+      <button type="button" class="btn ghost cs-add" data-add="${id}" ${full||lines.length>=CS_SLOT?'disabled':''}>+ ${kind==='b'?'Line on black':'Line over the art'}</button></div>`; };
+  const q=S.csQ||[], when=c=>CS_WHEN[c.when].replace('{he}',P.he);
+  const planUse=Object.entries(S.plans).filter(([,p])=>p.csA===T.k||p.csK===T.k).map(([d,p])=>esc(dayLabel(d))+(p.csA===T.k?' (arrives)':' (falls)'));
+  m.classList.add('split');
+  m.innerHTML=`<div class="stage"><canvas id="cscv" width="${CW}" height="${CH}" aria-label="${esc(T.n)}, art ${pan+1} of ${n}"></canvas>
+      <div class="plate hex"><b>${esc(T.n.toUpperCase())}</b><span>Art ${pan+1} of ${n}</span></div>
+      <button class="csnav l" id="cs-prev" aria-label="Previous art" ${pan?'':'disabled'}>◀</button><button class="csnav r" id="cs-next" aria-label="Next art" ${pan<n-1?'':'disabled'}>▶</button>
+      <button class="go back" id="go-lair" aria-label="Back to your lair"><i></i>LAIR</button></div>
+    <div class="below wrap"><div class="stack">
+      <div><h2 style="color:var(--hex)">Cutscene theater</h2><p class="small muted">Pick a cutscene and write its lines: on a black screen between the pictures, or in a box over one. Each picture waits until ${P.he}’s read every line. Then play it on a day (Mobs tab, Plan ahead) or send it right now.</p></div>
+      ${Object.entries(CS_CATS).map(([c,l])=>`<div><h3>${l}</h3><div class="csgrid">${CUTSCENES.filter(t=>t.cat===c).map(t=>`<button type="button" data-cs="${t.k}" aria-pressed="${t.k===T.k}"><img alt="" src="${csThumb(t.k,0,mob)}"><b>${esc(t.n)}</b><span>${t.panels.length} pictures${S.cs[t.k]?' · yours':''}</span></button>`).join('')}</div></div>`).join('')}
+      <div class="px vpanel">
+        <div><h3 style="margin:0 0 6px;color:var(--hex)">${esc(T.n)}</h3><p class="small muted" style="margin:0">${esc(T.d)}</p></div>
+        <div class="switch"><span>Lines</span><b${full?' style="color:var(--bad)"':''}>${used} of ${CS_MAX}</b></div>
+        <p class="small muted" style="margin:0">Up to ${CS_SLOT} lines in one spot, ${LIM.cline} letters a line. {hero}, {mob} and {me} fill in ${P.his} name, that day’s mob and your name.</p>
+        <div class="cs-script">${[...Array(n+1)].map((_,i)=>spot('b',i,sc.gaps[i])+(i<n?spot('p',i,sc.on[i]):'')).join('')}</div>
+        <button class="btn block" id="cs-play">▶ Preview it</button>
+        <button class="btn hex block" id="cs-send">Play it for ${P.him} now</button>
+        ${S.cs[T.k]?'<button class="btn ghost block" id="cs-reset">Go back to the default lines</button>':''}
+        ${planUse.length?`<p class="small muted" style="margin:0">Planned: ${planUse.join(', ')}.</p>`:''}</div>
+      <div><h3>Waiting for ${P.him}</h3>${q.length?`<div class="vlist">${q.map(c=>`<div class="vrow"><div class="t"><b>${esc(csTpl(c.k).n)}</b><span class="small muted">Plays ${when(c)}</span></div><button class="x" data-unq="${c.id}" aria-label="Call off ${esc(csTpl(c.k).n)}">X</button></div>`).join('')}</div>`
+        :`<p class="small muted">Nothing waiting. Cutscenes you send play the next time ${P.he} opens the Idle tab.</p>`}</div></div></div>`;
+  const cv=$('#cscv'), draw=()=>{ if(cv.isConnected) csDraw(cv.getContext('2d'),T.panels[pan],mob); };
+  draw(); document.fonts&&document.fonts.ready.then(draw);
+  const keep=()=>{ S.cs[T.k]=csTidy(sc,T); save(); };
+  const at=id=>{ const [s,j]=id.split(':'); return [(s[0]==='b'?sc.gaps:sc.on)[+s.slice(1)], +j]; };
+  $('#go-lair').onclick=()=>{ ui.lairRoom='lair'; renderMain(); $('#main').scrollTop=0; };
+  $('#cs-prev').onclick=()=>{ ui.csPan=pan-1; rerender(); }; $('#cs-next').onclick=()=>{ ui.csPan=pan+1; rerender(); };
+  m.querySelectorAll('[data-cs]').forEach(b=>b.onclick=()=>{ ui.csSel=b.dataset.cs; ui.csPan=0; rerender(); });
+  m.querySelectorAll('[data-pan]').forEach(b=>b.onclick=()=>{ ui.csPan=+b.dataset.pan; rerender(); });
+  m.querySelectorAll('[data-t]').forEach(e=>e.onchange=()=>{ const [l,j]=at(e.dataset.t); l[j].t=e.value; keep(); });
+  m.querySelectorAll('[data-who]').forEach(e=>e.onchange=()=>{ const [l,j]=at(e.dataset.who); l[j].w=e.value; keep(); });
+  m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ const [l,j]=at(b.dataset.rm); l.splice(j,1); keep(); rerender(); });
+  m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const [l]=at(b.dataset.add+':0');
+    if (csCount(sc)>=CS_MAX||l.length>=CS_SLOT){ toast('That’s the limit. Short and sharp is scarier anyway.'); return; }
+    l.push({w:'her', t:''}); keep(); rerender(); const ta=m.querySelectorAll(`[data-t^="${b.dataset.add}:"]`); ta[ta.length-1]?.focus(); });
+  $('#cs-play').onclick=()=>{ if(document.activeElement) document.activeElement.blur(); showCut({k:T.k, when:'now', sc:csScript(T.k), mob}); };
+  $('#cs-send').onclick=()=>{ if(document.activeElement) document.activeElement.blur(); queueCut(T.k,'now'); rerender(); toast(`It plays the next time ${P.he} opens the Idle tab.`); };
+  if ($('#cs-reset')) $('#cs-reset').onclick=()=>{ delete S.cs[T.k]; save(); rerender(); toast('Back to the default lines.'); };
+  m.querySelectorAll('[data-unq]').forEach(b=>b.onclick=()=>{ S.csQ=S.csQ.filter(c=>c.id!==b.dataset.unq); save(); rerender(); toast('Called off.'); });
 }
 /* Her spells: each can be cast once a day, free. None of them ever damages the mob or changes the threshold;
    he hears about each one in a pop-up on his field. Shown as a spellbook of 6 pages (owner, Nov 1): one spell per
