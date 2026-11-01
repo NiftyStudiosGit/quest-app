@@ -181,6 +181,13 @@ main.has-orb .below{padding-bottom:56px}
 .innbtn:active{transform:translateY(2px)}
 .innbtn.alert::after{content:'!';position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;font-size:8px;padding:3px 5px;box-shadow:0 0 0 2px var(--line)}
 .innp p{margin:0}
+.keys{display:flex;flex-wrap:wrap;gap:4px}
+.keys img{width:24px;height:24px;image-rendering:pixelated}
+.keys img.used{opacity:.3;filter:grayscale(1)}
+.vrow.got{box-shadow:inset 3px 0 0 var(--gold)}
+.paper .ln.mile{align-items:center}
+.paper .ln.mile img{width:32px;height:32px;image-rendering:pixelated;flex:none}
+.paper .ln.mile span:first-of-type{flex:1}
 .go.back{right:auto;left:2%;animation-name:nudge-back}
 .go.back i{transform:scaleX(-1);order:0}
 @keyframes nudge{50%{transform:translateX(3px)}}
@@ -674,6 +681,7 @@ function freshState(){
     // the clock: game date, spawn time and day end (minutes from midnight; end is -240..240 around midnight)
     date:null, tz:null, spawnMin:420, dayEnd:0, endProp:null, endFor:null, skew:0,   // tz = the time zone today started in
     inn:{per:3, used:{}, extra:{}}, req:null, rev:null, lost:null,   // req = his rest-day ask, rev = his revive ask
+    miles:null, mileGot:[], mileNew:null,   // her streak milestone treats, the ones reached this run, news to show him
     shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
     bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2, econ:1
   };
@@ -697,6 +705,7 @@ function upgrade(S){
   // saves from before repeating schedules: each "every day" quest becomes a schedule, today's copy stays as it is
   if (!S.recur){ S.recur=[];
     (S.tasks||[]).forEach(t=>{ if(t.repeat==='daily'){ t.rid=nid(); S.recur.push({rid:t.rid, name:t.name, dmg:t.dmg, taunt:t.taunt||'', days:[0,1,2,3,4,5,6], ...(t.npc?{npc:t.npc}:{})}); } delete t.repeat; }); }
+  S.mileGot??=[]; S.miles??=null;
   S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;   // saves from before the title screen pick a mode once, then keep everything
   return S;
 }
@@ -713,6 +722,7 @@ function tidyText(){
   Object.values(S.plans||{}).forEach(p=>{ p.name=clip(p.name,LIM.mob); p.note=clip(p.note,LIM.note); (p.quests||[]).forEach(q=>q.name=clip(q.name,LIM.quest)); });
   (S.shop||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); r.price=clampN(r.price,1,LIM.price); });
   (S.bag||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
+  (S.miles||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
   if (S.loot){ S.loot.name=clip(S.loot.name,LIM.mob+20); S.loot.note=clip(S.loot.note,LIM.note); }
 }
 tidyText();
@@ -760,8 +770,22 @@ const innLeft=()=>Math.max(0,S.inn.per+(S.inn.extra[innKey()]||0)-(S.inn.used[in
 const spendInn=()=>{ S.inn.used[innKey()]=(S.inn.used[innKey()]||0)+1; };
 // today becomes a rest day: the mob goes home, no bounty, the streak is safe
 function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++; }
-// bring back the streak that fell yesterday (Inn token or her revive)
-function revive(){ S.streak+=S.lost.streak; S.best=Math.max(S.best,S.streak); S.lost=null; S.rev=null; }
+// bring back the streak that fell yesterday (Inn token or her revive). Milestones it already paid out stay paid
+function revive(){ const before=S.streak; S.streak+=S.lost.streak; S.best=Math.max(S.best,S.streak);
+  S.mileGot=[...new Set([...S.mileGot,...(S.lost.got||[])])]; S.lost=null; S.rev=null; checkMiles(before); }
+
+/* Streak milestones: she picks treats for streak lengths (streaks never pay gold). Reaching one drops the treat in his
+   bag for free, once per streak run; a revived streak keeps the ones it already paid out */
+const MILE_DAYS=[3,5,7,10,14,21,30,45,60,90,100,180,365];
+const mileOf=(t,days)=>({id:nid(), days, name:t.name, desc:t.desc||'', icon:t.icon});
+// first time: two from her shop, a small treat for a week and a bigger one for a month
+function seedMiles(){ const near=v=>S.shop.slice().sort((a,b)=>Math.abs(a.price-v)-Math.abs(b.price-v))[0];
+  S.miles=[mileOf(near(50),7)]; const big=near(150); if(big!==near(50)) S.miles.push(mileOf(big,30)); }
+function checkMiles(prev){
+  (S.miles||[]).filter(r=>r.days>prev&&r.days<=S.streak&&!S.mileGot.includes(r.days)).sort((a,b)=>a.days-b.days).forEach(r=>{
+    S.mileGot.push(r.days); S.bag.push({id:nid(), name:r.name, icon:r.icon, desc:r.desc, used:false, delivered:false, day:S.day, mile:r.days});
+    S.mileNew=(S.mileNew||[]).concat({days:r.days, name:r.name, icon:r.icon}); });
+}
 
 /* =========================================================
    The daily mob: one per day, HP fixed at spawn
@@ -811,7 +835,7 @@ function landHit(task){
   m.state='dead';
   const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
-  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++;
+  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++; checkMiles(S.streak-1);
   S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(EXP_KILL+heroBoons().exp)};
   save(); return true;
 }
@@ -824,7 +848,7 @@ function endDay(){
   if (S.lost && S.lost.date<=S.date) S.lost=null;
   // a rest request she never answered is approved when the day ends
   if (m.state==='alive' && S.req && S.req.date===S.date && !S.req.no){ restDay(); S.fled={rest:true}; }
-  if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak}:null; S.streak=0; S.tally.fled++; }
+  if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak, got:S.mileGot}:null; S.streak=0; S.mileGot=[]; S.tally.fled++; }
   S.req=null; S.rev=null; S.endFor=null; S.day++;
   const hers=S.tasks.filter(t=>!t.npc&&!t.rid); if (hers.length) S.past=hers.map(({name,dmg,taunt})=>({name,dmg,taunt}));
   S.npcRecent=S.tasks.filter(t=>t.npc==='roll').map(t=>t.name);
@@ -835,7 +859,8 @@ function endDay(){
 // catch the game up with the clock: end finished days, spawn the mob when it's time. Returns true if anything changed
 function tick(){
   const t=clock(); let n=0, changed=false;
-  if (S.date&&!S.tz){ S.tz=myTz(); changed=true; }   // saves from before travel support: today is on this clock
+  if (S.date&&!S.tz){ S.tz=myTz(); changed=true; }
+  if (!S.miles&&S.shop.length){ seedMiles(); changed=true; }   // her first milestones, once the shop is stocked   // saves from before travel support: today is on this clock
   if (!S.date){ if(S.mob) S.date=dateOf(t); else { startDay(dateOf(t)); spawnMob(); } changed=true; }   // a brand-new game gets its first mob right away
   if (S.mob&&t<dayEndAt(S.date)&&heroBoons().min>(S.mob.bmin||0)){ S.mob.bmin=heroBoons().min; changed=true; }   // today's boon minutes only grow
   if (S.tz&&S.tz!==myTz()&&S.tzSeen!==myTz()&&t<dayEndAt(S.date)){ S.tzSeen=myTz(); changed=true;
@@ -1116,7 +1141,7 @@ function renderIdle(m){
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
   // news from a day that ended while he was away
-  if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400);
+  if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400); else if (S.mileNew) setTimeout(showMile,400);
 }
 function pickActivity(not){ const keys=Object.keys(ACTIVITIES).filter(k=>k!=='victory'&&k!==not); return keys[Math.floor(Math.random()*keys.length)]; }
 function idleHint(){
@@ -1530,7 +1555,7 @@ function showReceipt(){
   // a tap before it's done skips to the end; the next one accepts
   let ready=false; const t=setTimeout(()=>ready=true, tt*1000);
   o.onclick=()=>{ if(!ready){ ready=true; clearTimeout(t); o.classList.add('skip'); return; }
-    o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); };
+    o.remove(); renderHud(); if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); setTimeout(showMile,300); };
 }
 // the mob was still alive when the day ended
 function showFled(){
@@ -1550,6 +1575,16 @@ function showFled(){
     <button class="btn block" id="fl-ok">Next time…</button></div>`;
   $('#app').appendChild(o);
   $('#fl-ok').onclick=()=>o.remove();
+}
+// a streak milestone was reached: her treat is already in his bag
+function showMile(){
+  const N=S.mileNew; if (!N || ui.role!=='hero' || document.querySelector('.overlay')) return;
+  S.mileNew=null; save(); renderTabs();
+  const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML=`<div class="paper" role="dialog" aria-label="Streak milestone"><div class="hd">Streak milestone!</div><div class="sub">${N.length>1?'Your streak passed '+N.map(r=>r.days).join(' and ')+' days.':N[0].days+' days in a row.'} ${esc(S.villName)} grudgingly rewards you.</div>
+    ${N.map(r=>`<div class="ln mile"><img alt="" src="${url(icon(r.icon))}"><span>${esc(r.name)}</span><span>${r.days} days</span></div>`).join('')}
+    <p class="slain">It’s in your Bag. “Don’t let it go to your head.”</p><button class="btn block" id="ml-ok">Into the bag</button></div>`;
+  $('#app').appendChild(o); $('#ml-ok').onclick=()=>o.remove();
 }
 // the hero's Inn, a room off the Idle screen (round INN button): rest days, saving a lost streak, and when the day ends
 const endBy=()=>S.endProp?(S.endProp.by||'vill'):null;
@@ -1586,15 +1621,24 @@ function renderInn(m){
   const end=by==='vill'&&!P.no?`<p>${esc(S.villName)} proposes <b>${hm(P.min)}</b> instead. If you accept, it starts tomorrow.</p><div class="row2"><button class="btn ghost" data-n="end-no">Decline</button><button class="btn" data-n="end-ok">Accept</button></div>`
     : by==='hero'?`<p>${P.no?`She declined ${hm(P.min)}.`:`You proposed ${hm(P.min)}. Waiting for her answer.`}</p><button class="btn ghost block" data-n="end-clear">${P.no?'OK':'Withdraw'}</button>`
     : `<div class="row2"><select class="inp" id="in-end" aria-label="New end of the day">${END_OPTS.map(v=>`<option value="${v}" ${v===S.dayEnd?'selected':''}>${hm(v)}</option>`).join('')}</select><button class="btn ghost" data-n="end-prop">Propose</button></div><p class="small muted">She has to agree. It starts the day after she accepts.</p>`;
+  // tokens shown as room keys: spent ones fade
+  const total=S.inn.per+(S.inn.extra[innKey()]||0), keys=total?`<div class="keys" aria-hidden="true">${[...Array(total)].map((_,i)=>`<img alt="" src="${url(icon('key'))}"${i<left?'':' class="used"'}>`).join('')}</div>`:'';
+  const miles=(S.miles||[]).slice().sort((a,b)=>a.days-b.days), next=miles.find(r=>r.days>S.streak&&!S.mileGot.includes(r.days));
+  const streak=`<div class="switch"><span>Days in a row</span><b>${S.streak} (best ${S.best})</b></div>
+    ${next?`<p>${next.days-S.streak} more ${next.days-S.streak>1?'days':'day'} to <b>${esc(next.name)}</b>.</p>`:''}
+    ${miles.length?`<div class="vlist">${miles.map(r=>{ const got=S.mileGot.includes(r.days);
+      return `<div class="vrow${got?' got':''}"><img alt="" src="${url(icon(r.icon))}"><div class="t"><b>${r.days} days</b><span class="small muted">${esc(r.name)}</span></div><span class="small">${got?'Got it':S.streak>=r.days?'Next streak':(r.days-S.streak)+' to go'}</span></div>`; }).join('')}</div>`
+      :`<p>${esc(S.villName)} hasn’t set any milestone rewards. Streaks never pay gold.</p>`}`;
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="shopcv" width="480" height="300" aria-label="Your hero inside the inn, with the innkeeper behind the counter"></canvas>
       <div class="shopsign"><span>The Inn</span></div>
       <button class="go back" id="go-field" aria-label="Back to the field"><i></i>FIELD</button></div>
     <div class="below wrap"><div class="stack">
       <div class="px speech"><img alt="" src="${url(innFace())}"><div style="min-width:0"><div class="who2" style="color:var(--gold)">The Innkeeper</div><p id="shopline">${arriving?'Welcome, traveler! I am definitely just an innkeeper.':INN_LINES[Math.floor(Math.random()*INN_LINES.length)]}</p></div></div>
-      <div><h3>A room for the day</h3><div class="px vpanel innp"><div class="switch"><span>Inn tokens left this month</span><b>${left}</b></div>${rest}</div></div>
+      <div><h3>A room for the day</h3><div class="px vpanel innp"><div class="switch"><span>Inn tokens left this month</span><b>${left}</b></div>${keys}${rest}</div></div>
       ${S.lost?`<div><h3>Save your streak</h3><div class="px vpanel innp"><div class="switch"><span>Fell yesterday</span><b>${S.lost.streak} days</b></div><p>You can still save it until today ends.${V?(V.no?' She refused your revive. Rude.':' Revive requested. Waiting for her answer.'):''}</p>
         <div class="row2"><button class="btn" data-n="lost-inn" ${left?'':'disabled'}>Use a token</button><button class="btn ghost" data-n="lost-ask" ${V?'disabled':''}>Ask her</button></div></div></div>`:''}
+      <div><h3>Your streak</h3><div class="px vpanel innp">${streak}</div></div>
       <div><h3>When the day ends</h3><div class="px vpanel innp"><div class="switch"><span>The day ends at</span><b>${hm(S.dayEnd)}</b></div>${todayEnd()}${end}</div></div></div></div>`;
   const cv=$('#shopcv'); shopCtx=cv.getContext('2d'); shopCtx.imageSmoothingEnabled=false;
   shopT0=arriving?performance.now():-1e9;   // he hops in on entry, not on every repaint
@@ -1605,7 +1649,7 @@ function renderInn(m){
   const done=msg=>{ save(); renderHud(); renderTabs(); rerender(); toast(msg); };
   on('rest',()=>{ spendInn(); restDay(); done('Rest day. Sleep well, hero.'); });
   on('rest-ask',()=>{ S.req={date:S.date}; done('Rest day requested.'); });
-  on('lost-inn',()=>{ spendInn(); revive(); done(`Streak restored: ${S.streak} days.`); });
+  on('lost-inn',()=>{ spendInn(); revive(); done(`Streak restored: ${S.streak} days.`); setTimeout(showMile,300); });
   on('lost-ask',()=>{ S.rev={}; done('Revive requested. Now you wait.'); });
   on('end-ok',()=>{ acceptEnd(); done(`From tomorrow, the day ends at ${hm(S.dayEnd)}.`); });
   on('end-no',()=>{ P.no=true; done('Declined. The day still ends at '+hm(S.dayEnd)+'.'); });
@@ -1635,16 +1679,22 @@ function drawInn(now){
   r(cx-34,14,68,Y1-14,'#1e140d'); r(cx-38,8,76,6,'#4e301b'); r(cx-38,14,4,Y1-14,'#4e301b'); r(cx+34,14,4,Y1-14,'#4e301b');
   r(cx-12,22,24,Y1-22,'#5a3418'); r(cx-10,24,20,Y1-24,'#8a5530'); r(cx+5,44,2,4,'#f6c445');
   x.font='8px "Press Start 2P", monospace'; x.textBaseline='top'; x.fillStyle='#f6c445'; x.fillText('1',cx-4,28);
-  x.save(); x.globalCompositeOperation='lighter'; x.globalAlpha=.18; x.fillStyle='#ffb050'; x.beginPath(); x.arc(cx-24,30,14,0,Math.PI*2); x.fill(); x.restore(); r(cx-27,26,6,8,'#f6c445');
+  const fl=Math.floor(now/180)%3;   // the lantern flickers in steps
+  x.save(); x.globalCompositeOperation='lighter'; x.globalAlpha=[.16,.22,.19][fl]; x.fillStyle='#ffb050'; x.beginPath(); x.arc(cx-24,30,[14,16,15][fl],0,Math.PI*2); x.fill(); x.restore(); r(cx-27,26,6,8,'#f6c445'); r(cx-25,28+(fl===1?0:1),2,3,'#fff6c0');
+  // streak plaque on the wall: a flame and his streak, gray embers when there's none
+  const sk2=S.streak>0, pl=104; r(pl,10,46,48,'#c9a46a'); r(pl+2,12,42,44,'#8a5530'); r(pl+4,14,38,40,'#2a1a10'); r(pl+20,6,6,4,'#c9a46a');
+  const fc=sk2?['#e8402a','#ff8a2a','#ffd25a']:['#4a4a4a','#6a6a6a','#8a8a8a'], fy=18+(sk2&&fl===1?-1:0);
+  r(pl+16,fy+8,14,12,fc[0]); r(pl+18,fy+4,10,8,fc[0]); r(pl+21,fy,4,6,fc[0]); r(pl+18,fy+10,10,9,fc[1]); r(pl+21,fy+6,4,6,fc[1]); r(pl+20,fy+13,6,6,fc[2]);
+  x.font='8px "Press Start 2P", monospace'; x.textBaseline='top'; x.textAlign='center'; x.fillStyle=sk2?'#f6c445':'#8a8a8a'; x.fillText(String(Math.min(S.streak,999)),pl+23,42); x.textAlign='left';
   for(let i=0;i<n;i++){ const k0=i/n, k1=(i+1)/n, bot=Math.round(sy(k0)), top=Math.round(sy(k1)), w=Math.round(hw(k0)), tread=Math.max(2,Math.round((bot-top)*.4));
     r(cx-w,top,2*w,bot-top,'#8a5530'); r(cx-w,top,2*w,tread,'#e0a868'); r(cx-w,top+tread,2*w,1,'#6b4226'); }
   // side stringers and banisters converging toward the top
   x.strokeStyle='#3a2414'; x.lineWidth=4; [-1,1].forEach(sd=>{ x.beginPath(); x.moveTo(cx+sd*hw(0),Y0); x.lineTo(cx+sd*hw(1),Y1); x.stroke(); });
   [-1,1].forEach(sd=>{ for(let i=0;i<=n;i+=3){ const k=i/n, px=cx+sd*(hw(k)+2), py=sy(k), h=Math.round(46-26*k); r(px-2,py-h,4+Math.round(2*(1-k)),h,'#5a3418'); }
     x.strokeStyle='#a8703f'; x.lineWidth=5; x.beginPath(); x.moveTo(cx+sd*(hw(0)+3),Y0-46); x.lineTo(cx+sd*(hw(1)+3),Y1-20); x.stroke(); });
-  // key board for the rooms, behind the counter
-  r(330,20,120,56,'#5a3418'); r(330,20,120,3,'#8a5530');
-  for(let i=0;i<4;i++){ r(344+i*28,30,2,4,'#c9a46a'); if(i!==1) x.drawImage(icon('key'),332+i*28,30,24,24); }
+  // key board for the rooms: one key on a hook for each Inn token he has left (up to 4)
+  r(274,18,88,48,'#5a3418'); r(274,18,88,3,'#8a5530'); r(274,63,88,3,'#4e301b');
+  for(let i=0,k=Math.min(4,innLeft());i<4;i++){ r(286+i*21,26,2,4,'#c9a46a'); if(i<k) x.drawImage(icon('key'),278+i*21,28,18,18); }
   // the innkeeper behind the counter (always her, in a different disguise)
   const v=frame('vill_inn',0), bob=Math.round(Math.sin(now/500));
   x.save(); x.translate(416+Math.round(v.width/2), 34+bob); x.scale(-1,1); x.drawImage(v,0,0); x.restore();
@@ -2281,6 +2331,13 @@ function renderVRules(m){
       <div class="f"><div class="switch"><span>Inn tokens per month</span><span class="rateval" id="vd-iv">${S.inn.per}</span></div><input type="range" id="vd-inn" min="0" max="10" step="1" value="${S.inn.per}" aria-label="Inn tokens per month">
         <span class="small muted">${P.He} can spend one for a rest day without asking. ${innLeft()} left this month.</span></div>
       <button class="btn ghost block" id="vd-gift">Give ${P.him} an extra Inn token</button></div></div>
+    <div><h3>Streak milestones</h3><div class="px vpanel">
+      <span class="small muted">When ${P.his} streak reaches one, the treat lands in ${P.his} bag for free, once per streak. Streaks never pay gold. ${P.His} streak: ${S.streak} days.</span>
+      ${(S.miles||[]).length?`<div class="vlist">${S.miles.slice().sort((a,b)=>a.days-b.days).map(r=>`<div class="vrow"><img alt="" src="${url(icon(r.icon))}"><div class="t"><b>${r.days} days</b><span class="small muted">${esc(r.name)}</span></div><button class="x" data-mdel="${r.id}" aria-label="Remove the ${r.days}-day milestone">X</button></div>`).join('')}</div>`:'<div class="empty">No milestones yet.</div>'}
+      ${S.shop.length?`<div class="row2"><select class="inp" id="ms-days" aria-label="Streak length">${MILE_DAYS.map(v=>`<option value="${v}" ${v===7?'selected':''}>${v} days</option>`).join('')}</select>
+        <select class="inp" id="ms-treat" aria-label="Reward">${S.shop.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></div>
+        <button class="btn hex block" id="ms-add">Add milestone</button><span class="small muted">Rewards come from your shop. Write new ones on the Shop tab.</span>`
+      :'<span class="small muted">Stock your shop first: milestone rewards come from it.</span>'}</div></div>
     <div><h3>Prototype controls</h3><div class="px vpanel">
       <div class="switch"><span>Game clock</span><b>${esc(new Date(clock()).toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'}))}</b></div>
       ${S.mob.state==='coming'?`<button class="btn ghost block" id="pc-spawn">Jump to ${spawnHm()} (spawn)</button>`:''}
@@ -2298,6 +2355,9 @@ function renderVRules(m){
   if ($('#vd-withdraw')) $('#vd-withdraw').onclick=()=>{ S.endProp=null; save(); rerender(); };
   $('#vd-inn').oninput=e=>{ S.inn.per=+e.target.value; $('#vd-iv').textContent=e.target.value; save(); };
   $('#vd-inn').onchange=()=>rerender();
+  if ($('#ms-add')) $('#ms-add').onclick=()=>{ const days=+$('#ms-days').value, t=S.shop.find(x=>x.id===$('#ms-treat').value); if(!t) return;
+    S.miles=(S.miles||[]).filter(r=>r.days!==days).concat(mileOf(t,days)); save(); rerender(); toast(`${days}-day streak: ${t.name}.`); };
+  m.querySelectorAll('[data-mdel]').forEach(b=>b.onclick=()=>{ S.miles=S.miles.filter(r=>r.id!==b.dataset.mdel); save(); rerender(); });
   $('#vd-gift').onclick=()=>{ const k=innKey(); S.inn.extra[k]=(S.inn.extra[k]||0)+1; save(); rerender(); toast('One extra Inn token, this month only.'); };
   // the clock only moves forward: skew is added to the real time
   const jump=to=>{ S.skew+=Math.max(0,to-clock()); const before=S.day; tick(); render(); toast(S.day>before?(S.fled&&!S.fled.rest?`The mob fled. Day ${S.day} begins.`:`Day ${S.day} begins.`)+(S.mob.state==='alive'?' A new mob has spawned.':''):S.mob.state==='alive'?'The mob has spawned.':'Time flies.'); };
