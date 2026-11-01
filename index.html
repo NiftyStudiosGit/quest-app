@@ -1083,7 +1083,8 @@ const innKey=()=>S.date.slice(0,7);
 const innLeft=()=>Math.max(0,S.inn.per+(S.inn.extra[innKey()]||0)-(S.inn.used[innKey()]||0));
 const spendInn=()=>{ S.inn.used[innKey()]=(S.inn.used[innKey()]||0)+1; };
 // today becomes a rest day: the mob goes home, no bounty, the streak is safe
-function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++;
+function restDay(){ if (solo()) queueCut('restday','rest');   // the NPC tiptoes in on his rest day
+  S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++;
   if (S.amb){ S.tasks=S.tasks.filter(t=>!t.amb||t.hit); S.amb=null; } }
 // bring back the streak that fell yesterday (Inn token or her revive). Milestones it already paid out stay paid
 function revive(){ const before=S.streak; S.streak+=S.lost.streak; S.best=Math.max(S.best,S.streak);
@@ -1141,6 +1142,7 @@ function spawnMob(){
   const qt=S.tasks.filter(t=>t.taunt).map(t=>t.taunt), taunt=p.taunt||m.taunt||(solo()&&qt.length?qt[Math.floor(Math.random()*qt.length)]:'');
   Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', taunt, state:'alive', csK:p.csK||null});
   if (p.csA) queueCut(p.csA,'arrive');   // her cutscene for its arrival plays the next time he opens the Idle tab
+  else if (solo() && !p.csK) npcBossDay();
   delete S.plans[S.date];
 }
 const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
@@ -1213,7 +1215,7 @@ function endDay(){
   // repeating quests come back fresh with the new day (only on their days); her unfinished one-offs carry over
   // (ambush quests and ones that burned up under Haste go with the day)
   S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll'&&!t.amb&&!t.burnt); S.tasks.forEach(t=>{ delete t.haste; delete t.pf; delete t.pfWhy; });
-  S.pending=[]; S.amb=null; S.csQ=(S.csQ||[]).filter(c=>c.when!=='arrive');   // a boss intro he never saw goes with its day
+  S.pending=[]; S.amb=null; S.csQ=(S.csQ||[]).filter(c=>c.when!=='arrive'&&c.when!=='rest');   // a boss intro or rest-day scene he never saw goes with its day
   startDay(addDays(S.date,1));
   // photos left behind by an old save or a reset are never kept
   try{ Object.keys(localStorage).filter(k=>k.startsWith(PROOF)&&!proofsWaiting().some(t=>PROOF+t.id===k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
@@ -1228,6 +1230,7 @@ function tick(){
   if (S.tz&&S.tz!==myTz()&&S.tzSeen!==myTz()&&t<dayEndAt(S.date)){ S.tzSeen=myTz(); changed=true;
     setTimeout(()=>toast(`New time zone! Today still ends at ${clockHm(dayEndAt(S.date))} here. Tomorrow follows your new clock.`),600); }
   while (t>=dayEndAt(S.date) && n<400){ endDay(); n++; changed=true; }
+  if (n>=3 && solo() && S.mob) queueCut('welcome','now');   // solo: the NPC notices he was gone a while
   if (n>=400) startDay(dateOf(t));   // gone for over a year
   if (S.mob.state==='coming' && t>=spawnAt(S.date)){ spawnMob(); changed=true; }
   S.tasks.forEach(q=>{ if(q.haste&&!q.done&&!q.burnt&&t>=q.haste){ q.burnt=true; changed=true; } });   // Haste: too late, it burns up
@@ -2036,6 +2039,15 @@ const csThumb=(k,i,mob)=>memo(`csth:${k}:${i}:${mobId(mob)}:${mob.group}:${getTo
   const big=makeCanvas(CW,CH); csDraw(big.getContext('2d'),csTpl(k).panels[i],mob);
   const c=makeCanvas(160,100), g=c.getContext('2d'); g.imageSmoothingEnabled=true; g.drawImage(big,0,0,160,100); return c.toDataURL(); });
 // a cutscene waits in S.csQ with a snapshot of her lines and the day's mob, so later edits never change one already sent
+/* Solo mode: the NPC Villainess plays her own cutscenes from the same library, with its default lines (or ones written
+   on the Villainess side). About once a week (never two days running, never day 1) a boss day: a boss intro when the
+   mob arrives and a "when it falls" scene for the kill. Also "A quiet day" on his rest days and "Welcome back" after 3+ days away */
+const NPC_BOSS_ODDS=1/6;
+const pickCut=cat=>{ const l=CUTSCENES.filter(t=>t.cat===cat&&(t.k!=='horde'||S.mob.group>1)); return l[Math.floor(Math.random()*l.length)].k; };
+function npcBossDay(){
+  if (S.day<2 || S.npcBoss===S.day-1 || Math.random()>=NPC_BOSS_ODDS) return;
+  S.npcBoss=S.day; queueCut(S.mob.group>1&&Math.random()<.5?'horde':pickCut('boss'),'arrive'); S.mob.csK=pickCut('fall');
+}
 function queueCut(k, when){ const T=csTpl(k); if (!T||!S.mob) return;
   S.csQ=[...(S.csQ||[]), {id:nid(), k, when, date:S.date, sc:csTidy(csScript(k),T), mob:csMobNow()}].slice(-5); }
 // his side: play what's waiting (from the Idle tab, and before the decree), then the day's other news
@@ -3052,7 +3064,7 @@ function renderLair(m){
 }
 // a cutscene picker for her day plans
 const csSel=(id,v)=>`<select class="inp" id="${id}"><option value="">None</option>${Object.entries(CS_CATS).map(([c,l])=>`<optgroup label="${l}">${CUTSCENES.filter(t=>t.cat===c).map(t=>`<option value="${t.k}" ${v===t.k?'selected':''}>${esc(t.n)}</option>`).join('')}</optgroup>`).join('')}</select>`;
-const CS_WHEN={arrive:'when today’s mob arrives', fall:'when today’s mob falls', now:'the next time '+'{he}'+' opens the app'};
+const CS_WHEN={arrive:'when today’s mob arrives', fall:'when today’s mob falls', rest:'on today’s rest day', now:'the next time '+'{he}'+' opens the app'};
 /* Her cutscene theater (THEATER on the Lair): the library, the selected one's art on the main screen, and its script,
    spot by spot in play order: black screen, art 1, black screen, art 2 ... black screen */
 function renderTheater(m){
