@@ -180,6 +180,43 @@ main.has-orb .below{padding-bottom:56px}
 .innbtn img{width:28px;height:28px;image-rendering:pixelated}
 .innbtn:active{transform:translateY(2px)}
 .innbtn.alert::after{content:'!';position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;font-size:8px;padding:3px 5px;box-shadow:0 0 0 2px var(--line)}
+/* her pop-up bubble over the field: taunts and spell news. Tap to skip */
+.tpop{position:absolute;top:13%;left:3%;right:3%;display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:var(--ink-dk);padding:7px 10px;cursor:pointer;z-index:5;
+  box-shadow:0 0 0 3px var(--line),0 4px 0 3px rgba(0,0,0,.35)}
+.tpop::after{content:'';position:absolute;bottom:-11px;right:22%;border:8px solid transparent;border-top:8px solid #fffaf0;border-bottom:0;filter:drop-shadow(0 3px 0 var(--line))}
+.tpop[hidden]{display:none}
+.tpop img{width:32px;height:32px;image-rendering:pixelated;flex:none;object-fit:contain;object-position:top}
+.tpop b{display:block;font-family:var(--f-display);font-size:7px;color:var(--hex-dk);margin-bottom:3px}
+.tpop p{margin:0;font-size:15px;line-height:1.25}
+.tpop.spell{background:#2a1430;color:#fff;box-shadow:0 0 0 3px var(--line),0 0 0 6px var(--hex),0 4px 0 6px rgba(0,0,0,.35)}
+.tpop.spell::after{border-top-color:#2a1430;filter:none}
+.tpop.spell b{color:var(--gold);font-size:9px}
+.tpop.in{animation:tpop .3s steps(3) both}
+@keyframes tpop{0%{transform:scale(.4);opacity:0}66%{transform:scale(1.06);opacity:1}100%{transform:none}}
+/* quest tags: her spells and proof checks */
+.qi .txt em.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;font-style:normal}
+.qtag{font-style:normal;font-family:var(--f-display);font-size:7px;padding:3px 5px 2px;color:#fff;background:var(--ink-mid);line-height:1.3}
+.qtag.amb{background:#a2302a}.qtag.haste{background:#b8661a}.qtag.pf{background:#4a6aa0}.qtag.bad{background:#7a3a2a}
+.qi.burnt .txt span{color:#9a7a5a;text-decoration:line-through}
+.qi .box b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);font-size:12px;color:#a2302a}
+.qi.amb{background:rgba(162,48,42,.08)}
+.mobhp .bless{font-family:var(--f-display);font-size:7px;color:#8a5a00}
+.proofpic{display:grid;place-items:center;background:rgba(0,0,0,.25);padding:6px;box-shadow:0 0 0 3px var(--line)}
+.proofpic img{max-width:100%;max-height:260px;display:block}
+.paper .proofpic{margin:0 0 10px}
+.inv .tag.done{left:auto;right:0;background:var(--ok);color:var(--line)}
+/* scouting report: each quest and what became of it */
+.overlay.tall{align-content:safe center;overflow-y:auto;padding-block:24px}
+.paper.report .ln span:first-child{flex:none}
+.paper.report .ln span:last-child{white-space:normal;text-align:right;font-size:9px;line-height:1.5;min-width:0}
+.rep .switch span{flex:none}
+.rep .switch b{text-align:right}
+.paper .scout{padding:6px 0;border-bottom:2px dashed rgba(59,42,26,.3)}
+.scout{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:15px}
+.scout li{display:flex;justify-content:space-between;gap:10px}
+.scout li i{font-style:normal;opacity:.75;white-space:nowrap}
+.scout li.missed,.scout li.burnt{opacity:.7}
+.scout li.missed i,.scout li.burnt i{color:#c0503a;opacity:1}
 .innp p{margin:0}
 .keys{display:flex;flex-wrap:wrap;gap:4px}
 .keys img{width:24px;height:24px;image-rendering:pixelated}
@@ -585,8 +622,8 @@ const EXP_KILL=50;                     // EXP when the daily mob falls (before b
 // EXP for the next level, gentle early (first kill levels him up, talents at level 10 in ~2 weeks), ~13 kills for 49→50
 const expNeed=lv=>Math.round((25+lv*7+lv*lv/5)/5)*5;
 // her plan for one calendar day (null = use the default); quests are one-offs added at spawn
-const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', quests:[]});
-const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||p.quests.length>0);
+const newPlan=()=>({threshold:null, bounty:null, gold:null, mob:null, name:'', note:'', taunt:'', quests:[]});
+const planned=p=>!!p&&(p.threshold!=null||p.bounty!=null||p.gold!=null||!!p.mob||!!p.name||!!p.note||!!p.taunt||p.quests.length>0);
 /* ---- Solo mode: the NPC Villainess runs his days. Her lists are also the fallback when a real Villainess sets nothing ---- */
 const SIZE_DMG=[0,5,10,20];   // hidden damage by quest size: 1 quick (~10 min), 2 half an hour, 3 big (an hour or more)
 const GOALS={
@@ -710,7 +747,8 @@ function freshState(){
     inn:{per:3, used:{}, extra:{}}, req:null, rev:null, lost:null,   // req = his rest-day ask, rev = his revive ask
     miles:null, mileV:2, mileGot:[], mileNew:null,   // her streak milestone treats, the ones reached this run, news to show him
     shop:[],   // stocked when the mode is picked: her treats (duo) or the ones he picks in her questions (solo)
-    bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2, econ:1
+    bag:[], gear:[], equip:{}, forge:{}, tal:{}, talV:2, econ:1,
+    amb:null, news:[], reports:[], reportNew:null   // today's ambusher, spell news for him, her end-of-day scouting reports
   };
 }
 // two separate saves, one per mode (solo / duo), plus the mode last played. KEY alone = a save that hasn't picked a mode yet
@@ -733,7 +771,8 @@ function upgrade(S){
   if (!S.recur){ S.recur=[];
     (S.tasks||[]).forEach(t=>{ if(t.repeat==='daily'){ t.rid=nid(); S.recur.push({rid:t.rid, name:t.name, dmg:t.dmg, taunt:t.taunt||'', days:[0,1,2,3,4,5,6], ...(t.npc?{npc:t.npc}:{})}); } delete t.repeat; }); }
   S.mileGot??=[]; if (S.mileV!==2) S.miles=null;   // the first milestones were shop copies; they're her own now
-  S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;   // saves from before the title screen pick a mode once, then keep everything
+  S.npcRecent??=[]; if (S.mode===undefined) S.mode=null;
+  S.news??=[]; S.reports??=[]; S.amb??=null;   // saves from before the title screen pick a mode once, then keep everything
   return S;
 }
 // a save made before the split moves into its mode's slot
@@ -744,9 +783,9 @@ const clip=(v,n)=>typeof v==='string'?[...v].slice(0,n).join(''):v;   // by char
 const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
 function tidyText(){
   S.heroName=clip(S.heroName,LIM.hero); S.villName=clip(S.villName,LIM.vill);
-  if (S.mob){ S.mob.name=clip(S.mob.name,LIM.mob); S.mob.note=clip(S.mob.note,LIM.note); S.mob.bounty=clampN(S.mob.bounty,0,LIM.coins); S.mob.gold=clampN(S.mob.gold,0,LIM.coins); }
+  if (S.mob){ S.mob.name=clip(S.mob.name,LIM.mob); S.mob.note=clip(S.mob.note,LIM.note); S.mob.taunt=clip(S.mob.taunt,LIM.taunt); S.mob.bounty=clampN(S.mob.bounty,0,LIM.coins); S.mob.gold=clampN(S.mob.gold,0,LIM.coins); }
   (S.tasks||[]).forEach(t=>{ t.name=clip(t.name,LIM.quest); t.taunt=clip(t.taunt,LIM.taunt); });
-  Object.values(S.plans||{}).forEach(p=>{ p.name=clip(p.name,LIM.mob); p.note=clip(p.note,LIM.note); (p.quests||[]).forEach(q=>q.name=clip(q.name,LIM.quest)); });
+  Object.values(S.plans||{}).forEach(p=>{ p.name=clip(p.name,LIM.mob); p.note=clip(p.note,LIM.note); p.taunt=clip(p.taunt,LIM.taunt); (p.quests||[]).forEach(q=>q.name=clip(q.name,LIM.quest)); });
   (S.shop||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); r.price=clampN(r.price,1,LIM.price); });
   (S.bag||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
   (S.miles||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
@@ -796,7 +835,8 @@ const innKey=()=>S.date.slice(0,7);
 const innLeft=()=>Math.max(0,S.inn.per+(S.inn.extra[innKey()]||0)-(S.inn.used[innKey()]||0));
 const spendInn=()=>{ S.inn.used[innKey()]=(S.inn.used[innKey()]||0)+1; };
 // today becomes a rest day: the mob goes home, no bounty, the streak is safe
-function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++; }
+function restDay(){ S.pending.forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) t.hit=true; }); S.pending=[]; S.mob.state='rest'; S.req=null; S.tally.rests++;
+  if (S.amb){ S.tasks=S.tasks.filter(t=>!t.amb||t.hit); S.amb=null; } }
 // bring back the streak that fell yesterday (Inn token or her revive). Milestones it already paid out stay paid
 function revive(){ const before=S.streak; S.streak+=S.lost.streak; S.best=Math.max(S.best,S.streak);
   S.mileGot=[...new Set([...S.mileGot,...(S.lost.got||[])])]; S.lost=null; S.rev=null; checkMiles(before); }
@@ -829,10 +869,10 @@ const recurOn=(r,date)=>r.days.includes(wday(date))&&(!r.from||date>=r.from);
 function addRecur(date){
   if (!date) return;
   S.recur.filter(r=>recurOn(r,date)&&!S.tasks.some(t=>t.rid===r.rid))
-    .forEach(r=>S.tasks.push({id:nid(), rid:r.rid, name:r.name, dmg:r.dmg, taunt:r.taunt||'', ...(r.npc?{npc:r.npc}:{}), done:false, hit:false}));
+    .forEach(r=>S.tasks.push({id:nid(), rid:r.rid, name:r.name, dmg:r.dmg, taunt:r.taunt||'', ...(r.npc?{npc:r.npc}:{}), ...(r.proof?{proof:true}:{}), done:false, hit:false}));
 }
 // a new schedule; today gets its copy right away if today is one of its days
-function newRecur(q,days,from){ const r={rid:nid(), name:q.name, dmg:q.dmg, taunt:q.taunt||'', days:[...days].sort(), ...(from&&from>S.date?{from}:{}), ...(q.npc?{npc:q.npc}:{})}; S.recur.push(r); addRecur(S.date); return r; }
+function newRecur(q,days,from){ const r={rid:nid(), name:q.name, dmg:q.dmg, taunt:q.taunt||'', days:[...days].sort(), ...(from&&from>S.date?{from}:{}), ...(q.npc?{npc:q.npc}:{}), ...(q.proof?{proof:true}:{})}; S.recur.push(r); addRecur(S.date); return r; }
 // a new game day: the mob's look is rolled now, everything else is read from her plan at spawn time
 function startDay(date){
   const art=rmob(); S.date=date; S.tz=myTz();
@@ -846,29 +886,64 @@ function spawnMob(){
   if (!p.quests.length) fillQuests();
   if (p.mob){ m.b=p.mob.b; m.v=p.mob.v; }
   const total=S.tasks.reduce((a,t)=>a+t.dmg,0), threshold=p.threshold??npcThreshold();
-  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', state:'alive'});
+  // her taunt for the day pops up on his field; the NPC Villainess borrows one of her quest taunts
+  const qt=S.tasks.filter(t=>t.taunt).map(t=>t.taunt), taunt=p.taunt||m.taunt||(solo()&&qt.length?qt[Math.floor(Math.random()*qt.length)]:'');
+  Object.assign(m, {threshold, hp:total*threshold/100, dmg:0, bounty:p.bounty??DEF.bounty, gold:p.gold, name:p.name||m.name||'', note:p.note||'', taunt, state:'alive'});
   delete S.plans[S.date];
 }
 const hpFrac=()=>S.mob.state==='alive'?Math.max(0,1-S.mob.dmg/S.mob.hp):0;
+const openQ=t=>!t.done&&!t.burnt;   // still to do (a quest that burned up under Haste is gone)
+const fogged=()=>!!S.mob.fog;        // Fog: the mob hides until his first quest lands
 function gainExp(n){ S.exp+=n; let up=false; while(S.exp>=expNeed(S.level)){ S.exp-=expNeed(S.level); S.level++; up=true; } return up; }
 // one finished quest's hidden damage lands; returns true if this blow kills the mob
 function landHit(task){
+  if (task.amb) return landAmb(task);
   task.hit=true; S.pending=S.pending.filter(id=>id!==task.id); S.tally.quests++;
   const m=S.mob;
-  if (m.state==='dead'){ const g=KICK_LOOT[Math.floor(Math.random()*KICK_LOOT.length)]+heroBoons().kick; task.kick=g; S.gold+=g; S.tally.kicks++; }
+  if (m.state==='dead'){ const g=KICK_LOOT[Math.floor(Math.random()*KICK_LOOT.length)]+heroBoons().kick; task.kick=g; S.gold+=g; m.eg=(m.eg||0)+g; S.tally.kicks++; }
   if (m.state!=='alive'){ save(); return false; }
   m.dmg+=task.dmg;
+  if (m.fog){ m.fog=false; m.fogLift=1; }   // his first quest lands: the fog lifts
   if (m.dmg < m.hp-1e-6){ save(); return false; }
-  m.state='dead';
-  const gold=(m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold;
+  m.state='dead'; m.killAt=clock();
+  const gold=((m.gold??LOOT[Math.floor(Math.random()*LOOT.length)])+heroBoons().gold)*(m.bless?2:1);   // Blessing doubles the drop
   const gross=S.taxRate>0?Math.round(m.bounty/(1-S.taxRate)):m.bounty;
-  S.vcoins+=m.bounty; S.gold+=gold; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++; checkMiles(S.streak-1);
+  S.vcoins+=m.bounty; S.gold+=gold; m.eg=(m.eg||0)+gold; m.ev=m.bounty; S.infamy+=gross-m.bounty; S.streak++; S.best=Math.max(S.best,S.streak); S.tally.slain++; checkMiles(S.streak-1);
   S.loot={day:S.day, name:dailyName(m), mb:{b:m.b,v:m.v}, note:m.note||(!solo()?'':NPC_NOTES[Math.floor(Math.random()*NPC_NOTES.length)]), bounty:m.bounty, gross, rate:S.taxRate, gold, streak:S.streak, up:gainExp(EXP_KILL+heroBoons().exp)};
   save(); return true;
+}
+// the ambusher falls to its one quest: gold only, it never touches the daily mob's HP
+function landAmb(task){
+  task.hit=true; S.pending=S.pending.filter(id=>id!==task.id); S.tally.quests++;
+  const a=S.amb; if (a&&a.state==='alive'){ a.state='dead'; task.kick=a.gold; S.gold+=a.gold; S.mob.eg=(S.mob.eg||0)+a.gold; }
+  save(); return false;
+}
+/* Proof checks: she can ask for a photo on any quest. The photo waits on this phone (its own storage key, shrunk to
+   640 px) until she approves or refuses it, then it's deleted. The hit lands only once she approves; if she never
+   answers, the day's end approves it. Real encryption comes with accounts (roadmap step 3) */
+const PROOF=KEY+'-proof-';
+const proofPic=id=>{ try{ return localStorage.getItem(PROOF+id); }catch(e){ return null; } };
+const dropProof=id=>{ try{ localStorage.removeItem(PROOF+id); }catch(e){} };
+const proofsWaiting=()=>S.tasks.filter(t=>t.pf==='wait');
+function sealProof(t, ok){
+  dropProof(t.id); S.infamy+=2;   // reviewing proof earns her a little Infamy
+  if (!ok){ t.done=false; t.pf='no'; S.mob.refused=(S.mob.refused||0)+1; return; }
+  t.pf='ok'; S.mob.proofs=(S.mob.proofs||0)+1;
+  if (S.mob.state==='rest') t.hit=true; else S.pending.push(t.id);
+}
+// her raven's end-of-day scouting report: what he did with the day she gave him
+function scout(m){
+  const qs=S.tasks.filter(t=>!t.amb).map(t=>({n:t.name, s:t.burnt?'burnt':t.hit?(t.kick?'kick':'done'):'missed'})), at=S.tasks.find(t=>t.amb);
+  const r={day:S.day, date:S.date, name:dailyName(m), out:m.state==='dead'?'slain':m.state==='rest'?'rest':'fled', at:m.killAt||null, qs,
+    amb:S.amb&&at?{n:at.name, s:S.amb.state==='dead'?'done':'missed'}:null, spells:Object.keys(m.cast||{}),
+    gold:m.eg||0, vc:m.ev||0, streak:S.streak, was:S.fled&&!S.fled.rest?S.fled.streak||0:0, proofs:m.proofs||0, refused:m.refused||0};
+  S.reports=[r,...(S.reports||[])].slice(0,30); S.reportNew=r.day;
 }
 function endDay(){
   const m=S.mob;
   if (m.state==='coming') spawnMob();   // it spawned while he was away
+  // proof she never checked is approved when the day ends, so he isn't punished for her silence
+  proofsWaiting().forEach(t=>{ dropProof(t.id); t.pf='ok'; if(m.state!=='rest') S.pending.push(t.id); else t.hit=true; });
   // quests checked off but not watched yet still count for the day that's ending
   S.pending.slice().forEach(id=>{ const t=S.tasks.find(x=>x.id===id); if(t) landHit(t); });
   // yesterday's lost streak could only be saved today; unanswered revive asks lapse too
@@ -876,12 +951,16 @@ function endDay(){
   // a rest request she never answered is approved when the day ends
   if (m.state==='alive' && S.req && S.req.date===S.date && !S.req.no){ restDay(); S.fled={rest:true}; }
   if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak, got:S.mileGot}:null; S.streak=0; S.mileGot=[]; S.tally.fled++; }
+  scout(m);
   S.req=null; S.rev=null; S.endFor=null; S.day++;
   const hers=S.tasks.filter(t=>!t.npc&&!t.rid); if (hers.length) S.past=hers.map(({name,dmg,taunt})=>({name,dmg,taunt}));
   S.npcRecent=S.tasks.filter(t=>t.npc==='roll').map(t=>t.name);
   // repeating quests come back fresh with the new day (only on their days); her unfinished one-offs carry over
-  S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll');
-  S.pending=[]; startDay(addDays(S.date,1));
+  // (ambush quests and ones that burned up under Haste go with the day)
+  S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll'&&!t.amb&&!t.burnt); S.tasks.forEach(t=>{ delete t.haste; delete t.pf; });
+  S.pending=[]; S.amb=null; startDay(addDays(S.date,1));
+  // photos left behind by an old save or a reset are never kept
+  try{ Object.keys(localStorage).filter(k=>k.startsWith(PROOF)&&!proofsWaiting().some(t=>PROOF+t.id===k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
 }
 // catch the game up with the clock: end finished days, spawn the mob when it's time. Returns true if anything changed
 function tick(){
@@ -895,6 +974,7 @@ function tick(){
   while (t>=dayEndAt(S.date) && n<400){ endDay(); n++; changed=true; }
   if (n>=400) startDay(dateOf(t));   // gone for over a year
   if (S.mob.state==='coming' && t>=spawnAt(S.date)){ spawnMob(); changed=true; }
+  S.tasks.forEach(q=>{ if(q.haste&&!q.done&&!q.burnt&&t>=q.haste){ q.burnt=true; changed=true; } });   // Haste: too late, it burns up
   if (!S.stock || S.stock.week!==weekOf(S.date)){ rollForge(); changed=true; }
   if (changed) save();
   return changed;
@@ -945,7 +1025,7 @@ function renderTabs(){
   const ic=k=>url(icon(k));
   const tabs = hero ? [['bag','Bag',ic('bag'),'side l1'],['shop','Shop',ic('coinbag'),''],['idle','Idle',ic('sword'),'idle'],['hero','Hero',ic('shield'),''],['talents','Talents',ic('star'),'side r2']]
     : [['mobs','Mobs',url(mobThumb({b:3,v:0})),'side l1'],['vshop','Shop',ic('coinbag'),''],['lair','Lair',url(CROWN()),'idle'],['spells','Spells',ic('orb'),''],['rules','Rules',ic('book'),'side r2']];
-  const cur=hero?(ui.heroTab==='inn'?'idle':ui.heroTab):ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length, deliver=S.bag.filter(b=>b.used&&!b.delivered).length+(S.req&&!S.req.no?1:0)+(S.rev&&!S.rev.no?1:0)+(endBy()==='hero'&&!S.endProp.no?1:0);
+  const cur=hero?(ui.heroTab==='inn'?'idle':ui.heroTab):ui.villTab, pend=S.pending.length, unused=S.bag.filter(b=>!b.used).length, deliver=S.bag.filter(b=>b.used&&!b.delivered).length+(S.req&&!S.req.no?1:0)+(S.rev&&!S.rev.no?1:0)+(endBy()==='hero'&&!S.endProp.no?1:0)+proofsWaiting().length;
   n.innerHTML=tabs.map(([id,label,src,cls])=>{ let badge=''; if(id==='idle'&&pend) badge=`<span class="badge">${pend}</span>`; if(id==='bag'&&unused) badge=`<span class="badge" style="background:var(--hex)">${unused}</span>`; if(id==='talents'&&talPoints()) badge=`<span class="badge" style="background:var(--gold);color:var(--line)">${talPoints()}</span>`; if(id==='lair'&&deliver) badge=`<span class="badge" style="background:var(--hex)">${deliver}</span>`;
     if (cls==='idle') return `<button role="tab" class="idle" data-t="${id}" aria-selected="${cur===id}" aria-label="${label}"><span class="idle-orb"><i></i><b><img alt="" src="${src}">${label}</b></span>${badge}</button>`;
     return `<button role="tab" class="${cls}" data-t="${id}" aria-selected="${cur===id}"><img alt="" src="${src}">${label}${badge}</button>`; }).join('');
@@ -1138,8 +1218,10 @@ let hit=null, booms=[], floats=[], parts=[], act=null, wob=[], vicT=-1e9, leaveT
 const membersAlive=()=>S.mob.state!=='alive'?0:S.mob.group>1?Math.max(1,Math.ceil(S.mob.group*hpFrac()-1e-6)):1;
 const mobSpots=()=>S.mob.group>1?PACK:SOLO;
 const mobSlots=()=>mobSpots().slice(0,membersAlive());
-const taunts=()=>S.tasks.filter(t=>t.taunt&&!t.done).map(t=>t.taunt);
-const downField=()=>S.mob.state==='dead'&&(S.pending.length>0||S.tasks.some(t=>!t.done));
+const taunts=()=>S.tasks.filter(t=>t.taunt&&openQ(t)).map(t=>t.taunt);
+const downField=()=>S.mob.state==='dead'&&(S.pending.length>0||S.tasks.some(openQ));
+const ambAlive=()=>!!S.amb&&S.amb.state==='alive';
+const AMB_SPOT={x:66, y:G-60, sc:.75};   // the ambusher lurks on the hill behind him (clear of the INN button)
 const ACTIVITIES={ victory:'Celebrating a clear field', chop:'Chopping wood', camp:'Resting by the campfire', fish:'Fishing at the pond', nap:'Napping in the grass', sheep:'Watching the sheep', train:'Training on a dummy' };
 const IDLE_HINT='Finish quests to wear the mob down. Tap it to poke it.';
 
@@ -1157,26 +1239,47 @@ function renderIdle(m){
     : alive?(tn[0]||'Run along, hero. My mob is hungry.'):'Hmph. Enjoy it while it lasts. Tomorrow I send worse.';
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="cv" width="480" height="300" aria-label="Battle scene, ${tod}"></canvas>
-    <button class="innbtn${innAlert()?' alert':''}" id="inn-open" aria-label="The Inn${innAlert()?', something needs you':''}"><img alt="" src="${url(innIcon())}"><span>INN</span></button></div><div class="below wrap"><div class="stack">
+    <button class="innbtn${innAlert()?' alert':''}" id="inn-open" aria-label="The Inn${innAlert()?', something needs you':''}"><img alt="" src="${url(innIcon())}"><span>INN</span></button>
+    <div class="tpop" id="tpop" role="status" hidden><img alt=""><div><b></b><p></p></div></div></div><div class="below wrap"><div class="stack">
     <p class="hint" id="hint">${hint}</p>
     <div id="qlog"></div>
     <div class="px speech"><img alt="" src="${url(villSprite(false))}"><div style="min-width:0"><div class="who2">${esc(S.villName)}</div><p id="taunt">${esc(line)}</p></div></div></div></div>`;
   renderQuestLog(); $('#inn-open').onclick=()=>{ ui.heroTab='inn'; ui.arrive=true; render(); $('#main').scrollTop=0; };
+  $('#tpop').onclick=popNext; tpopQ=[]; clearTimeout(tpopT);
+  // her news pops up over the field: spells she cast, then today's taunt (once)
+  const pops=[...S.news];
+  if (alive && S.mob.taunt && !S.mob.tSeen){ S.mob.tSeen=1; save(); pops.push({t:S.mob.taunt}); }
+  if (pops.length){ const go=()=>{ if(!$('#tpop')) return; if(document.querySelector('.overlay')) return setTimeout(go,700); tpopQ.push(...pops); popNext(); }; setTimeout(go,900); }
   cvs=$('#cv'); ctx=cvs.getContext('2d'); sceneCtx=ctx; ctx.imageSmoothingEnabled=false;
   cvs.addEventListener('pointerdown', onPoke);
-  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; confetti.b=-1; hit=null; booms=[]; floats=[]; parts=[]; wob=[];
+  const now=performance.now(); enterT=now; combatT0=now; lastBeat=-1; tauntT=now; confetti.b=-1; hit=null; booms=[]; floats=[]; parts=[]; wob=[];
   document.fonts && document.fonts.load('16px "Press Start 2P"').catch(()=>{});
   raf=requestAnimationFrame(loop);
   // news from a day that ended while he was away
   if (S.loot) setTimeout(showReceipt,400); else if (S.fled) setTimeout(showFled,400); else if (S.mileNew) setTimeout(showMile,400);
 }
+// her pop-up bubble over the field (spell news, taunts). It never blocks the field: tap it to skip
+let tpopQ=[], tpopT=0, tauntT=0;
+function popNext(){
+  const el=$('#tpop'); clearTimeout(tpopT); if (!el) return;
+  const n=tpopQ.shift(); if (!n){ el.hidden=true; return; }
+  if (n.id){ S.news=S.news.filter(x=>x.id!==n.id); save(); }
+  el.querySelector('img').src=n.ic?url(icon(n.ic)):url(villSprite(false));
+  el.querySelector('b').textContent=n.h||S.villName; el.querySelector('p').textContent=n.t;
+  el.className='tpop'+(n.h?' spell':''); el.hidden=false; void el.offsetWidth; el.classList.add('in');
+  tpopT=setTimeout(popNext, n.h?6500:5000);
+}
+const popTaunt=t=>{ tpopQ=[{t}]; popNext(); };
+// spell news waits for him in S.news until it's shown on his field
+const tellHero=n=>{ S.news.push({...n, id:nid()}); };
 function pickActivity(not){ const keys=Object.keys(ACTIVITIES).filter(k=>k!=='victory'&&k!==not); return keys[Math.floor(Math.random()*keys.length)]; }
 function idleHint(){
   const st=S.mob.state, pend=S.pending.length;
   if (st==='coming') return `${ACTIVITIES[act.k]}. Today’s mob arrives at ${spawnHm()}.${pend?' Quests you finish now land when it shows up.':''}`;
   if (st==='rest') return `${ACTIVITIES[act.k]}. Rest day: your streak is safe.`;
   if (pend) return 'Your finished quests are about to land…';
-  if (st==='alive') return IDLE_HINT;
+  if (ambAlive()) return 'Ambush! Finish its quest to drive it off.';
+  if (st==='alive') return fogged()?'Something lurks in the fog. Finish a quest to see what it is.':IDLE_HINT;
   if (downField()) return 'It’s down! Every quest you finish now kicks bonus gold out of it.';
   return ACTIVITIES[act.k]+'. Every quest is done for today.';
 }
@@ -1199,11 +1302,12 @@ function update(now){
     p.life--; return p.life>0; });
   booms=booms.filter(b=>now-b.t0<700);
   if (!hit && !leaveT && S.pending.length && S.mob.state!=='coming' && now-enterT>500 && !document.querySelector('.overlay')){
-    const kick=S.mob.state==='dead';
-    hit={t0:now, kick, task:S.tasks.find(x=>x.id===S.pending[0]), from:hpFrac(), word:(kick?KICK_WORDS:HIT_WORDS)[Math.floor(Math.random()*4)]};
-    const h=$('#hint'); if(h) h.textContent=kick?'A quest lands a bonus kick!':'A quest lands a big hit!';
+    const task=S.tasks.find(x=>x.id===S.pending[0]), amb=!!task&&!!task.amb&&ambAlive(), kick=!amb&&S.mob.state==='dead';
+    hit={t0:now, kick, amb, task, from:hpFrac(), word:(kick||amb?KICK_WORDS:HIT_WORDS)[Math.floor(Math.random()*4)]};
+    const h=$('#hint'); if(h) h.textContent=amb?`${S.heroName} turns on the ambusher!`:kick?'A quest lands a bonus kick!':'A quest lands a big hit!';
   }
   if (leaveT && now-leaveT>900){ leaveT=0; if(ui.role==='hero'&&ui.heroTab==='idle') renderMain(); return; }
+  if (hit && hit.amb){ updateAmb(now); return; }
   if (hit && hit.kick){ updateKick(now); return; }
   if (hit){
     const t=now-hit.t0;
@@ -1212,6 +1316,7 @@ function update(now){
       const before=membersAlive(), spots=mobSpots();
       hit.killed = hit.task ? landHit(hit.task) : (S.pending.shift(), false);
       hit.to=hpFrac();
+      if (S.mob.fogLift){ delete S.mob.fogLift; save(); floats.push({x:W/2-150,y:G-260,text:'THE FOG LIFTS!',life:110,c:'#ffffff',size:18}); }
       if (hit.killed){ hit.corpse=spots.slice(0,before); shake(now,420,3.2); }
       else for(let i=membersAlive();i<before;i++) booms.push({x:spots[i].x, y:spots[i].y, t0:now, sc:spots[i].sc});
       const cx=spots[0].x;
@@ -1228,6 +1333,28 @@ function update(now){
   if (act){ updateActivity(now); if (now-act.t0>(act.k==='victory'?6000:ACT_CYCLE)) nextActivity(now); }
   else if (S.mob.state==='dead'){ if (now-vicT<4500) confetti(now, now-vicT, HERO_X); }
   else if (S.mob.state==='alive'){ const b=Math.floor((now-combatT0)/BEAT); if(b!==lastBeat){ lastBeat=b; shake(now,150,1); beatKind=b%2===0?'hero':'mobs'; } }
+  // now and then one of her quest taunts pops up while the mob is alive
+  if (S.mob.state==='alive' && now-tauntT>45000){ tauntT=now; const t=taunts(), el=$('#tpop'); if(t.length&&el&&el.hidden) popTaunt(t[Math.floor(Math.random()*t.length)]); }
+}
+// a quest from her Ambush spell: he spins round and one blow sends the ambusher packing. Gold only, no damage
+function updateAmb(now){
+  const t=now-hit.t0, s=AMB_SPOT;
+  if (t>=KICK_LAND && !hit.landed){
+    hit.landed=now; shake(now,240,1.8);
+    if (hit.task) landHit(hit.task); else S.pending.shift();
+    const g=hit.task?.kick||0;
+    booms.push({x:s.x, y:s.y, t0:now, sc:s.sc});
+    for(let j=0;j<4+g;j++) parts.push({x:s.x+Math.random()*30-15, y:s.y-40, vx:-2+Math.random()*8, vy:-7-Math.random()*5, g:.38, floor:G+6+Math.random()*26, life:999, img:COIN()});
+    floats.push({x:s.x-20,y:s.y-200,text:'AMBUSH FOILED!',life:90,c:'#ffe066',size:14});
+    if (g) floats.push({x:s.x+10,y:s.y-160,text:'+'+g+'g',life:70,c:'#f6c445',size:16});
+    renderHud(); renderTabs(); renderQuestLog();
+  }
+  if (hit.landed && now-hit.landed>900 && !hit.collected){ hit.collected=1; parts.forEach(p=>{ if(p.img){ p.home=1; p.life=40; } }); }
+  if (t>=KICK_LEN){
+    hit=null; combatT0=now; lastBeat=-1;
+    if (S.mob.state==='dead' && !S.pending.length && !downField()){ leaveT=now; mobSpots().forEach(s=>booms.push({x:s.x, y:s.y, t0:now, sc:s.sc})); shake(now,200,1.4); }
+    else { const h=$('#hint'); if(h) h.textContent=idleHint(); }
+  }
 }
 // after the K.O. freeze: the mob bursts, loot fountains out, then he scoops it all up
 function updateKill(now, k){
@@ -1280,7 +1407,7 @@ function onPoke(e){
       for(let k=0;k<10;k++){ const a=Math.random()*Math.PI*2; parts.push({x:px,y:py,vx:Math.cos(a)*2,vy:Math.sin(a)*2-1,g:.05,life:26,c:['#ffe9a0','#e8508a','#8fd4f4'][k%3],sz:4}); }
       floats.push({x:px-20,y:py-30,text:['poke','tickle','*bonk*','hey!'][Math.floor(Math.random()*4)],life:40,c:'#ffe9a0'});
       wob[i]=performance.now();
-      const tn=$('#taunt'), t=taunts(); if(tn) tn.textContent=t.length?t[Math.floor(Math.random()*t.length)]:('Stop poking my '+MOB_BASES[S.mob.b].n.toLowerCase()+'. Do the quest.');
+      const t=taunts(); popTaunt(t.length?t[Math.floor(Math.random()*t.length)]:fogged()?'Curious, are we? Do a quest and find out.':('Stop poking my '+MOB_BASES[S.mob.b].n.toLowerCase()+'. Do the quest.'));
       return;
     }
   }
@@ -1341,19 +1468,47 @@ function heroDraw(pose, now, x=HERO_X, foot=G-70){
   if (pose==='ouch'){ shadow(HERO_X,G+2,40); return heroSpr(ctx,'ouch',now,HERO_X-14,G,{fx:(performance.now()-shakeT<140)?'tint:#ff3030':''}); }
   shadow(HERO_X,G+2,40); return heroSpr(ctx,'idle',now,HERO_X,G);
 }
-const crowned=()=>S.showValue&&S.mob.bounty>DEF.bounty;   // a juicier bounty than usual
+const crowned=()=>!fogged()&&S.showValue&&S.mob.bounty>DEF.bounty;   // a juicier bounty than usual
 function mobDraw(i, s, pose, now, knock=0, fxo=''){
   const a=mobArt(S.mob, pose==='atk'?'atk':'idle'), sc=(a.scale||1)*s.sc;
   let x=s.x+knock, rot=0, fx=a.fx;
   if (pose==='hurt'){ x+=14; rot=0.2; if(now-shakeT<130) fx='solid:#ffffff'; }
   if (pose==='atk') x-=28;
-  if (fxo) fx=fxo;
+  if (fxo) fx=fxo; else if (fogged()) fx=pose==='hurt'&&now-shakeT<130?'solid:#ffffff':'solid:#4e5566';   // a shape in the mist
   if (wob[i] && now-wob[i]<260) x+=Math.round(Math.sin((now-wob[i])/22)*5);
   shadow(s.x,s.y+2,(34*(a.scale>1?1:a.scale||1)+6)*s.sc);
   if (crowned()){ ctx.globalAlpha=.25+.12*Math.sin(now/220); ctx.fillStyle='#f6c445'; ctx.beginPath(); ctx.ellipse(s.x,s.y-40*s.sc,56*s.sc,58*s.sc,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
   const r=spr(ctx,a.name,0,x,s.y,{flip:true, rot, fx, scale:sc});
   if (crowned() && i===0){ const cr=CROWN(); ctx.drawImage(cr, Math.round(x-cr.width*3), Math.round(r.top-30), cr.width*6, cr.height*6); }
   return r;
+}
+// the ambusher stands behind him facing right, a little "!" blinking over it
+function ambDraw(now, pose='idle'){
+  if (!ambAlive()) return null;
+  const a=mobArt(S.amb, pose==='atk'?'atk':'idle'), s=AMB_SPOT, sc=(a.scale||1)*s.sc;
+  let x=s.x+(pose==='atk'?26:pose==='hurt'?-14:0), fx=a.fx;
+  if (pose==='hurt' && now-shakeT<130) fx='solid:#ffffff';
+  shadow(s.x,s.y+2,(34*(a.scale>1?1:a.scale||1)+6)*s.sc);
+  const r=spr(ctx,a.name,0,x,s.y,{rot:pose==='hurt'?-0.2:0, fx, scale:sc});
+  if (pose!=='hurt' && Math.floor(now/400)%2) text('!', s.x-8, r.top-34, '#e04a3c', 22, '#fff4c0');
+  return r;
+}
+function drawAmbHit(now){
+  const t=now-hit.t0, s=AMB_SPOT, landed=t>=KICK_LAND;
+  if (t<KICK_BACK){
+    shadow(HERO_X-20,G+2,40); heroSpr(ctx,landed?'strike':'windup',now,HERO_X-20,G,{flip:true});
+    if (!landed){ ambDraw(now,'idle'); text('HUP!', HERO_X-60, G-250, '#ffffff', 16); }
+    else { burstStar(s.x+30,s.y-50,40,'#ffe066'); text(hit.word, s.x+30-hit.word.length*8, s.y-60, '#e04a3c', 14, '#fff4c0'); }
+    return;
+  }
+  heroDraw('idle',now);
+}
+// Fog: stepped banks of mist drift over the mob in held cuts
+function fogDraw(now){
+  const st=Math.floor(now/700)%4; ctx.fillStyle='rgba(226,232,240,.62)';
+  [[380,G-170,180,56],[470,G-96,230,66],[560,G-230,160,52],[410,G-30,280,46]].forEach(([x,y,w,h],k)=>{ const dx=((k+st)%4-1.5)*8;
+    rect(x+dx,y,w,h,ctx.fillStyle); rect(x+dx+24,y-14,w-48,14,ctx.fillStyle); rect(x+dx+18,y+h,w-36,12,ctx.fillStyle); });
+  text('???', 512, G-150, '#ffffff', 24, '#4e5566');
 }
 function mobDown(s, now, bump){
   const a=mobArt(S.mob,'idle'), sc=(a.scale||1)*s.sc, c=frame(a.name,0,a.fx), h=c.height*sc*1.5, w=c.width*sc*1.5;
@@ -1367,7 +1522,7 @@ function dazed(hx, hy, now){
   ouch(hx+10, hy-96, 'x.x');
 }
 // the field after the kill: the dazed mob, the hero cheering on the left, and a kick for every bonus quest
-function drawDown(now){
+function drawDown(now, noHero){
   const spots=mobSpots(), k=hit&&hit.kick?now-hit.t0:-1, landed=k>=KICK_LAND;
   if (leaveT){ heroDraw('idle',now); return; }
   const bump=landed&&k<KICK_LAND+240?16:0;
@@ -1381,6 +1536,7 @@ function drawDown(now){
     return;
   }
   dazed(head.hx, head.hy, now);
+  if (noHero) return;
   // cheering: two hops, then a breather
   const cy=now%2100, up=cy<1400&&Math.floor(cy/350)%2===0, foot=up?G-34:G;
   shadow(HERO_X,G+2,40); heroSpr(ctx,cy<1400?(up?'up':'land'):'idle',now,HERO_X,foot);
@@ -1398,7 +1554,7 @@ function hpBar(now){
   rect(x-4,y-4,w+8,h+8,'#1a100a'); rect(x,y,w,h,'#5a2a20');
   if (f>0){ rect(x,y,Math.max(4,Math.round(w*f)),h,'#e04a3c'); rect(x,y,Math.max(4,Math.round(w*f)),7,'#ff8a7a'); }
   if (crowned()){ const cr=CROWN(); ctx.drawImage(cr, x+8, y+5, cr.width*4, cr.height*4); }
-  const nx=x+(crowned()?46:12), nm=fitText(dailyName(S.mob), x+w-12-nx, 16);
+  const nx=x+(crowned()?46:12), nm=fitText(fogged()?'???':dailyName(S.mob), x+w-12-nx, 16);
   text(nm.t, nx, y+7+Math.floor((16-nm.size)/2), '#ffffff', nm.size);
 }
 // completing a quest: a held wind-up cut, then a bigger impact cut than the idle POW
@@ -1456,10 +1612,12 @@ function draw(now){
   if (act){ drawActivity(now); }
   else {
     const spots=mobSlots(), order=spots.map((s,i)=>i).sort((a,b)=>spots[a].y-spots[b].y);
-    if (S.mob.state==='dead' && !(hit && !hit.kick)) drawDown(now);
-    else if (hit) drawBigHit(now, spots, order);
+    if (hit && hit.amb){ if (S.mob.state==='dead') drawDown(now,true); else order.forEach(i=>mobDraw(i,spots[i],'idle',now)); drawAmbHit(now); }
+    else if (S.mob.state==='dead' && !(hit && !hit.kick)){ ambDraw(now); drawDown(now); }
+    else if (hit){ ambDraw(now); drawBigHit(now, spots, order); }
     else if (!spots.length) heroDraw('idle',now);
     else if (beatKind==='hero'){
+      ambDraw(now);
       heroDraw('air',now);
       if (S.cls!=='mage') heroFx(S.cls,HERO_X+140,G-80);
       speedLines(HERO_X+70, 380, G-150, G-60);
@@ -1468,6 +1626,7 @@ function draw(now){
       order.forEach(i=>{ if(tops[i]) ouch(spots[i].x+14, Math.max(30,tops[i].top-28)); });
       burstStar(440,G-70,46,'#ffe066'); text('POW!', 400, G-80, '#e04a3c', 18, '#fff4c0');
     } else {
+      ambDraw(now,'atk');
       heroDraw('ouch',now);
       order.forEach(i=>mobDraw(i,spots[i],'atk',now));
       ouch(HERO_X-10, G-150);
@@ -1475,6 +1634,7 @@ function draw(now){
     }
     // puffs for members that drop off, and for the kill
     booms.forEach(b=>{ const f=Math.min(7,Math.floor((now-b.t0)/85)); spr(ctx,'fx_boom',f,b.x,b.y+50,{scale:b.sc||1}); });
+    if (fogged() && S.mob.state==='alive' && !(hit && hit.landed)) fogDraw(now);
     hpBar(now);
   }
   parts.forEach(p=>{ if(!p.img) return rect(p.x,p.y,p.sz||4,p.sz||4,p.c); const w=Math.floor(now/120+p.floor)%3===1?12:24; ctx.drawImage(p.img,Math.round(p.x-w/2),Math.round(p.y-24),w,24); });
@@ -1766,20 +1926,60 @@ function drawInn(now){
 const CHECK_SVG=`<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 17 L12 25 L29 3" stroke="#2b1a10" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 function renderQuestLog(){
   const box=$('#qlog'); if(!box) return;
-  const left=S.tasks.filter(t=>!t.done).length, m=S.mob, alive=m.state==='alive', pct=Math.round(hpFrac()*100);
-  const head=alive?`<b>${esc(dailyName(m))}</b><div class="hpbar" role="img" aria-label="Mob health: ${pct>66?'still strong':pct>33?'wounded':'nearly beaten'}"><i style="width:${pct}%"></i></div>`
+  const left=S.tasks.filter(openQ).length, m=S.mob, alive=m.state==='alive', pct=Math.round(hpFrac()*100);
+  const head=alive?`<b>${fogged()?'??? (hidden in the fog)':esc(dailyName(m))}</b><div class="hpbar" role="img" aria-label="Mob health: ${pct>66?'still strong':pct>33?'wounded':'nearly beaten'}"><i style="width:${pct}%"></i></div>`
     : m.state==='coming'?`<b>Today’s mob arrives at ${spawnHm()}</b>` : m.state==='rest'?`<b>Rest day: the mob stayed home</b>` : `<b class="down">${esc(dailyName(m))}: defeated!</b>${S.tasks.some(t=>!t.done)?'<div class="sub" style="margin:2px 0 0">Bonus quests kick gold out of it.</div>':''}`;
   box.innerHTML=`<div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'} · <span id="dayleft">${dayLeftText()}</span></p>
-      <div class="mobhp">${head}</div>
-      <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.hit?'killed':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.hit?-1:0}">
-        <span class="box">${t.done?CHECK_SVG:''}</span><span class="txt"><span>${esc(t.name)}</span></span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
+      <div class="mobhp">${head}${m.bless&&(alive||m.state==='coming')?'<span class="bless">Blessed: double gold when it falls</span>':''}</div>
+      <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.hit||t.burnt?'killed':''} ${t.burnt?'burnt':''} ${t.amb?'amb':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.hit||t.burnt?-1:0}">
+        <span class="box">${t.done?CHECK_SVG:t.burnt?'<b aria-hidden="true">X</b>':''}</span><span class="txt"><span>${esc(t.name)}</span>${qTags(t)}</span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
   ui.freshQuest=null;
-  box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.hit) return; t.done=!t.done;
+  box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.hit) return;
+      if (t.burnt){ toast('Too late. It burned up.'); return; }
+      if (t.pf==='wait'||t.pf==='ok'){ toast(t.pf==='wait'?`Waiting for ${S.villName}’s seal.`:'Sealed. No take-backs.'); return; }
+      if (!t.done && t.proof && S.mob.state!=='rest'){ askProof(t); return; }
+      t.done=!t.done;
       if (t.done && S.mob.state==='rest'){ t.hit=true; ui.freshQuest=t.id; toast('On a rest day? Show-off.'); }
       else if (t.done){ S.pending.push(t.id); ui.freshQuest=t.id; } else S.pending=S.pending.filter(id=>id!==t.id); save(); renderTabs(); renderQuestLog(); };
     el.onclick=go; el.onkeydown=e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); go(); } }; });
 }
 const dayLeftText=()=>'day ends in '+dur(dayEndAt(S.date)-clock());
+// little ink tags on a quest: her spells and proof checks (never whether it repeats)
+function qTags(t){ const a=[];
+  if (t.amb) a.push('<i class="qtag amb">AMBUSH</i>');
+  if (t.burnt) a.push('<i class="qtag bad">BURNED UP</i>');
+  else if (t.haste && !t.done) a.push(`<i class="qtag haste">HASTE <span data-h="${t.id}">${dur(t.haste-clock())}</span></i>`);
+  if (t.proof && !t.hit && !t.burnt) a.push(t.pf==='wait'?'<i class="qtag pf">AWAITING HER SEAL</i>':t.pf==='no'?'<i class="qtag bad">PROOF REFUSED. TRY AGAIN</i>':t.pf==='ok'?'<i class="qtag pf">SEALED</i>':'<i class="qtag pf">PHOTO PROOF</i>');
+  return a.length?`<em class="tags">${a.join('')}</em>`:''; }
+// shrink a photo to 640 px so it fits in the phone's storage
+function shrinkPhoto(file, cb){
+  const r=new FileReader(); r.onerror=()=>cb(null);
+  r.onload=()=>{ const im=new Image(); im.onerror=()=>cb(null);
+    im.onload=()=>{ const k=Math.min(1,640/Math.max(im.width,im.height)), c=makeCanvas(Math.max(1,Math.round(im.width*k)),Math.max(1,Math.round(im.height*k)));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height); cb(c.toDataURL('image/jpeg',.7)); };
+    im.src=r.result; };
+  r.readAsDataURL(file);
+}
+// she asked for proof: he takes a photo, it waits for her seal, and only then does the hit land
+function askProof(t){
+  if (document.querySelector('.overlay')) return;
+  const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML=`<div class="paper" role="dialog" aria-label="Proof needed"><div class="hd">Proof, please</div>
+    <div class="sub">${esc(S.villName)} wants a photo of “${esc(t.name)}”.</div>
+    <div class="proofpic" id="pp-pic" hidden></div>
+    <input type="file" id="pp-file" accept="image/*" capture="environment" hidden>
+    <p class="slain">Only she sees it, inside the app. It’s deleted as soon as she’s checked it. If she doesn’t check it before the day ends, it counts.</p>
+    <button class="btn block" id="pp-take">Take a photo</button><button class="btn hex block" id="pp-send" hidden>Send it to her</button>
+    <button class="btn ghost block" id="pp-no">Not yet</button></div>`;
+  $('#app').appendChild(o);
+  let pic=null; const file=$('#pp-file');
+  $('#pp-take').onclick=()=>file.click();
+  file.onchange=()=>{ const f=file.files[0]; if(!f) return; shrinkPhoto(f, d=>{ if(!d){ toast('That photo didn’t work. Try another.'); return; }
+    pic=d; const b=$('#pp-pic'); b.innerHTML=`<img alt="Your photo" src="${d}">`; b.hidden=false; $('#pp-send').hidden=false; $('#pp-take').textContent='Retake'; }); };
+  $('#pp-no').onclick=()=>o.remove();
+  $('#pp-send').onclick=()=>{ try{ localStorage.setItem(PROOF+t.id,pic); }catch(e){ toast('The phone is out of room for photos.'); return; }
+    t.done=true; t.pf='wait'; ui.freshQuest=t.id; save(); o.remove(); renderTabs(); renderQuestLog(); toast(`Sent. Now wait for ${S.villName}’s seal.`); };
+}
 
 /* =========================================================
    Hero sheet: 8 gear slots, the gear rack, boons and stats
@@ -2180,6 +2380,7 @@ function renderVMobs(m){
       <div class="f"><span>Grant extra time today</span><div class="row3">${[30,60,120].map(n=>`<button class="btn ghost" data-ext="${n}" ${room<n?'disabled':''}>+${n<60?n+'m':n/60+'h'}</button>`).join('')}</div>
         ${room<120?`<span class="small muted">${room<30?'No more time to give:':'Only so much:'} tomorrow’s mob arrives at ${clockHm(spawnAt(addDays(S.date,1)))}.</span>`:''}</div>
       ${alive?`<div class="row2"><label class="f">Today’s bounty<input class="inp" id="td-bounty" type="number" min="0" max="999" value="${mb.bounty}"></label><label class="f">Today’s gold drop<input class="inp" id="td-gold" type="number" min="0" max="999" placeholder="Loot table" value="${mb.gold??''}"></label></div>`:''}
+      <label class="f">Today’s taunt (optional)<textarea class="inp" id="td-taunt" maxlength="${LIM.taunt}" placeholder="Pops up on ${P.his} field the next time ${P.he} looks">${esc(mb.taunt||'')}</textarea></label>
       ${alive?`<label class="f">Note on today’s decree (optional)<textarea class="inp" id="td-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(mb.note||'')}</textarea></label>`:''}
       <button class="btn ghost block" id="td-rest">Give ${P.him} a free rest day</button>
       <p class="small muted">Extra time and rest days are gifts: they never cost ${P.him} an Inn token. Ending the day earlier needs ${P.his} OK (Rules tab).</p></div>`:''}
@@ -2188,9 +2389,10 @@ function renderVMobs(m){
       <label class="f">Task<input class="inp" id="mf-name" maxlength="${LIM.quest}" placeholder="e.g. Fold the laundry" value="${esc(d.name)}"></label>
       <div class="row2"><label class="f">Damage (hidden) <span class="small muted">quick 5 · half hour 10 · big 20</span><input class="inp" id="mf-dmg" type="number" min="1" max="999" value="${d.dmg}"></label><label class="f">Repeats${repSel('mf-rep',d.repeat,[['once','Today only'],['daily','Every day'],['weekdays','Weekdays'],['weekends','Weekends'],['custom','Pick days']])}</label></div>
       ${d.repeat==='custom'?`<div class="f"><span>On these days</span><div class="cal days" id="mf-days">${WD_ORDER.map(w=>`<button type="button" data-w="${w}" aria-pressed="${d.days.includes(w)}"><span>${WD[w]}</span></button>`).join('')}</div></div>`:''}
-      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="${LIM.taunt}" placeholder="Shown when ${P.he} pokes the mob">${esc(d.taunt)}</textarea></label>
+      <label class="f">Taunt (optional)<textarea class="inp" id="mf-taunt" maxlength="${LIM.taunt}" placeholder="Pops up when ${P.he} pokes the mob, and now and then on its own">${esc(d.taunt)}</textarea></label>
+      ${solo()?'':`<label class="switch"><span>Ask for photo proof<br><span class="small muted">${P.He} sends a photo when ${P.he} checks it off. The hit lands once you approve.</span></span><input type="checkbox" id="mf-proof" ${d.proof?'checked':''}></label>`}
       <button class="btn hex block" type="submit">Add to ${P.his} Quest Log</button></form>
-    <div><h3>${P.His} quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.dmg} damage${share(t)} · ${recOf(t)?'repeats '+daysText(recOf(t).days):'once'} · ${t.hit?'landed':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}${recOf(t)?' (today only)':''}">X</button></div>`).join('')||'<div class="empty">No quests. At spawn I’ll fall back to the default list.</div>'}</div>
+    <div><h3>${P.His} quests today</h3><div class="vlist">${S.tasks.map(t=>`<div class="vrow"><div class="t"><b>${esc(t.name)}</b><span class="small muted">${t.amb?'ambush · gold only':`${t.dmg} damage${share(t)} · ${recOf(t)?'repeats '+daysText(recOf(t).days):'once'}`}${t.proof?' · photo proof':''}${t.haste&&!t.done&&!t.burnt?' · Haste: due '+clockHm(t.haste):''} · ${t.burnt?'burned up':t.hit?'landed':t.pf==='wait'?'proof waiting on your Lair':t.done?'done, hit pending':'not done'}</span></div><button class="x" data-del="${t.id}" aria-label="Remove ${esc(t.name)}${recOf(t)?' (today only)':''}">X</button></div>`).join('')||'<div class="empty">No quests. At spawn I’ll fall back to the default list.</div>'}</div>
       ${S.tasks.some(recOf)?'<p class="small muted">X on a repeating quest skips it today only. Stop it below.</p>':''}</div>
     ${S.recur.length?`<div><h3>Repeating quests</h3><div class="vlist">${S.recur.map(r=>`<div class="vrow"><div class="t"><b>${esc(r.name)}</b><span class="small muted">${r.dmg} damage · ${daysText(r.days)}${r.from?' from '+esc(dayLabel(r.from)):''}${r.npc?' · from the questions':''}</span></div><button class="x" data-stop="${r.rid}" aria-label="Stop repeating ${esc(r.name)}">X</button></div>`).join('')}</div></div>`:''}
     <div><h2 style="color:var(--hex)">Plan ahead</h2><p class="muted small">Pick a day and set up its mob. A plan is used when that day’s mob spawns. Leave a box empty to use the default.</p></div>
@@ -2201,18 +2403,20 @@ function renderVMobs(m){
       <div class="f"><div class="switch"><span>Kill threshold</span><span class="rateval" id="np-tv">${p.threshold??DEF.threshold}%</span></div><input type="range" id="np-th" min="10" max="100" step="5" value="${p.threshold??DEF.threshold}" aria-label="Kill threshold">
         <span class="small muted">The mob dies once ${P.he}’s done this share of the day’s damage. Default ${DEF.threshold}%.</span></div>
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
+      <label class="f">Taunt for that day’s mob (optional)<textarea class="inp" id="np-taunt" maxlength="${LIM.taunt}" placeholder="Pops up on ${P.his} field when it arrives">${esc(p.taunt||'')}</textarea></label>
       <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
       <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div></div>
       <div class="f"><span>Repeating quests that day</span>${pdRec.length?`<div class="vlist">${pdRec.map(r=>`<div class="vrow"><div class="t"><b>${esc(r.name)}</b><span class="small muted">${r.dmg} damage · ${daysText(r.days)}</span></div></div>`).join('')}</div>`:`<span class="small muted">None on ${esc(pdWd)}s.</span>`}</div>
       <div class="f"><span>Extra quests that day (added at spawn)</span>
-        ${p.quests.length?`<div class="vlist">${p.quests.map((q,i)=>`<div class="vrow"><div class="t"><b>${esc(q.name)}</b><span class="small muted">${q.dmg} damage</span></div><button class="x" data-pq="${i}" aria-label="Remove ${esc(q.name)}">X</button></div>`).join('')}</div>`:''}
+        ${p.quests.length?`<div class="vlist">${p.quests.map((q,i)=>`<div class="vrow"><div class="t"><b>${esc(q.name)}</b><span class="small muted">${q.dmg} damage${q.proof?' · photo proof':''}</span></div><button class="x" data-pq="${i}" aria-label="Remove ${esc(q.name)}">X</button></div>`).join('')}</div>`:''}
         <div class="row2"><input class="inp" id="pq-name" maxlength="${LIM.quest}" placeholder="e.g. Call grandma" aria-label="Planned quest" value="${esc(pq.name)}"><input class="inp" id="pq-dmg" type="number" min="1" max="999" aria-label="Damage (hidden)" value="${pq.dmg}"></div>
+        ${solo()?'':`<label class="switch"><span>Ask for photo proof</span><input type="checkbox" id="pq-proof" ${pq.proof?'checked':''}></label>`}
         ${repSel('pq-rep',pq.repeat||'once',[['once','Only that day'],['weekly','Every '+pdWd+' from then'],['weekdays','Weekdays from then'],['daily','Every day from then']])}
         <button type="button" class="btn ghost block" id="pq-add">Add quest to ${esc(dayLabel(pd,{weekday:'short'}))}</button>
         ${pdDmg?`<span class="small muted">So far: ${pdRec.length+p.quests.length} quests, ${pdDmg} damage. At ${p.threshold??DEF.threshold}% the mob would have ${Math.ceil(pdDmg*(p.threshold??DEF.threshold)/100)} HP (unfinished one-offs carried over may add more).</span>`:''}</div>
       ${planned(S.plans[pd])?'<button type="button" class="btn ghost block" id="np-clear">Clear this day’s plan</button>':''}</div></div></div>`;
   stageLoop($('#fieldcv'), drawField);
-  const sync=()=>{ d.name=$('#mf-name').value; d.dmg=$('#mf-dmg').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; pq.name=$('#pq-name').value; pq.dmg=$('#pq-dmg').value; pq.repeat=$('#pq-rep').value; };
+  const sync=()=>{ d.name=$('#mf-name').value; d.dmg=$('#mf-dmg').value; d.repeat=$('#mf-rep').value; d.taunt=$('#mf-taunt').value; d.proof=!!$('#mf-proof')?.checked; pq.name=$('#pq-name').value; pq.dmg=$('#pq-dmg').value; pq.repeat=$('#pq-rep').value; pq.proof=!!$('#pq-proof')?.checked; };
   const nextOn=days=>{ let x=S.date; for(let i=0;i<7;i++){ x=addDays(x,1); if(days.includes(wday(x))) break; } return x; };
   const num=v=>v===''?null:Math.max(0,Math.min(999,parseInt(v,10)||0));
   const plan=()=>S.plans[pd]||(S.plans[pd]=newPlan());
@@ -2223,6 +2427,9 @@ function renderVMobs(m){
     save(); rerender(); toast(`${P.He} gets ${dur(got)} more today. How merciful.`); });
   if ($('#td-bounty')) $('#td-bounty').onchange=e=>{ mb.bounty=num(e.target.value)??DEF.bounty; save(); toast(`Today’s bounty: ${mb.bounty} V.coins.`); };
   if ($('#td-gold')) $('#td-gold').onchange=e=>{ mb.gold=num(e.target.value); save(); toast(mb.gold==null?'Gold drop: default loot table.':`Today’s gold drop: ${mb.gold}.`); };
+  if ($('#td-taunt')) $('#td-taunt').onchange=e=>{ mb.taunt=e.target.value.trim(); mb.tSeen=0;
+    if (mb.taunt && !mb.tInf){ mb.tInf=1; S.infamy++; }   // writing taunts earns a little Infamy, once a day
+    save(); renderHud(); toast(mb.taunt?`It pops up on ${P.his} field next time ${P.he} looks.`:'No taunt today.'); };
   if ($('#td-note')) $('#td-note').onchange=e=>{ mb.note=e.target.value.trim(); save(); toast(mb.note?'Your note will be on today’s decree.':'No note today.'); };
   if ($('#td-rest')) $('#td-rest').onclick=()=>{ restDay(); save(); renderTabs(); rerender(); toast(`Rest day granted. ${P.His} streak is safe.`); };
   m.querySelectorAll('#cal button').forEach(b=>b.onclick=()=>{ sync(); ui.planDate=b.dataset.d; rerender(); });
@@ -2232,10 +2439,11 @@ function renderVMobs(m){
   $('#np-bounty').onchange=e=>{ sync(); plan().bounty=num(e.target.value); tidy(); rerender(); };
   $('#np-gold').onchange=e=>{ sync(); plan().gold=num(e.target.value); tidy(); rerender(); };
   $('#np-note').onchange=e=>{ sync(); plan().note=e.target.value.trim(); tidy(); rerender(); };
+  $('#np-taunt').onchange=e=>{ sync(); plan().taunt=e.target.value.trim(); tidy(); rerender(); };
   $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); plan().mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; tidy(); rerender(); });
   m.querySelectorAll('[data-pq]').forEach(b=>b.onclick=()=>{ sync(); plan().quests.splice(+b.dataset.pq,1); tidy(); rerender(); });
   $('#pq-add').onclick=()=>{ sync(); const name=pq.name.trim(); if(!name){ toast('Name the quest first.'); return; }
-    const q={name, dmg:Math.max(1,Math.min(999,parseInt(pq.dmg,10)||1)), taunt:''}, rep=pq.repeat;
+    const q={name, dmg:Math.max(1,Math.min(999,parseInt(pq.dmg,10)||1)), taunt:'', ...(pq.proof?{proof:true}:{})}, rep=pq.repeat;
     if (rep==='once') plan().quests.push(q); else newRecur(q, rep==='weekly'?[wday(pd)]:REPEATS[rep], pd);
     ui.pdraft={name:'',dmg:10,taunt:'',repeat:'once'}; tidy(); rerender();
     toast(rep==='once'?`Planned for ${dayLabel(pd)}.`:`Repeats ${rep==='weekly'?'every '+pdWd:daysText(REPEATS[rep])}, starting ${dayLabel(pd)}.`); };
@@ -2243,12 +2451,14 @@ function renderVMobs(m){
   $('#mf-rep').onchange=()=>{ sync(); if(d.repeat==='custom'&&!d.days.length) d.days=[wday(S.date)]; rerender(); };
   m.querySelectorAll('#mf-days button').forEach(b=>b.onclick=()=>{ sync(); const w=+b.dataset.w; d.days=d.days.includes(w)?d.days.filter(x=>x!==w):[...d.days,w]; rerender(); });
   $('#mf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Give the quest a name first.'); return; }
-    const q={name, dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)), taunt:d.taunt.trim()}, days=REPEATS[d.repeat]||d.days, rep=d.repeat;
+    const q={name, dmg:Math.max(1,Math.min(999,parseInt(d.dmg,10)||1)), taunt:d.taunt.trim(), ...(d.proof?{proof:true}:{})}, days=REPEATS[d.repeat]||d.days, rep=d.repeat;
     if (rep==='once') S.tasks.push({...q, id:nid(), done:false, hit:false});
     else { if(!days.length){ toast('Pick at least one day.'); return; } newRecur(q,days); }
     save(); ui.draft={name:'',dmg:10,repeat:'once',days:[wday(S.date)],taunt:''}; rerender();
     toast(rep==='once'?`Added to ${P.his} Quest Log.`:`Repeats ${daysText(days)}.`+(days.includes(wday(S.date))?` Today’s is in ${P.his} Quest Log.`:` First one: ${dayLabel(nextOn(days))}.`)); };
-  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.tasks=S.tasks.filter(t=>t.id!==b.dataset.del); S.pending=S.pending.filter(id=>id!==b.dataset.del); save(); rerender(); });
+  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ const id=b.dataset.del, t=S.tasks.find(x=>x.id===id);
+    if (t&&t.amb&&ambAlive()) S.amb=null;   // calling off the ambush
+    dropProof(id); S.tasks=S.tasks.filter(x=>x.id!==id); S.pending=S.pending.filter(x=>x!==id); save(); renderTabs(); rerender(); });
   m.querySelectorAll('[data-stop]').forEach(b=>b.onclick=()=>{ const r=S.recur.find(x=>x.rid===b.dataset.stop); S.recur=S.recur.filter(x=>x!==r);
     // today's copy goes too, unless it's already done
     S.tasks=S.tasks.filter(t=>t.rid!==r.rid||t.done||t.hit); S.tasks.forEach(t=>{ if(t.rid===r.rid) delete t.rid; });
@@ -2300,6 +2510,33 @@ function renderVShop(m){
   $('#sf').onsubmit=e=>{ e.preventDefault(); sync(); const name=d.name.trim(); if(!name){ toast('Name the reward first.'); return; } S.shop.push({id:nid(),name,desc:d.desc.trim(),price:clampN(parseInt(d.price,10)||1,1,LIM.price),icon:d.icon}); save(); ui.shopDraft={name:'',price:40,icon:'heart',desc:''}; rerender(); toast('Added to the shop.'); };
   m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ S.shop=S.shop.filter(x=>x.id!==b.dataset.del); save(); rerender(); });
 }
+// her raven's scouting reports: one per finished day, newest first (S.reports keeps 30)
+const OUTCOME={slain:'Slain', fled:'It fled', rest:'Rest day'};
+const RAVEN={slain:['The hero did the thing. Annoyingly.','Your mob fought bravely. For a while.','Defeated again. I’ve started a betting pool.'],
+  fled:['Your mob escaped with its dignity. Mostly.','The hero dawdled. The mob strolled off.','Not a scratch on it. Well. A few scratches.'],
+  rest:['Spent the day at the inn. I counted the snores.','No fight today. The mob had a nice nap too.']};
+const QSTATE={done:'done', kick:'bonus kick', missed:'missed', burnt:'burned up (Haste)'};
+function reportRows(r, ln){
+  const done=r.qs.filter(q=>q.s==='done'||q.s==='kick').length;
+  return ln('Mob',esc(r.name))+ln('Outcome',r.out==='slain'&&r.at?'Slain at '+clockHm(r.at):OUTCOME[r.out])
+    +ln('Quests',`${done} of ${r.qs.length} done`)
+    +(r.qs.length?`<ul class="scout">${r.qs.map(q=>`<li class="${q.s}"><span>${esc(q.n)}</span><i>${QSTATE[q.s]}</i></li>`).join('')}</ul>`:'')
+    +(r.amb?ln('Ambush',`${esc(r.amb.n)}: ${r.amb.s==='done'?'driven off':'ignored'}`):'')
+    +(r.spells.length?ln('Spells cast',r.spells.map(k=>SPELLS.find(x=>x.k===k)?.n||k).join(', ')):'')
+    +(r.proofs||r.refused?ln('Proofs',`${r.proofs} sealed${r.refused?` · ${r.refused} refused`:''}`):'')
+    +ln('Earned',`${r.gold} gold · ${r.vc} V.coins`)+ln('Streak',r.was?`lost (was ${r.was})`:r.streak);
+}
+function showReport(){
+  const r=(S.reports||[]).find(x=>x.day===S.reportNew); if (!r || document.querySelector('.overlay')) return;
+  S.reportNew=null; save(); renderTabs();
+  const lines=RAVEN[r.out], o=document.createElement('div'); o.className='overlay tall';
+  o.innerHTML=`<div class="paper report" role="dialog" aria-label="Scouting report, day ${r.day}"><div class="hd">Scouting report</div>
+    <div class="sub">Day ${r.day} · ${esc(dayLabel(r.date))}</div>
+    ${reportRows(r,(a,b)=>`<div class="ln"><span>${a}</span><span>${b}</span></div>`)}
+    <p class="slain">“${lines[Math.floor(Math.random()*lines.length)]}” · your raven</p>
+    <button class="btn hex block" id="rp-ok">Noted</button></div>`;
+  $('#app').appendChild(o); $('#rp-ok').onclick=()=>o.remove();
+}
 // her home tab: the lair, with deliveries and the scouting report
 function drawLair(x,now){
   const r=(a,b,c,d,col)=>{ x.fillStyle=col; x.fillRect(Math.round(a),Math.round(b),c,d); }, FL=232, sk=SKIES[getTod()];
@@ -2324,24 +2561,34 @@ function drawLair(x,now){
 }
 function renderLair(m){
   if (!atlasReady){ m.innerHTML='<p class="hint">Loading…</p>'; readyCbs.push(()=>{ if(ui.role==='vill') renderMain(); }); return; }
-  const mb=S.mob, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), unused=S.bag.filter(b=>!b.used), done=S.tasks.filter(t=>t.done).length;
+  const mb=S.mob, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), unused=S.bag.filter(b=>!b.used), done=S.tasks.filter(t=>t.done).length, proofs=proofsWaiting();
   const ln=(a,b)=>`<div class="switch"><span>${a}</span><b>${b}</b></div>`;
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="laircv" width="480" height="300" aria-label="Your lair"></canvas>
       <div class="plate hex"><b>LAIR OF ${esc(S.villName.toUpperCase())}</b><span>Infamy ${S.infamy}</span></div></div>
     <div class="below wrap"><div class="stack">
+      ${proofs.length?`<div><h3 style="color:var(--hex)">Proof to review</h3><div class="vlist">${proofs.map(t=>{ const pic=proofPic(t.id); return `<div class="px vpanel">
+        <b>${esc(t.name)}</b>${pic?`<div class="proofpic"><img alt="${P.His} photo for ${esc(t.name)}" src="${pic}"></div>`:'<span class="small muted">The photo is gone. Judge on trust.</span>'}
+        <span class="small muted">Approve and the hit lands. Refuse and it goes back on ${P.his} list. Either way the photo is deleted. Unchecked proof is approved when the day ends.</span>
+        <div class="row2"><button class="btn ghost" data-pf-no="${t.id}">Refuse</button><button class="btn hex" data-pf-ok="${t.id}">Approve</button></div></div>`; }).join('')}</div></div>`:''}
       ${S.req&&!S.req.no?`<div class="px vpanel"><b>${P.He} asks for a rest day today</b><span class="small muted">${P.He}’s out of Inn tokens. If you don’t answer before the day ends, it’s granted automatically.</span><div class="row2"><button class="btn ghost" data-rq="rest-no">Refuse</button><button class="btn hex" data-rq="rest-ok">Grant</button></div></div>`:''}
       ${S.rev&&!S.rev.no&&S.lost?`<div class="px vpanel"><b>${P.He} begs you to revive ${P.his} ${S.lost.streak}-day streak</b><span class="small muted">It fell yesterday. The offer lapses when today ends.</span><div class="row2"><button class="btn ghost" data-rq="rev-no">Refuse</button><button class="btn hex" data-rq="rev-ok">Revive</button></div></div>`:''}
       ${endBy()==='hero'&&!S.endProp.no?`<div class="px vpanel"><b>${P.He} proposes ending the day at ${hm(S.endProp.min)}</b><span class="small muted">Instead of ${hm(S.dayEnd)}. If you accept, it starts tomorrow.</span><div class="row2"><button class="btn ghost" data-rq="end-no">Decline</button><button class="btn hex" data-rq="end-ok">Accept</button></div></div>`:''}
       <div><h3 style="color:var(--gold)">Rewards to deliver</h3>${toDeliver.length?`<div class="vlist">${toDeliver.map(b=>`<div class="vrow px"><img alt="" src="${url(icon(b.icon))}"><div class="t"><b>${esc(b.name)}</b><span class="small muted">${esc(b.desc||`${P.He} cashed this in`)}</span></div><button class="btn hex" data-dl="${b.id}">Delivered</button></div>`).join('')}</div>`:`<p class="small muted">Nothing to deliver. ${P.He} hasn’t cashed anything in.</p>`}</div>
-      <div><h3>Scouting report · Day ${S.day}</h3><div class="px vpanel">
+      <div><h3>Today so far · Day ${S.day}</h3><div class="px vpanel">
         ${ln('Today’s mob',esc(dailyName(mb)))}${ln('Its HP',{alive:Math.round(hpFrac()*100)+'% left',coming:'arrives at '+spawnHm(),rest:'rest day',dead:'Defeated'}[mb.state])}
         ${ln('Day ends in',dur(dayEndAt(S.date)-clock()))}${ln('Inn tokens left',innLeft())}
         ${ln('Quests done',`${done} of ${S.tasks.length}`)}${ln('Streak',`${S.streak} (best ${S.best})`)}
-        ${ln(`${P.His} purse`,`${S.gold} gold · ${S.vcoins} V.coins`)}${ln('Unused rewards',unused.length?unused.map(b=>esc(b.name)).join(', '):'none')}</div></div>
+        ${ln(`${P.His} purse`,`${S.gold} gold · ${S.vcoins} V.coins`)}${ln('Unused rewards',unused.length?unused.map(b=>esc(b.name)).join(', '):'none')}
+        ${mb.cast&&Object.keys(mb.cast).length?ln('Spells cast',Object.keys(mb.cast).map(k=>SPELLS.find(x=>x.k===k).n).join(', ')):''}</div></div>
+      <div><h3>Scouting reports</h3>${(S.reports||[]).length?S.reports.map(r=>`<details class="cat"><summary>Day ${r.day} · ${esc(dayLabel(r.date))} · <span style="color:${r.out==='slain'?'var(--ok)':r.out==='fled'?'var(--bad)':'var(--muted)'}">${OUTCOME[r.out]}</span></summary><div class="px vpanel rep">${reportRows(r,ln)}</div></details>`).join('')
+        :'<p class="small muted">Your raven reports at the end of each day.</p>'}</div>
       <div class="px empty">Building and decorating your lair is coming soon.</div></div></div>`;
   stageLoop($('#laircv'), drawLair);
   m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); renderTabs(); rerender(); toast('Marked as delivered.'); });
+  m.querySelectorAll('[data-pf-ok],[data-pf-no]').forEach(b=>b.onclick=()=>{ const ok=!!b.dataset.pfOk, t=S.tasks.find(x=>x.id===(b.dataset.pfOk||b.dataset.pfNo)); if(!t) return;
+    sealProof(t,ok); save(); renderHud(); renderTabs(); rerender(); toast(ok?'Sealed. The hit lands when '+P.he+' looks.':'Refused. It’s back on '+P.his+' list.'); });
+  if (S.reportNew) setTimeout(showReport,300);
   const answer={'rest-ok':()=>{ if(S.mob.state==='alive'||S.mob.state==='coming') restDay(); S.req=null; return 'Rest day granted. So generous.'; },
     'rest-no':()=>{ S.req.no=true; return 'Refused. The mob stays.'; },
     'rev-ok':()=>{ revive(); return `Streak revived: ${S.streak} days.`; },
@@ -2350,20 +2597,60 @@ function renderLair(m){
     'end-no':()=>{ S.endProp.no=true; return 'Declined. The day stays as it is.'; }};
   m.querySelectorAll('[data-rq]').forEach(b=>b.onclick=()=>{ const msg=answer[b.dataset.rq](); save(); renderTabs(); rerender(); toast(msg); });
 }
-// her spells (not built yet): the selected one is shown big on the main screen
+/* Her spells: each can be cast once a day, free. None of them ever damages the mob or changes the threshold;
+   he hears about each one in a pop-up on his field */
 const SPELLS=[
-  {k:'ambush',ic:'sword',n:'Ambush',d:'Send a surprise mob in the middle of the day, with its own quick quest.'},
-  {k:'haste',ic:'potion',n:'Haste',d:'Put a deadline on a quest. It has to be finished before time runs out.'},
-  {k:'fog',ic:'orb',n:'Fog',d:'Hide today’s mob in the mist until the first quest is started.'},
-  {k:'blessing',ic:'star',n:'Blessing',d:'Double the gold the mob drops today. Even villainesses have soft days.'}
+  {k:'ambush',ic:'sword',n:'Ambush',d:()=>`Send a surprise mob with one quest of its own. It sneaks up behind ${P.him} and never touches the daily mob’s HP. Driving it off drops the gold you choose.`},
+  {k:'haste',ic:'potion',n:'Haste',d:()=>`Put a deadline on one of ${P.his} quests. If it isn’t done in time, it burns up and its damage is lost for the day.`},
+  {k:'fog',ic:'orb',n:'Fog',d:()=>`Hide today’s mob in the mist. ${P.He} can’t see what it is until ${P.his} first quest lands.`},
+  {k:'blessing',ic:'star',n:'Blessing',d:()=>'Double the gold the mob drops when it falls today. Even villainesses have soft days.'}
 ];
+const HASTE_MIN=[30,60,120,180,240];
+const hasteable=()=>S.tasks.filter(t=>openQ(t)&&!t.amb&&!t.haste);
+// why a spell can't be cast right now ('' = it can)
+function spellWhy(k){
+  const m=S.mob, st=m.state;
+  if ((m.cast||{})[k]) return 'Already cast today. It’s ready again tomorrow.';
+  if (st==='rest') return `${P.He}’s resting at the inn today.`;
+  if (st==='dead') return 'Today’s mob is already beaten.';
+  if (k==='ambush' && st!=='alive') return `Wait for today’s mob: it arrives at ${spawnHm()}.`;
+  if (k==='haste' && !hasteable().length) return 'No open quests to put a deadline on.';
+  if (k==='haste' && dayEndAt(S.date)-clock()<HASTE_MIN[0]*60000) return 'The day is nearly over already.';
+  if (k==='fog' && (m.dmg>0 || S.pending.length || S.tasks.some(t=>t.hit&&!t.amb))) return `${P.He}’s already started. Fog only works before ${P.his} first quest lands.`;
+  return '';
+}
 function renderSpells(m){
-  const sp=SPELLS.find(x=>x.k===ui.spellSel)||SPELLS[0];
+  const sp=SPELLS.find(x=>x.k===ui.spellSel)||SPELLS[0], why=spellWhy(sp.k), cast=!!(S.mob.cast||{})[sp.k];
+  const ad=ui.ambDraft||(ui.ambDraft={name:'', gold:10, taunt:''}), left=dayEndAt(S.date)-clock();
+  const form={
+    ambush:`<label class="f">The ambusher’s quest<input class="inp" id="sp-name" maxlength="${LIM.quest}" placeholder="e.g. Take out the trash, right now" value="${esc(ad.name)}"></label>
+      <label class="f">Gold it drops<input class="inp" id="sp-gold" type="number" min="1" max="${LIM.coins}" value="${ad.gold}"></label>
+      <label class="f">Taunt (optional)<textarea class="inp" id="sp-taunt" maxlength="${LIM.taunt}" placeholder="e.g. Surprise! Did you miss me?">${esc(ad.taunt)}</textarea></label>`,
+    haste:`<label class="f">Which quest<select class="inp" id="sp-q">${hasteable().map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
+      <label class="f">Time to finish it<select class="inp" id="sp-min">${HASTE_MIN.filter(n=>n*60000<=left).map(n=>`<option value="${n}">${n<60?n+' minutes':n/60+' hour'+(n>60?'s':'')}</option>`).join('')}</select></label>`,
+    fog:'', blessing:''}[sp.k];
   m.classList.add('split');
-  m.innerHTML=showcase(url(icon(sp.ic)), sp.n, sp.d, '<span class="st">COMING SOON</span>')+`<div class="below wrap"><div class="stack">
-    <p class="hint">Hexes and blessings you can cast on ${P.his} day. Tap one to read it.</p>
-    <div><h3>Spellbook</h3><div class="inv">${SPELLS.map(x=>`<button data-k="${x.k}" aria-pressed="${x===sp}" aria-label="${esc(x.n)}"><img alt="" src="${url(icon(x.ic))}"><span class="tag">${esc(x.n.toUpperCase())}</span></button>`).join('')}</div></div></div></div>`;
+  m.innerHTML=showcase(url(icon(sp.ic)), sp.n, sp.d(), `<span class="st">${cast?'CAST TODAY':why?'NOT NOW':'READY'}</span>`)+`<div class="below wrap"><div class="stack">
+    <p class="hint">Hexes and blessings for ${P.his} day. Each one works once a day and ${P.he} gets a pop-up when you cast it.</p>
+    <div><h3>Spellbook</h3><div class="inv">${SPELLS.map(x=>`<button data-k="${x.k}" aria-pressed="${x===sp}" aria-label="${esc(x.n)}${(S.mob.cast||{})[x.k]?', cast today':''}"><img alt="" src="${url(icon(x.ic))}"><span class="tag">${esc(x.n.toUpperCase())}</span>${(S.mob.cast||{})[x.k]?'<span class="tag done">✓</span>':''}</button>`).join('')}</div></div>
+    <div class="px vpanel">${why?`<p class="small muted" style="margin:0">${why}</p>`:form}
+      <button class="btn hex block" id="sp-cast" ${why?'disabled':''}>Cast ${esc(sp.n)}</button></div></div></div>`;
   m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.spellSel=b.dataset.k; rerender(); });
+  const sync=()=>{ if(!$('#sp-name')) return; ad.name=$('#sp-name').value; ad.gold=$('#sp-gold').value; ad.taunt=$('#sp-taunt').value; };
+  ['#sp-name','#sp-gold','#sp-taunt'].forEach(q=>{ const e=$(q); if(e) e.oninput=sync; });
+  const mb=S.mob, spells={
+    ambush:()=>{ const name=ad.name.trim(); if(!name){ toast('Write the ambusher’s quest first.'); return false; }
+      const gold=clampN(parseInt(ad.gold,10)||1,1,LIM.coins), taunt=clip(ad.taunt.trim(),LIM.taunt), art=rmob();
+      S.amb={...art, gold, state:'alive'}; S.tasks.unshift({id:nid(), name, dmg:0, amb:true, taunt, done:false, hit:false});
+      tellHero({ic:'sword', h:'AMBUSH!', t:(taunt?taunt+' ':'')+`A ${mobName(art)} jumped you! Finish “${name}” to drive it off.`});
+      ui.ambDraft={name:'', gold:ad.gold, taunt:''}; return `A ${mobName(art)} lies in wait behind ${P.him}.`; },
+    haste:()=>{ const t=S.tasks.find(x=>x.id===$('#sp-q').value), n=+$('#sp-min').value; if(!t||!n) return false;
+      t.haste=clock()+n*60000; tellHero({ic:'potion', h:'HASTE!', t:`“${t.name}” must be done by ${clockHm(t.haste)}, or it burns up.`});
+      return `“${t.name}” is due by ${clockHm(t.haste)}. Tick tock.`; },
+    fog:()=>{ mb.fog=true; tellHero({ic:'orb', h:'FOG!', t:'A thick fog rolls in. Something is out there… finish a quest to find out what.'}); return 'The fog rolls in.'; },
+    blessing:()=>{ mb.bless=true; tellHero({ic:'star', h:'BLESSING!', t:'Today’s mob drops double gold when it falls. Don’t get used to it.'}); return 'Blessed. Double gold today. How soft of you.'; }};
+  $('#sp-cast').onclick=()=>{ if (spellWhy(sp.k)) return; sync(); const msg=spells[sp.k](); if(!msg) return;
+    mb.cast={...(mb.cast||{}), [sp.k]:1}; save(); renderTabs(); rerender(); toast(msg); };
 }
 const taxText=(ex,g)=>`Shown once a day, when the daily mob dies. If the bounty is ${ex} V.coins, the receipt says ${g} earned and ${g-ex} paid in taxes. ${P.He} still keeps ${ex}. The tax becomes your Infamy.`;
 function renderVRules(m){
@@ -2440,6 +2727,7 @@ function heartbeat(){
   if (tick()) dirty=true;
   if (dirty && !hit && !document.querySelector('.overlay')){ dirty=false; render(); }
   const el=$('#dayleft'); if(el) el.textContent=dayLeftText();
+  document.querySelectorAll('[data-h]').forEach(e=>{ const t=S.tasks.find(x=>x.id===e.dataset.h); if(t&&t.haste) e.textContent=dur(t.haste-clock()); });
 }
 setInterval(heartbeat,15000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) heartbeat(); });
