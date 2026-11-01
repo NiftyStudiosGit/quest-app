@@ -199,6 +199,7 @@ main.has-orb .below{padding-bottom:56px}
 .qtag.amb{background:#a2302a}.qtag.haste{background:#b8661a}.qtag.pf{background:#4a6aa0}.qtag.bad{background:#7a3a2a}
 .qi.burnt .txt span{color:#9a7a5a;text-decoration:line-through}
 .qi .box b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);font-size:12px;color:#a2302a}
+.qi .txt small.pfwhy{display:block;font-size:15px;color:#a0402a;margin-top:3px}
 .qi.amb{background:rgba(162,48,42,.08)}
 .mobhp .bless{font-family:var(--f-display);font-size:7px;color:#8a5a00}
 .proofpic{display:grid;place-items:center;background:rgba(0,0,0,.25);padding:6px;box-shadow:0 0 0 3px var(--line)}
@@ -784,7 +785,7 @@ const clampN=(v,lo,hi)=>v==null?v:Math.max(lo,Math.min(hi,Math.round(+v)||0));
 function tidyText(){
   S.heroName=clip(S.heroName,LIM.hero); S.villName=clip(S.villName,LIM.vill);
   if (S.mob){ S.mob.name=clip(S.mob.name,LIM.mob); S.mob.note=clip(S.mob.note,LIM.note); S.mob.taunt=clip(S.mob.taunt,LIM.taunt); S.mob.bounty=clampN(S.mob.bounty,0,LIM.coins); S.mob.gold=clampN(S.mob.gold,0,LIM.coins); }
-  (S.tasks||[]).forEach(t=>{ t.name=clip(t.name,LIM.quest); t.taunt=clip(t.taunt,LIM.taunt); });
+  (S.tasks||[]).forEach(t=>{ t.name=clip(t.name,LIM.quest); t.taunt=clip(t.taunt,LIM.taunt); t.pfWhy=clip(t.pfWhy,LIM.taunt); });
   Object.values(S.plans||{}).forEach(p=>{ p.name=clip(p.name,LIM.mob); p.note=clip(p.note,LIM.note); p.taunt=clip(p.taunt,LIM.taunt); (p.quests||[]).forEach(q=>q.name=clip(q.name,LIM.quest)); });
   (S.shop||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); r.price=clampN(r.price,1,LIM.price); });
   (S.bag||[]).forEach(r=>{ r.name=clip(r.name,LIM.reward); r.desc=clip(r.desc,LIM.desc); });
@@ -925,10 +926,12 @@ const PROOF=KEY+'-proof-';
 const proofPic=id=>{ try{ return localStorage.getItem(PROOF+id); }catch(e){ return null; } };
 const dropProof=id=>{ try{ localStorage.removeItem(PROOF+id); }catch(e){} };
 const proofsWaiting=()=>S.tasks.filter(t=>t.pf==='wait');
-function sealProof(t, ok){
+// refusing can come with a reason ("Still water in the glass. Drink all of it."): it pops up on his field and stays on the quest
+function sealProof(t, ok, why=''){
   dropProof(t.id); S.infamy+=2;   // reviewing proof earns her a little Infamy
-  if (!ok){ t.done=false; t.pf='no'; S.mob.refused=(S.mob.refused||0)+1; return; }
-  t.pf='ok'; S.mob.proofs=(S.mob.proofs||0)+1;
+  if (!ok){ t.done=false; t.pf='no'; t.pfWhy=clip(why.trim(),LIM.taunt); S.mob.refused=(S.mob.refused||0)+1;
+    tellHero({t:(t.pfWhy||'Not good enough.')+` (Proof refused: “${t.name}”.)`}); return; }
+  t.pf='ok'; delete t.pfWhy; S.mob.proofs=(S.mob.proofs||0)+1;
   if (S.mob.state==='rest') t.hit=true; else S.pending.push(t.id);
 }
 // her raven's end-of-day scouting report: what he did with the day she gave him
@@ -957,7 +960,7 @@ function endDay(){
   S.npcRecent=S.tasks.filter(t=>t.npc==='roll').map(t=>t.name);
   // repeating quests come back fresh with the new day (only on their days); her unfinished one-offs carry over
   // (ambush quests and ones that burned up under Haste go with the day)
-  S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll'&&!t.amb&&!t.burnt); S.tasks.forEach(t=>{ delete t.haste; delete t.pf; });
+  S.tasks=S.tasks.filter(t=>!t.rid&&!t.done&&t.npc!=='roll'&&!t.amb&&!t.burnt); S.tasks.forEach(t=>{ delete t.haste; delete t.pf; delete t.pfWhy; });
   S.pending=[]; S.amb=null; startDay(addDays(S.date,1));
   // photos left behind by an old save or a reset are never kept
   try{ Object.keys(localStorage).filter(k=>k.startsWith(PROOF)&&!proofsWaiting().some(t=>PROOF+t.id===k)).forEach(k=>localStorage.removeItem(k)); }catch(e){}
@@ -1932,7 +1935,7 @@ function renderQuestLog(){
   box.innerHTML=`<div class="scroll"><div class="parch"><div class="seal" aria-hidden="true">V</div><h2>Quest Log</h2><p class="sub">Day ${S.day} · ${left?left+' left to do':'all done!'} · <span id="dayleft">${dayLeftText()}</span></p>
       <div class="mobhp">${head}${m.bless&&(alive||m.state==='coming')?'<span class="bless">Blessed: double gold when it falls</span>':''}</div>
       <ul class="ql">${S.tasks.map(t=>`<li class="qi ${t.done?'done':''} ${t.hit||t.burnt?'killed':''} ${t.burnt?'burnt':''} ${t.amb?'amb':''} ${ui.freshQuest===t.id?'fresh':''}" data-id="${t.id}" role="checkbox" aria-checked="${t.done}" tabindex="${t.hit||t.burnt?-1:0}">
-        <span class="box">${t.done?CHECK_SVG:t.burnt?'<b aria-hidden="true">X</b>':''}</span><span class="txt"><span>${esc(t.name)}</span>${qTags(t)}</span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
+        <span class="box">${t.done?CHECK_SVG:t.burnt?'<b aria-hidden="true">X</b>':''}</span><span class="txt"><span>${esc(t.name)}</span>${qTags(t)}${t.pf==='no'&&t.pfWhy?`<small class="pfwhy">“${esc(t.pfWhy)}”</small>`:''}</span></li>`).join('')||'<li class="empty" style="color:#7a5a3a">No quests today. Suspicious.</li>'}</ul></div></div>`;
   ui.freshQuest=null;
   box.querySelectorAll('.qi[data-id]').forEach(el=>{ const go=()=>{ const t=S.tasks.find(x=>x.id===el.dataset.id); if(!t||t.hit) return;
       if (t.burnt){ toast('Too late. It burned up.'); return; }
@@ -1966,6 +1969,7 @@ function askProof(t){
   const o=document.createElement('div'); o.className='overlay';
   o.innerHTML=`<div class="paper" role="dialog" aria-label="Proof needed"><div class="hd">Proof, please</div>
     <div class="sub">${esc(S.villName)} wants a photo of “${esc(t.name)}”.</div>
+    ${t.pf==='no'&&t.pfWhy?`<p class="slain">Last time she said: “${esc(t.pfWhy)}”</p>`:''}
     <div class="proofpic" id="pp-pic" hidden></div>
     <input type="file" id="pp-file" accept="image/*" capture="environment" hidden>
     <p class="slain">Only she sees it, inside the app. It’s deleted as soon as she’s checked it. If she doesn’t check it before the day ends, it counts.</p>
@@ -2569,7 +2573,8 @@ function renderLair(m){
     <div class="below wrap"><div class="stack">
       ${proofs.length?`<div><h3 style="color:var(--hex)">Proof to review</h3><div class="vlist">${proofs.map(t=>{ const pic=proofPic(t.id); return `<div class="px vpanel">
         <b>${esc(t.name)}</b>${pic?`<div class="proofpic"><img alt="${P.His} photo for ${esc(t.name)}" src="${pic}"></div>`:'<span class="small muted">The photo is gone. Judge on trust.</span>'}
-        <span class="small muted">Approve and the hit lands. Refuse and it goes back on ${P.his} list. Either way the photo is deleted. Unchecked proof is approved when the day ends.</span>
+        <label class="f">Why not? (optional, only if you refuse)<textarea class="inp" id="pf-why-${t.id}" maxlength="${LIM.taunt}" placeholder="e.g. There’s still water in the glass. Drink all of it, then take another picture."></textarea></label>
+        <span class="small muted">Approve and the hit lands. Refuse and it goes back on ${P.his} list with your reason. Either way the photo is deleted. Unchecked proof is approved when the day ends.</span>
         <div class="row2"><button class="btn ghost" data-pf-no="${t.id}">Refuse</button><button class="btn hex" data-pf-ok="${t.id}">Approve</button></div></div>`; }).join('')}</div></div>`:''}
       ${S.req&&!S.req.no?`<div class="px vpanel"><b>${P.He} asks for a rest day today</b><span class="small muted">${P.He}’s out of Inn tokens. If you don’t answer before the day ends, it’s granted automatically.</span><div class="row2"><button class="btn ghost" data-rq="rest-no">Refuse</button><button class="btn hex" data-rq="rest-ok">Grant</button></div></div>`:''}
       ${S.rev&&!S.rev.no&&S.lost?`<div class="px vpanel"><b>${P.He} begs you to revive ${P.his} ${S.lost.streak}-day streak</b><span class="small muted">It fell yesterday. The offer lapses when today ends.</span><div class="row2"><button class="btn ghost" data-rq="rev-no">Refuse</button><button class="btn hex" data-rq="rev-ok">Revive</button></div></div>`:''}
@@ -2587,7 +2592,7 @@ function renderLair(m){
   stageLoop($('#laircv'), drawLair);
   m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); renderTabs(); rerender(); toast('Marked as delivered.'); });
   m.querySelectorAll('[data-pf-ok],[data-pf-no]').forEach(b=>b.onclick=()=>{ const ok=!!b.dataset.pfOk, t=S.tasks.find(x=>x.id===(b.dataset.pfOk||b.dataset.pfNo)); if(!t) return;
-    sealProof(t,ok); save(); renderHud(); renderTabs(); rerender(); toast(ok?'Sealed. The hit lands when '+P.he+' looks.':'Refused. It’s back on '+P.his+' list.'); });
+    sealProof(t,ok,$('#pf-why-'+t.id)?.value||''); save(); renderHud(); renderTabs(); rerender(); toast(ok?'Sealed. The hit lands when '+P.he+' looks.':'Refused. It’s back on '+P.his+' list.'); });
   if (S.reportNew) setTimeout(showReport,300);
   const answer={'rest-ok':()=>{ if(S.mob.state==='alive'||S.mob.state==='coming') restDay(); S.req=null; return 'Rest day granted. So generous.'; },
     'rest-no':()=>{ S.req.no=true; return 'Refused. The mob stays.'; },
