@@ -557,6 +557,9 @@ input[type=range]{accent-color:var(--hex);width:100%}
 .cs-add:disabled{opacity:.4;cursor:default}
 /* her castle grounds (swipe across, tap a building) and decorating */
 .plate.corner{left:8px;transform:none}
+.stage.tall{aspect-ratio:48/58;max-height:min(66vh,700px)}
+.gnav{position:absolute;right:8px;width:34px;height:34px;border:0;cursor:pointer;background:rgba(20,12,6,.72);color:var(--gold);font-size:13px;box-shadow:0 0 0 3px var(--line)}
+.gnav.u{top:8px}.gnav.d{top:50px}
 .stage canvas.pan{touch-action:none;cursor:grab}
 .glabels{position:absolute;inset:0;pointer-events:none}
 .glab{position:absolute;top:84%;transform:translateX(-50%);pointer-events:auto;border:0;cursor:pointer;background:var(--wood2);color:var(--gold);font-family:var(--f-display);font-size:7px;padding:5px 6px;box-shadow:0 0 0 2px var(--line),inset 0 2px 0 var(--wood-hi);text-shadow:1px 1px 0 var(--line);white-space:nowrap}
@@ -1012,7 +1015,7 @@ function applySolo(){
    A piece's key starts with its kind (w_ walls, l_ ceiling, h_ hung on a wall, c_ centerpiece, f_ floor corner, r_ rug,
    gb_/gc_/gf_ garden, op_/ob_/ol_ the grounds); a spot takes pieces of one kind. Starter pieces cost 0
    ========================================================= */
-const GW=1200, GG=232, FL=232;   // grounds width (the view is 480) and its ground line; rooms' floor line
+const FL=232; let GG=232;   // rooms' floor line; GG = the ground line the grounds' buildings stand on (set per tier)
 let RX=null, GLOWS=[];
 const rr=(a,b,w,h,c)=>{ RX.fillStyle=c; RX.fillRect(Math.round(a),Math.round(b),Math.round(w),Math.round(h)); };
 const ob=(a,b,w,h,c)=>{ rr(a-2,b-2,w+4,h+4,'#2a1a24'); rr(a,b,w,h,c); };   // with the thick dark outline
@@ -1207,9 +1210,9 @@ const SPOT_N={walls:'Walls and floor', light:'Ceiling', wallL:'Left wall', wallR
 const SPOT_KIND={walls:'w',light:'l',wallL:'h',wallR:'h',center:'c',floorL:'f',floorR:'f',rug:'r',gBack:'gb',gCenter:'gc',gBedL:'gf',gBedR:'gf',plaza:'op',banner:'ob',lamps:'ol'};
 const NO_EMPTY=['walls','gBack','banner'];   // these always hold something
 const ANCHOR={walls:[0,0], light:[240,0], wallL:[110,50], wallR:[370,50], center:[240,FL], floorL:[56,FL], floorR:[424,FL], rug:[240,FL+34], gBack:[240,204], gCenter:[240,262], gBedL:[86,282], gBedR:[394,282]};
-// the part of the main screen each spot covers: thumbnails and tapping. Grounds spots are in world coordinates
+// the part of a room's main screen each spot covers: thumbnails and tapping (the grounds use GSPOT)
 const SPOT_BOX={walls:[0,0,480,300], light:[150,0,180,120], wallL:[46,30,128,96], wallR:[306,30,128,96], center:[140,72,200,160], floorL:[0,104,112,128], floorR:[368,104,112,128], rug:[150,236,180,64],
-  gBack:[0,70,480,140], gCenter:[150,120,180,150], gBedL:[24,226,124,62], gBedR:[332,226,124,62], plaza:[565,GG-50,120,100], banner:[545,GG-120,160,120], lamps:[375,GG-66,90,72]};
+  gBack:[0,70,480,140], gCenter:[150,120,180,150], gBedL:[24,226,124,62], gBedR:[332,226,124,62]};
 // her keep, garden, treasury and the grounds themselves. her: where she stands. The bedroom's standing mirror is fixed (tap it to change her look)
 const ROOMS={
   throne:{n:'Throne room', keep:1, her:240, def:{walls:'w_stone', light:'l_iron', wallL:'h_banner', wallR:'h_banner', center:'c_throne', floorL:'f_candle', floorR:'f_candle', rug:'r_runner'}},
@@ -1264,36 +1267,61 @@ function drawRookery(x, now){ RX=x; GLOWS=[]; x.setTransform(1,0,0,1,0,0); x.ima
   ob(330,FL-40,120,8,'#8a5a3a'); rr(340,FL-32,6,32,'#6a4028'); rr(434,FL-32,6,32,'#6a4028'); rr(350,FL-48,26,8,'#f0dcb0'); rr(382,FL-46,22,6,'#f0dcb0'); ell(420,FL-46,6,5,'#1e1a24'); rr(424,FL-62,2,14,'#ffffff');
   flushGlows(); }
 
-// the grounds: swipe across, tap a building. off = how far the view has scrolled into the world
+/* the grounds: a town that rises away from her in tiers (owner, Nov 1: the layered DD look, scrolled up and down, no cliff).
+   Each tier has its own ground line (g) and scroll speed (sp): the back moves slower than the front, so scrolling shows depth.
+   A tier's screen y = its y - off*sp. off = how far she has scrolled down (0 = the keep at the top) */
+const TIERS={far:{sp:.35}, back:{g:300, sp:.7}, mid:{g:540, sp:.86}, front:{g:780, sp:1}, fore:{g:884, sp:1.12}};
+const GH=860;   // the front tier's bottom: the most she can scroll is GH minus the screen's height
 const BLD=[
-  {k:'market', n:'Market', s:'MARKET', x:80, top:GG-92, w:110, d:'Your shop and the forge'},
-  {k:'garden', n:'Garden', s:'GARDEN', x:215, top:GG-76, w:110, d:'Hedges, a fountain and flowerbeds to decorate'},
-  {k:'rookery', n:'Rookery', s:'ROOKERY', x:345, top:GG-160, w:70, d:'Your raven’s scouting reports'},
-  {k:'theater', n:'Theater', s:'THEATER', x:470, top:GG-130, w:120, d:'Write cutscenes and send them'},
-  {k:'keep', n:'Castle keep', s:'KEEP', x:625, top:GG-245, w:230, d:'Throne room, bedroom and dungeon to decorate'},
-  {k:'tower', n:'Wizard tower', s:'TOWER', x:790, top:GG-240, w:56, d:'Your spellbook'},
-  {k:'treasury', n:'Treasury', s:'TREASURY', x:905, top:GG-92, w:84, d:'Your Infamy hoard'},
-  {k:'war', n:'War tent', s:'WAR TENT', x:1015, top:GG-92, w:100, d:'Plan his days and send mobs'},
-  {k:'pens', n:'Monster pens', s:'PENS', x:1125, top:GG-70, w:120, d:'Your Bestiary: favorites, bans, names'}];
-const LAMP_X=[148,288,404,546,706,848,962,1072];
-function drawGrounds(x, now, off, lay){
+  {k:'rookery', n:'Rookery', s:'ROOKERY', t:'back', x:64, h:160, w:70, d:'Your raven’s scouting reports'},
+  {k:'keep', n:'Castle keep', s:'KEEP', t:'back', x:240, h:245, w:230, d:'Throne room, bedroom and dungeon to decorate'},
+  {k:'tower', n:'Wizard tower', s:'TOWER', t:'back', x:420, h:240, w:56, d:'Your spellbook'},
+  {k:'theater', n:'Theater', s:'THEATER', t:'mid', x:92, h:130, w:120, d:'Write cutscenes and send them'},
+  {k:'treasury', n:'Treasury', s:'TREASURY', t:'mid', x:392, h:100, w:84, d:'Your Infamy hoard'},
+  {k:'market', n:'Market', s:'MARKET', t:'front', x:66, h:92, w:110, d:'Your shop and the forge'},
+  {k:'war', n:'War tent', s:'WAR TENT', t:'front', x:190, h:112, w:96, d:'Plan his days and send mobs'},
+  {k:'garden', n:'Garden', s:'GARDEN', t:'front', x:300, h:76, w:106, d:'Hedges, a fountain and flowerbeds to decorate'},
+  {k:'pens', n:'Monster pens', s:'PENS', t:'front', x:410, h:70, w:116, d:'Your Bestiary: favorites, bans, names'}];
+const LAMP_X=[34,150,330,446];
+// the grounds' decor spots, by tier: [tier, box in that tier's coordinates] (for thumbnails)
+const GSPOT={plaza:['mid',[180,500,120,100]], banner:['back',[160,190,160,120]], lamps:['mid',[105,498,90,80]]};
+const tierY=(t,off)=>Math.round(off*TIERS[t].sp);
+function drawGrounds(x, now, off, lay, VH){
   RX=x; GLOWS=[]; x.setTransform(1,0,0,1,0,0); x.imageSmoothingEnabled=false;
-  const sk=SKIES[getTod()], lit=lampLit(), bh=Math.ceil(170/sk.bands.length);
-  sk.bands.forEach((c,i)=>rr(0,i*bh,480,bh+1,c)); rr(0,bh*sk.bands.length,480,300,sk.bands[sk.bands.length-1]);
-  if (sk.moon){ for(let k=0;k<50;k++) rr((k*97)%480,(k*53)%120,1,1,k%5?'#f3e9d2':'#bfe0ff'); ell(400,40,12,12,'#fff1b8'); ell(406,36,10,10,sk.bands[0]); }
-  if (sk.sun){ const [sx,sy,s,c]=sk.sun; ell(sx*2,sy*2,s*2+8,s*2+8,c+'55'); ell(sx*2,sy*2,s*2,s*2,c); }
-  if (sk.cloud) [[60,40],[230,56],[380,30]].forEach(([cx,cy])=>{ const px=((cx-off*.1)%560+560)%560-40; ell(px,cy,18,7,sk.cloud); ell(px+16,cy-4,12,7,sk.cloud); });
-  x.translate(-Math.round(off*.35),0); for(let i=0;i<GW;i+=4){ const h=Math.round(140+16*Math.sin(i/90)+9*Math.sin(i/31)); rr(i,h,4,GG-h,lit?'#3a3a6a':'#8aa8c8'); }
-  x.setTransform(1,0,0,1,0,0); x.translate(-Math.round(off*.6),0); for(let i=0;i<GW;i+=4){ const h=Math.round(172+10*Math.sin(i/60+1)+6*Math.sin(i/17)); rr(i,h,4,GG-h,lit?'#2f5a4a':'#5a9a5a'); }
-  x.setTransform(1,0,0,1,0,0); x.translate(-Math.round(off),0);
-  rr(0,GG,GW,300-GG,'#86cc5e'); rr(0,GG,GW,3,'#a6e07a'); rr(0,GG+30,GW,16,'#d9b77e'); rr(0,GG+30,GW,2,'#e8c994'); rr(0,GG+45,GW,1,'#c09a62');
-  for(let k=0;k<170;k++){ const gx=(k*53)%GW, gy=GG+6+(k*29)%60; if(gy>GG+26&&gy<GG+48) continue; rr(gx,gy,1,2,'#5fa848'); rr(gx+2,gy,1,2,'#5fa848'); }
-  gMarket(80,now); gGarden(215,now); gRookery(345,now,lit); gTheater(470,now); gKeep(625,now,lit,lay); gTower(790,now); gTreasury(905,now); gWar(1015,now); gPens(1125,now);
-  if (lay.plaza&&PC[lay.plaza]) PC[lay.plaza].d(625,GG+44,now);
-  if (lay.lamps&&PC[lay.lamps]) LAMP_X.forEach(lx=>PC[lay.lamps].d(lx,GG+31,now));
+  const sk=SKIES[getTod()], lit=lampLit(), B=sk.bands, bh=Math.ceil(VH*.55/B.length), sh=Math.round(off*.12);
+  // sky (barely moves)
+  B.forEach((c,i)=>rr(0,i*bh-sh,480,bh+1,c)); rr(0,B.length*bh-sh,480,VH,B[B.length-1]);
+  if (sk.moon){ for(let k=0;k<50;k++) rr((k*97)%480,(k*53)%150-sh,1,1,k%5?'#f3e9d2':'#bfe0ff'); ell(400,46-sh,12,12,'#fff1b8'); ell(406,42-sh,10,10,B[0]); }
+  if (sk.sun){ const [sx,sy,s,c]=sk.sun; ell(sx*2,sy*2-sh,s*2+8,s*2+8,c+'55'); ell(sx*2,sy*2-sh,s*2,s*2,c); }
+  if (sk.cloud) [[60,50],[250,80],[400,36]].forEach(([cx,cy])=>{ const px=((cx+now/400)%560+560)%560-40; ell(px,cy-sh,18,7,sk.cloud); ell(px+16,cy-4-sh,12,7,sk.cloud); });
+  const layer=(t,fn)=>{ const n=GLOWS.length, dy=tierY(t,off); x.setTransform(1,0,0,1,0,-dy); GG=TIERS[t].g; fn(TIERS[t].g); for(let i=n;i<GLOWS.length;i++) GLOWS[i][1]-=dy; };
+  // far: hills and the spires of some other villain's castle
+  layer('far',()=>{ const fc=lit?'#3a3a6a':'#8aa8c8'; rr(380,128,8,70,fc); tri(384,112,14,16,fc); rr(396,146,6,50,fc); tri(399,134,10,12,fc); rr(60,150,6,50,fc); tri(63,138,10,12,fc);
+    for(let i=0;i<480;i+=4){ const h=Math.round(186+14*Math.sin(i/70)+8*Math.sin(i/23)); rr(i,h,4,600,fc); } });
+  // back: the hill with the keep, the tower and the rookery, stairs running down
+  layer('back',g=>{ const land=lit?'#2f5a4a':'#5a9a5a', hi=lit?'#3f6a5a':'#6aae5e';
+    for(let i=0;i<480;i+=4){ const h=Math.round(g-16+8*Math.sin(i/50)-Math.max(0,60-Math.abs(i-240))/4); rr(i,h,4,700,land); rr(i,h,4,2,hi); }
+    for(let s=0;s<20;s++){ const w=40+s*2; rr(240-w/2,g+s*10,w,10,'#b8a8c8'); rr(240-w/2,g+s*10+8,w,2,'#9a8aaa'); }
+    gRookery(64,now,lit); gTower(420,now); gKeep(240,now,lit,lay); });
+  // middle: the theater, the treasury, a cobbled plaza with her lamps and the plaza piece
+  layer('mid',g=>{ const land=lit?'#3a6a4a':'#6aae5e';
+    for(let i=0;i<480;i+=4){ const h=Math.round(g-22+6*Math.sin(i/40+2)); rr(i,h,4,700,land); rr(i,h,4,2,lit?'#4a7a5a':'#7cc46a'); }
+    rr(0,g+24,480,44,'#c9a77a'); rr(0,g+24,480,2,'#e0c494'); for(let k=0;k<70;k++) rr((k*37)%476,g+28+(k*13)%38,6,3,'#b08e62');
+    gTheater(92,now); gTreasury(392,now);
+    if (lay.lamps&&PC[lay.lamps]) LAMP_X.forEach(lx=>PC[lay.lamps].d(lx,g+30,now));
+    if (lay.plaza&&PC[lay.plaza]) PC[lay.plaza].d(240,g+56,now); });
+  // front: her street (market, war tent, garden, pens)
+  layer('front',g=>{ rr(0,g-24,480,700,'#86cc5e'); for(let i=0;i<480;i+=4){ const h=Math.round(g-28+3*Math.sin(i/22)); rr(i,h,4,6,'#86cc5e'); rr(i,h,4,2,'#a6e07a'); }
+    rr(0,g+30,480,16,'#d9b77e'); rr(0,g+30,480,2,'#e8c994'); rr(0,g+45,480,1,'#c09a62');
+    for(let k=0;k<60;k++){ const gx=(k*53)%480, gy=g+6+(k*29)%70; if(gy>g+26&&gy<g+48) continue; rr(gx,gy,1,2,'#5fa848'); rr(gx+2,gy,1,2,'#5fa848'); }
+    gMarket(66,now); gWar(190,now); gGarden(300,now); gPens(410,now); });
+  // the foreground frame: dark bushes, a lamp post and a cart, like a stage set
+  layer('fore',g=>{ const d='#1e2a1e', d2='#2a3a2a'; ell(14,g-10,40,34,d); ell(60,g+4,30,20,d2); ell(470,g-6,36,30,d); ell(430,g+8,26,18,d2);
+    rr(96,g-110,4,110,'#1e1a24'); rr(90,g-122,16,14,'#1e1a24'); rr(93,g-119,10,8,lit?'#ffd25a':'#5a5070'); if(lit) glowAt(98,g-115,26,'#ffb04a',.14);
+    rr(352,g-40,58,22,'#2a1e18'); rr(348,g-44,66,6,'#3a2a1e'); ell(362,g-16,9,9,'#1e1a24'); ell(398,g-16,9,9,'#1e1a24'); rr(410,g-34,30,3,'#2a1e18'); rr(0,g,480,40,d); });
   x.setTransform(1,0,0,1,0,0);
-  if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,300); }
-  x.translate(-Math.round(off),0); flushGlows(); x.setTransform(1,0,0,1,0,0);
+  if (sk.overlay){ x.fillStyle=sk.overlay; x.fillRect(0,0,480,VH); }
+  flushGlows(); GG=232;
 }
 const bricksIn=(a,b,w,h,lo)=>{ for(let y=b+10,row=0;y<b+h;y+=10,row++){ rr(a,y,w,1,lo); for(let i=a+(row%2)*8+4;i<a+w;i+=16) rr(i,y-9,1,9,lo); } };
 const gwin=(a,b,w,h,lit)=>{ rr(a-2,b-2,w+4,h+4,'#2a1a24'); rr(a,b,w,h,lit?'#ffd25a':'#3a3060'); if(!lit) rr(a,b,w,2,'#5a5090'); else glowAt(a+w/2,b+h/2,w*1.6,'#ffb04a',.12); };
@@ -1332,8 +1360,9 @@ function gPens(cx,now){ ob(cx+34,GG-40,34,40,'#8a5a3a'); roofT(cx+51,GG-62,46,22
 
 // a thumbnail of a piece in its spot, drawn into the room as it is now
 function decThumb(rk, sp, key){ const lay={...layOf(rk), [sp]:key};
-  return memo('dt:'+rk+':'+sp+':'+getTod()+':'+lookFx()+':'+JSON.stringify(lay), ()=>{ const big=makeCanvas(480,300), g=big.getContext('2d'); let [bx,by,bw,bh]=SPOT_BOX[sp];
-    if (rk==='grounds'){ const off=Math.max(0,Math.min(GW-480,bx-(480-bw)/2)); drawGrounds(g,0,off,lay); bx-=off; } else drawRoom(g,rk,0,lay,{noHer:1});
+  return memo('dt:'+rk+':'+sp+':'+getTod()+':'+lookFx()+':'+JSON.stringify(lay), ()=>{ const big=makeCanvas(480,300), g=big.getContext('2d'); let bx,by,bw,bh;
+    if (rk==='grounds'){ const [t,b]=GSPOT[sp], s=TIERS[t].sp, off=Math.max(0,(b[1]+b[3]/2-150)/s); drawGrounds(g,0,off,lay,300); [bx,by,bw,bh]=[b[0],b[1]-tierY(t,off),b[2],b[3]]; }
+    else { [bx,by,bw,bh]=SPOT_BOX[sp]; drawRoom(g,rk,0,lay,{noHer:1}); }
     const c=makeCanvas(128,96), t=c.getContext('2d'), s=Math.min(128/bw,96/bh); t.imageSmoothingEnabled=false; t.fillStyle='#1e1024'; t.fillRect(0,0,128,96);
     t.drawImage(big,bx,by,bw,bh,Math.round((128-bw*s)/2),Math.round((96-bh*s)/2),Math.round(bw*s),Math.round(bh*s)); return c; }); }
 
@@ -1610,7 +1639,7 @@ function tick(){
   return changed;
 }
 
-let ui={gx:385, dec:null, role:'hero', heroTab:'idle', villTab:'lair', spellSel:'ambush', resetArm:false, justCleared:false, freshQuest:null,
+let ui={gy:0, dec:null, role:'hero', heroTab:'idle', villTab:'lair', spellSel:'ambush', resetArm:false, justCleared:false, freshQuest:null,
   shopRoom:'shop', arrive:false, gearSel:null, slotSel:null, eqFx:0, talSel:'bounty', bagSel:null,
   planDate:null, pdraft:{name:'',dmg:10,taunt:'',repeat:'once'},
   draft:{name:'',dmg:10,repeat:'once',days:[],taunt:''}, shopDraft:{name:'',price:40,icon:'heart',desc:''}};
@@ -3375,7 +3404,8 @@ function drawLair(x,now,empty){ drawRoom(x,'throne',now,layOf('throne'),{noHer:e
 // her home tab: the castle grounds (swipe to look around, tap a building), with her inbox below
 const INF_HOW=`<ul class="small muted infhow"><li>Taxes on ${'{his}'} bounty (your tax rate, on Rules)</li><li>Holding court: +2 the first time you visit your grounds each day</li><li>Sending quests: +1 each, up to 3 a day</li><li>Writing today’s taunt: +1</li><li>Reviewing a photo proof: +2</li></ul>`;
 const infHow=()=>INF_HOW.replace('{his}',P.his);
-const clampG=v=>Math.max(0,Math.min(GW-480,Math.round(v)));
+let GVH=580;   // the grounds screen's height in canvas pixels (measured, it depends on the phone)
+const clampG=v=>Math.max(0,Math.min(GH-GVH,Math.round(v)));
 function goBuilding(k){
   const b=BLD.find(x=>x.k===k); ui.dec=null;
   if (k==='market'){ ui.villTab='vshop'; ui.shopRoom='shop'; return render(); }
@@ -3391,12 +3421,10 @@ function renderLair(m){
   if (S.date && S.infDay!==S.date){ S.infDay=S.date; addInf(2); save(); renderHud(); setTimeout(()=>toast('You hold court. +2 Infamy.'),400); }
   const mb=S.mob, toDeliver=S.bag.filter(b=>b.used&&!b.delivered), unused=S.bag.filter(b=>!b.used), done=S.tasks.filter(t=>t.done).length, proofs=proofsWaiting();
   const ln=(a,b)=>`<div class="switch"><span>${a}</span><b>${b}</b></div>`;
-  ui.gx=clampG(ui.gx??385);
   m.classList.add('split');
-  m.innerHTML=`<div class="stage"><canvas id="grcv" class="pan" width="480" height="300" aria-label="Your castle grounds. Swipe to look around, tap a building"></canvas>
-      <div class="plate hex corner"><b>GROUNDS OF ${esc(S.villName.toUpperCase())}</b><span>Infamy ${S.infamy}</span></div>
+  m.innerHTML=`<div class="stage tall"><canvas id="grcv" class="pan" width="480" height="580" aria-label="Your castle grounds. Scroll up and down to look around, tap a building"></canvas>
       <div class="glabels">${BLD.map(b=>`<button class="glab" data-b="${b.k}" aria-label="${b.n}: ${b.d}">${b.s}</button>`).join('')}</div>
-      <button class="csnav l" id="gr-l" aria-label="Look left">◀</button><button class="csnav r" id="gr-r" aria-label="Look right">▶</button></div>
+      <button class="gnav u" id="gr-l" aria-label="Look further back">▲</button><button class="gnav d" id="gr-r" aria-label="Look closer">▼</button></div>
     <div class="below wrap"><div class="stack">
       ${proofs.length?`<div><h3 style="color:var(--hex)">Proof to review</h3><div class="vlist">${proofs.map(t=>{ const pic=proofPic(t.id); return `<div class="px vpanel">
         <b>${esc(t.name)}</b>${pic?`<div class="proofpic"><img alt="${P.His} photo for ${esc(t.name)}" src="${pic}"></div>`:'<span class="small muted">The photo is gone. Judge on trust.</span>'}
@@ -3416,16 +3444,18 @@ function renderLair(m){
       <div><h3>Your grounds</h3><div class="dirgrid">${BLD.map(b=>`<button class="px" data-b="${b.k}"><b>${b.n}</b><span>${b.d}</span></button>`).join('')}</div></div>
       ${decorHTML('grounds')}
       <div><h3>Earning Infamy</h3>${infHow()}<p class="small muted">Spend it on decorations for your grounds, garden and rooms. Nothing you need to run ${P.his} days ever costs Infamy.</p></div></div></div>`;
-  const cv=$('#grcv'), labs=[...m.querySelectorAll('.glab')];
-  const place=()=>labs.forEach((el,i)=>{ el.style.left=((BLD[i].x-ui.gx)/480*100)+'%'; });
-  place(); stageLoop(cv,(x,now)=>drawGrounds(x,now,ui.gx,layOf('grounds')));
-  let st=null;
-  cv.onpointerdown=e=>{ st={x:e.clientX, gx:ui.gx, moved:false}; try{ cv.setPointerCapture(e.pointerId); }catch(_){} };
-  cv.onpointermove=e=>{ if(!st) return; const dx=(e.clientX-st.x)*480/cv.clientWidth; if(Math.abs(dx)>6) st.moved=true; if(st.moved){ ui.gx=clampG(st.gx-dx); place(); } };
-  cv.onpointerup=e=>{ const s=st; st=null; if(!s||s.moved) return; const r=cv.getBoundingClientRect(), wx=(e.clientX-r.left)*480/r.width+ui.gx, wy=(e.clientY-r.top)*300/r.height;
-    const b=BLD.find(b=>Math.abs(wx-b.x)<=b.w/2&&wy>=b.top&&wy<=GG+24); if(b) goBuilding(b.k); };
+  const cv=$('#grcv'), stg=cv.parentElement, labs=[...m.querySelectorAll('.glab')];
+  GVH=Math.max(360,Math.min(720,Math.round(480*stg.clientHeight/Math.max(1,stg.clientWidth)))); cv.height=GVH; ui.gy=clampG(ui.gy??0);
+  const place=()=>labs.forEach((el,i)=>{ const b=BLD[i]; el.style.left=(b.x/480*100)+'%'; el.style.top=((TIERS[b.t].g+6-tierY(b.t,ui.gy))/GVH*100)+'%'; });
+  place(); stageLoop(cv,(x,now)=>drawGrounds(x,now,ui.gy,layOf('grounds'),GVH));
+  let st=null;   // drag up and down to look around; a tap without a drag opens the building under it (front tiers first)
+  cv.onpointerdown=e=>{ st={y:e.clientY, gy:ui.gy, moved:false}; try{ cv.setPointerCapture(e.pointerId); }catch(_){} };
+  cv.onpointermove=e=>{ if(!st) return; const dy=(e.clientY-st.y)*GVH/cv.clientHeight; if(Math.abs(dy)>6) st.moved=true; if(st.moved){ ui.gy=clampG(st.gy-dy); place(); } };
+  cv.onpointerup=e=>{ const s=st; st=null; if(!s||s.moved) return; const r=cv.getBoundingClientRect(), px=(e.clientX-r.left)*480/r.width, py=(e.clientY-r.top)*GVH/r.height;
+    const b=[...BLD].reverse().find(b=>{ const sy=TIERS[b.t].g-tierY(b.t,ui.gy); return Math.abs(px-b.x)<=b.w/2&&py>=sy-b.h&&py<=sy+24; }); if(b) goBuilding(b.k); };
   cv.onpointercancel=()=>{ st=null; };
-  $('#gr-l').onclick=()=>{ ui.gx=clampG(ui.gx-180); place(); }; $('#gr-r').onclick=()=>{ ui.gx=clampG(ui.gx+180); place(); };
+  cv.addEventListener('wheel',e=>{ e.preventDefault(); ui.gy=clampG(ui.gy+e.deltaY*.6); place(); },{passive:false});
+  $('#gr-l').onclick=()=>{ ui.gy=clampG(ui.gy-160); place(); }; $('#gr-r').onclick=()=>{ ui.gy=clampG(ui.gy+160); place(); };
   m.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>goBuilding(b.dataset.b));
   bindDecor(m,'grounds');
   m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ const it=S.bag.find(x=>x.id===b.dataset.dl); it.delivered=true; save(); renderTabs(); rerender(); toast('Marked as delivered.'); });
