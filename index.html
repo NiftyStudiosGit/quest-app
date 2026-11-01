@@ -205,6 +205,42 @@ main.has-orb .below{padding-bottom:56px}
 .proofpic{display:grid;place-items:center;background:rgba(0,0,0,.25);padding:6px;box-shadow:0 0 0 3px var(--line)}
 .proofpic img{max-width:100%;max-height:260px;display:block}
 .paper .proofpic{margin:0 0 10px}
+/* her spellbook (Spells tab): an open leather tome, one spell per spread; bookmark ribbons below are the contents */
+.stage.book{background:radial-gradient(ellipse at 50% 45%,#4a2a50,#1e1024 78%);padding:4.5% 4%;display:flex}
+.tome{position:relative;flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:9px 8px;background:#7a1c34;
+  box-shadow:inset 0 0 0 3px #5a1024,inset 0 0 0 5px #f6c445,inset 0 0 0 7px #5a1024,0 0 0 3px var(--line),0 7px 0 3px rgba(0,0,0,.45);touch-action:pan-y}
+.pg{position:relative;background:var(--parch);color:var(--ink-dk);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:16px 10px 22px;min-width:0;overflow:hidden}
+.pg.l{box-shadow:inset -14px 0 12px -10px rgba(90,50,20,.55)}
+.pg.r{box-shadow:inset 14px 0 12px -10px rgba(90,50,20,.55)}
+.pg .folio{position:absolute;top:5px;font-family:var(--f-display);font-size:7px;color:var(--ink-mid);opacity:.7}
+.pg h2{margin:0;font-size:10px;text-align:center;color:var(--ink-dk);line-height:1.4}
+.sigil{position:relative;height:42%;margin-bottom:6px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle,rgba(255,255,255,.55) 0 40%,transparent 41%);box-shadow:0 0 0 2px var(--c),0 0 0 6px var(--parch),0 0 0 8px var(--c)}
+.sigil::after{content:'';position:absolute;inset:-17%;border-radius:50%;border:2px dashed var(--c);opacity:.6;animation:spin 12s steps(24) infinite}
+.sigil img{width:64%;image-rendering:pixelated;animation:hover 1.2s steps(2) infinite}
+.sigil.blank{box-shadow:0 0 0 2px var(--c);opacity:.6}
+.sigil.blank::after{animation:none}
+.sigil b{font-family:var(--f-display);font-size:22px;color:var(--c)}
+@keyframes hover{50%{transform:translateY(-3px)}}
+.pg .tagline{margin:0;font-size:16px;line-height:1.25;text-align:center}
+.pg .rule{width:55%;height:2px;background:var(--ink-mid);opacity:.35;flex:none}
+.stamp{font-family:var(--f-display);font-size:8px;padding:5px 6px 4px;border:2px solid currentColor;transform:rotate(-8deg);color:#3f7a2a;opacity:.85;white-space:nowrap}
+.stamp.cast{color:#a2302a}.stamp.not{color:#7a6a5a}
+.turn{position:absolute;bottom:1px;width:30px;height:24px;border:0;background:none;font-family:var(--f-display);font-size:14px;color:var(--ink-mid);cursor:pointer;padding:0}
+.turn.prev{left:1px}.turn.next{right:1px}.turn:disabled{opacity:.15;cursor:default}
+.ribbon{position:absolute;top:-5px;right:9%;width:12px;height:34%;background:var(--c);z-index:2;clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)}
+.tome.turn-n .pg.r{animation:turnpg .24s steps(3) both;transform-origin:left center}
+.tome.turn-p .pg.l{animation:turnpg .24s steps(3) both;transform-origin:right center}
+@keyframes turnpg{from{transform:scaleX(.15)}to{transform:none}}
+.contents{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:start;border-top:7px solid var(--wood2);box-shadow:0 -3px 0 var(--line)}
+.contents button{position:relative;border:0;cursor:pointer;background:var(--c);color:#fff;padding:7px 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);filter:brightness(.7)}
+.contents button[aria-selected="true"]{padding-bottom:28px;filter:none}
+.contents img{width:24px;height:24px;image-rendering:pixelated}
+.contents b{font-family:var(--f-display);font-size:7px;text-shadow:1px 1px 0 var(--line)}
+.contents b.q{font-size:14px;height:24px;display:grid;place-items:center}
+.contents .ck{position:absolute;top:3px;right:3px;font-style:normal;font-size:11px;color:var(--ok);text-shadow:1px 1px 0 var(--line)}
+@media (prefers-reduced-motion: reduce){.sigil::after,.sigil img,.tome .pg{animation:none}}
 .inv .tag.done{left:auto;right:0;background:var(--ok);color:var(--line)}
 /* scouting report: each quest and what became of it */
 .overlay.tall{align-content:safe center;overflow-y:auto;padding-block:24px}
@@ -2603,13 +2639,16 @@ function renderLair(m){
   m.querySelectorAll('[data-rq]').forEach(b=>b.onclick=()=>{ const msg=answer[b.dataset.rq](); save(); renderTabs(); rerender(); toast(msg); });
 }
 /* Her spells: each can be cast once a day, free. None of them ever damages the mob or changes the threshold;
-   he hears about each one in a pop-up on his field */
+   he hears about each one in a pop-up on his field. Shown as a spellbook of 6 pages (owner, Nov 1): one spell per
+   spread, two blank pages waiting for spells not designed yet */
 const SPELLS=[
-  {k:'ambush',ic:'sword',n:'Ambush',d:()=>`Send a surprise mob with one quest of its own. It sneaks up behind ${P.him} and never touches the daily mob’s HP. Driving it off drops the gold you choose.`},
-  {k:'haste',ic:'potion',n:'Haste',d:()=>`Put a deadline on one of ${P.his} quests. If it isn’t done in time, it burns up and its damage is lost for the day.`},
-  {k:'fog',ic:'orb',n:'Fog',d:()=>`Hide today’s mob in the mist. ${P.He} can’t see what it is until ${P.his} first quest lands.`},
-  {k:'blessing',ic:'star',n:'Blessing',d:()=>'Double the gold the mob drops when it falls today. Even villainesses have soft days.'}
+  {k:'ambush',ic:'sword',n:'Ambush',c:'#b8342e',tag:()=>'A surprise mob with one quest of its own.',d:()=>`Send a surprise mob with one quest of its own. It sneaks up behind ${P.him} and never touches the daily mob’s HP. Driving it off drops the gold you choose.`},
+  {k:'haste',ic:'potion',n:'Haste',c:'#d9781a',tag:()=>'A deadline on one quest. Too slow, and it burns.',d:()=>`Put a deadline on one of ${P.his} quests. If it isn’t done in time, it burns up and its damage is lost for the day.`},
+  {k:'fog',ic:'orb',n:'Fog',c:'#6a7c98',tag:()=>`Hides today’s mob until ${P.his} first hit.`,d:()=>`Hide today’s mob in the mist. ${P.He} can’t see what it is until ${P.his} first quest lands.`},
+  {k:'blessing',ic:'star',n:'Blessing',c:'#c9a020',tag:()=>'Double gold when the mob falls.',d:()=>'Double the gold the mob drops when it falls today. Even villainesses have soft days.'}
 ];
+const BLANK={ic:'', n:'Blank page', c:'#8a7a6a', tag:()=>'Reserved for a spell not yet written.', d:()=>'This page is still blank. A new spell will be written here someday.'};
+const PAGES=[...SPELLS, {...BLANK,k:'blank5'}, {...BLANK,k:'blank6'}], ROMAN=['I','II','III','IV','V','VI'];
 const HASTE_MIN=[30,60,120,180,240];
 const hasteable=()=>S.tasks.filter(t=>openQ(t)&&!t.amb&&!t.haste);
 // why a spell can't be cast right now ('' = it can)
@@ -2625,22 +2664,40 @@ function spellWhy(k){
   return '';
 }
 function renderSpells(m){
-  const sp=SPELLS.find(x=>x.k===ui.spellSel)||SPELLS[0], why=spellWhy(sp.k), cast=!!(S.mob.cast||{})[sp.k];
+  const i=Math.max(0,PAGES.findIndex(x=>x.k===ui.spellSel)), sp=PAGES[i], blank=!SPELLS.includes(sp);
+  const why=blank?'':spellWhy(sp.k), castT=k=>!!(S.mob.cast||{})[k], turn=ui.turn||''; ui.turn='';
   const ad=ui.ambDraft||(ui.ambDraft={name:'', gold:10, taunt:''}), left=dayEndAt(S.date)-clock();
   const form={
     ambush:`<label class="f">The ambusher’s quest<input class="inp" id="sp-name" maxlength="${LIM.quest}" placeholder="e.g. Take out the trash, right now" value="${esc(ad.name)}"></label>
       <label class="f">Gold it drops<input class="inp" id="sp-gold" type="number" min="1" max="${LIM.coins}" value="${ad.gold}"></label>
       <label class="f">Taunt (optional)<textarea class="inp" id="sp-taunt" maxlength="${LIM.taunt}" placeholder="e.g. Surprise! Did you miss me?">${esc(ad.taunt)}</textarea></label>`,
     haste:`<label class="f">Which quest<select class="inp" id="sp-q">${hasteable().map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
-      <label class="f">Time to finish it<select class="inp" id="sp-min">${HASTE_MIN.filter(n=>n*60000<=left).map(n=>`<option value="${n}">${n<60?n+' minutes':n/60+' hour'+(n>60?'s':'')}</option>`).join('')}</select></label>`,
-    fog:'', blessing:''}[sp.k];
+      <label class="f">Time to finish it<select class="inp" id="sp-min">${HASTE_MIN.filter(n=>n*60000<=left).map(n=>`<option value="${n}">${n<60?n+' minutes':n/60+' hour'+(n>60?'s':'')}</option>`).join('')}</select></label>`}[sp.k]||'';
+  const stamp=blank?'':castT(sp.k)?'<span class="stamp cast">CAST TODAY</span>':why?'<span class="stamp not">NOT NOW</span>':'<span class="stamp">READY</span>';
   m.classList.add('split');
-  m.innerHTML=showcase(url(icon(sp.ic)), sp.n, sp.d(), `<span class="st">${cast?'CAST TODAY':why?'NOT NOW':'READY'}</span>`)+`<div class="below wrap"><div class="stack">
-    <p class="hint">Hexes and blessings for ${P.his} day. Each one works once a day and ${P.he} gets a pop-up when you cast it.</p>
-    <div><h3>Spellbook</h3><div class="inv">${SPELLS.map(x=>`<button data-k="${x.k}" aria-pressed="${x===sp}" aria-label="${esc(x.n)}${(S.mob.cast||{})[x.k]?', cast today':''}"><img alt="" src="${url(icon(x.ic))}"><span class="tag">${esc(x.n.toUpperCase())}</span>${(S.mob.cast||{})[x.k]?'<span class="tag done">✓</span>':''}</button>`).join('')}</div></div>
-    <div class="px vpanel">${why?`<p class="small muted" style="margin:0">${why}</p>`:form}
-      <button class="btn hex block" id="sp-cast" ${why?'disabled':''}>Cast ${esc(sp.n)}</button></div></div></div>`;
-  m.querySelectorAll('.inv button').forEach(b=>b.onclick=()=>{ ui.spellSel=b.dataset.k; rerender(); });
+  // the open book: sigil and name on the left page, what it does and an ink stamp on the right
+  m.innerHTML=`<div class="stage book"><div class="tome ${turn}" style="--c:${sp.c}">
+      <i class="ribbon" aria-hidden="true"></i>
+      <div class="pg l"><span class="folio">${ROMAN[i]}</span>
+        <div class="sigil${blank?' blank':''}">${blank?'<b aria-hidden="true">?</b>':`<img alt="" src="${url(icon(sp.ic))}">`}</div>
+        <h2>${esc(sp.n)}</h2>
+        <button class="turn prev" id="pg-prev" aria-label="Previous page" ${i?'':'disabled'}>&lsaquo;</button></div>
+      <div class="pg r"><span class="folio">${ROMAN[i]}</span><p class="tagline">${esc(sp.tag())}</p><i class="rule" aria-hidden="true"></i>${stamp}
+        <button class="turn next" id="pg-next" aria-label="Next page" ${i<PAGES.length-1?'':'disabled'}>&rsaquo;</button></div>
+    </div></div>
+    <div class="below wrap"><div class="stack">
+      <div class="contents" role="tablist" aria-label="Spellbook pages">${PAGES.map((x,j)=>{ const bl=!SPELLS.includes(x);
+        return `<button role="tab" style="--c:${x.c}" data-k="${x.k}" aria-selected="${j===i}" aria-label="Page ${j+1}: ${esc(x.n)}${!bl&&castT(x.k)?', cast today':''}">${bl?'<b class="q">?</b>':`<img alt="" src="${url(icon(x.ic))}">`}<b>${ROMAN[j]}</b>${!bl&&castT(x.k)?'<i class="ck">&#10003;</i>':''}</button>`; }).join('')}</div>
+      <div class="px vpanel incant"><h3 style="margin:0;color:${sp.c}">${blank?'An empty page':'Incantation'}</h3><p class="small" style="margin:0">${esc(sp.d())}</p>
+        ${blank?'':`${why?`<p class="small muted" style="margin:0">${why}</p>`:form}<button class="btn hex block" id="sp-cast" ${why?'disabled':''}>Cast ${esc(sp.n)}</button>`}</div>
+      <p class="hint">Hexes and blessings for ${P.his} day. Each works once a day, and ${P.he} gets a pop-up when you cast one.</p></div></div>`;
+  // turning pages: corner arrows, the ribbons below, or a swipe across the book
+  const go=j=>{ if(j<0||j>=PAGES.length||j===i) return; ui.spellSel=PAGES[j].k; ui.turn=j>i?'turn-n':'turn-p'; rerender(); };
+  $('#pg-prev').onclick=()=>go(i-1); $('#pg-next').onclick=()=>go(i+1);
+  m.querySelectorAll('.contents button').forEach((b,j)=>b.onclick=()=>go(j));
+  const tome=m.querySelector('.tome'); let x0=null;
+  tome.onpointerdown=e=>{ x0=e.clientX; }; tome.onpointerup=e=>{ if(x0==null) return; const dx=e.clientX-x0; x0=null; if(Math.abs(dx)>40) go(dx<0?i+1:i-1); };
+  if (blank) return;
   const sync=()=>{ if(!$('#sp-name')) return; ad.name=$('#sp-name').value; ad.gold=$('#sp-gold').value; ad.taunt=$('#sp-taunt').value; };
   ['#sp-name','#sp-gold','#sp-taunt'].forEach(q=>{ const e=$(q); if(e) e.oninput=sync; });
   const mb=S.mob, spells={
