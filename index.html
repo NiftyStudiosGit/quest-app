@@ -3166,7 +3166,7 @@ function renderVMobs(m){
     <div class="below wrap"><div class="stack">
     <div><h2 style="color:var(--hex)">Today · ${esc(dayLabel(S.date))}</h2><p class="small muted">${about}</p>
       ${st!=='rest'?`<label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="${LIM.mob}" placeholder="${esc(mb.group>1?hordeName(mb):mobName(mb))}" value="${esc(mb.name||'')}"></label>`:''}
-      ${alive?'<p class="small muted">The threshold and HP locked when the mob spawned. Quests you add now give ${P.him} other ways to land hits. You pick their damage, so a few small ones can be a shortcut or the long way round.</p>':''}</div>
+      ${alive?'<p class="small muted">The threshold and HP locked when the mob spawned. Quests you add now give '+P.him+' other ways to land hits. You pick their damage, so a few small ones can be a shortcut or the long way round.</p>':''}</div>
     ${alive||st==='coming'?`<div class="px vpanel">
       <div class="switch"><span>Day ends</span><b>${clockHm(endAt)} · in ${dur(endAt-clock())}</b></div>
       <p class="small muted">Agreed end ${hm(baseEnd(S.date))}${bm?` · +${bm} min from ${P.his} gear and talents`:''}${mb.extra?` · +${dur(mb.extra*60000)} from you`:''}</p>
