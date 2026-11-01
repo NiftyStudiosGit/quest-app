@@ -196,7 +196,7 @@ main.has-orb .below{padding-bottom:56px}
 /* quest tags: her spells and proof checks */
 .qi .txt em.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;font-style:normal}
 .qtag{font-style:normal;font-family:var(--f-display);font-size:7px;padding:3px 5px 2px;color:#fff;background:var(--ink-mid);line-height:1.3}
-.qtag.amb{background:#a2302a}.qtag.haste{background:#b8661a}.qtag.pf{background:#4a6aa0}.qtag.bad{background:#7a3a2a}
+.qtag.amb{background:#a2302a}.qtag.haste{background:#b8661a}.qtag.pf{background:#4a6aa0}.qtag.bad{background:#7a3a2a}.qtag.dmg{background:#8f2d58}
 .qi.burnt .txt span{color:#9a7a5a;text-decoration:line-through}
 .qi .box b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-display);font-size:12px;color:#a2302a}
 .qi .txt small.pfwhy{display:block;font-size:15px;color:#a0402a;margin-top:3px}
@@ -1371,7 +1371,7 @@ const NPC_NOTES=['Don’t spend it all on snacks. Actually, do.','Fine. You win 
 function freshState(){
   return {
     cls:null, sex:null, heroName:'', gold:0, vcoins:0, exp:0, level:1, day:1, streak:0, best:0, infamy:0,
-    taxRate:0.25, showValue:true, villName:'Lady Malvessa', tod:'auto',
+    taxRate:0.25, showValue:true, showDmg:false, villName:'Lady Malvessa', tod:'auto',
     mode:null, solo:null, past:null, npcRecent:[],   // mode: 'solo' | 'duo' (picked on the title screen)
     tally:{slain:0,fled:0,quests:0,kicks:0,rests:0},   // lifetime counts for the Hero tab
     tasks:[], recur:[], pending:[], mob:null, plans:{}, loot:null, fled:null,
@@ -2725,6 +2725,7 @@ function renderQuestLog(){
 const dayLeftText=()=>'day ends in '+dur(dayEndAt(S.date)-clock());
 // little ink tags on a quest: her spells and proof checks (never whether it repeats)
 function qTags(t){ const a=[];
+  if (S.showDmg && !t.amb && t.dmg) a.push(`<i class="qtag dmg">${t.dmg} DMG</i>`);   // only if she switched it on (off by default)
   if (t.amb) a.push('<i class="qtag amb">AMBUSH</i>');
   if (t.burnt) a.push('<i class="qtag bad">BURNED UP</i>');
   else if (t.haste && !t.done) a.push(`<i class="qtag haste">HASTE <span data-h="${t.id}">${dur(t.haste-clock())}</span></i>`);
@@ -3165,7 +3166,7 @@ function renderVMobs(m){
     <div class="below wrap"><div class="stack">
     <div><h2 style="color:var(--hex)">Today · ${esc(dayLabel(S.date))}</h2><p class="small muted">${about}</p>
       ${st!=='rest'?`<label class="f" style="margin-top:10px">Rename today’s mob<input class="inp" id="tm-name" maxlength="${LIM.mob}" placeholder="${esc(mb.group>1?hordeName(mb):mobName(mb))}" value="${esc(mb.name||'')}"></label>`:''}
-      ${alive?'<p class="small muted">The threshold locked when the mob spawned. Quests you add now make today’s kill easier, never harder.</p>':''}</div>
+      ${alive?'<p class="small muted">The threshold and HP locked when the mob spawned. Quests you add now give ${P.him} other ways to land hits. You pick their damage, so a few small ones can be a shortcut or the long way round.</p>':''}</div>
     ${alive||st==='coming'?`<div class="px vpanel">
       <div class="switch"><span>Day ends</span><b>${clockHm(endAt)} · in ${dur(endAt-clock())}</b></div>
       <p class="small muted">Agreed end ${hm(baseEnd(S.date))}${bm?` · +${bm} min from ${P.his} gear and talents`:''}${mb.extra?` · +${dur(mb.extra*60000)} from you`:''}</p>
@@ -3678,6 +3679,7 @@ function renderVRules(m){
     <div class="px vpanel"><label class="f">Your name<input class="inp" id="vr-name" maxlength="${LIM.vill}" value="${esc(S.villName)}"></label>
       <div class="f"><div class="switch"><span>Cosmetic tax rate</span><span class="rateval" id="vr-rv">${Math.round(S.taxRate*100)}%</span></div><input type="range" id="vr-rate" min="0" max="50" step="5" value="${Math.round(S.taxRate*100)}" aria-label="Tax rate">
         <span class="small muted" id="vr-ex">${taxText(ex,gross)}</span></div>
+      <label class="switch"><span>Show ${P.him} each quest’s damage<br><span class="small muted">Off: ${P.he} can’t tell which quests hit hardest. The fight itself never shows numbers</span></span><input type="checkbox" id="vr-dmg" ${S.showDmg?'checked':''}></label>
       <label class="switch"><span>Show a juicy bounty<br><span class="small muted">Crown and glow when the bounty is above ${DEF.bounty} V.coins</span></span><input type="checkbox" id="vr-show" ${S.showValue?'checked':''}></label></div>
     <div><h3>Your day</h3><div class="px vpanel">
       <label class="f">Mob spawns at<select class="inp" id="vd-spawn">${spawnOpts.map(v=>`<option value="${v}" ${S.spawnMin===v?'selected':''}>${hm(v)}</option>`).join('')}</select><span class="small muted">${P.His} local time. If nothing is assigned by then, ${P.his} daily quests (or my default list) are used.</span></label>
@@ -3709,6 +3711,7 @@ function renderVRules(m){
   $('#vr-name').onchange=e=>{ S.villName=e.target.value.trim()||'Lady Malvessa'; save(); renderHud(); rerender(); };
   $('#vr-rate').oninput=e=>{ S.taxRate=(+e.target.value)/100; save(); const g=S.taxRate>0?Math.round(ex/(1-S.taxRate)):ex; $('#vr-rv').textContent=e.target.value+'%'; $('#vr-ex').textContent=taxText(ex,g); };
   $('#vr-show').onchange=e=>{ S.showValue=e.target.checked; save(); };
+  $('#vr-dmg').onchange=e=>{ S.showDmg=e.target.checked; save(); };
   $('#pc-tod').onchange=e=>{ S.tod=e.target.value; save(); toast('Scenes now show: '+(S.tod==='auto'?'the phone clock ('+getTod()+')':S.tod)+'.'); };
   $('#vd-spawn').onchange=e=>{ S.spawnMin=+e.target.value; save(); tick(); render(); toast('Mobs now spawn at '+hm(S.spawnMin)+'.'); };
   if ($('#vd-end')) $('#vd-end').onchange=e=>{ const v=+e.target.value; S.endProp=v===S.dayEnd?null:{min:v, by:'vill'}; save(); rerender(); toast(S.endProp?`Proposal sent. ${P.He} has to accept it.`:'Proposal withdrawn.'); };
