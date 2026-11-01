@@ -2462,6 +2462,9 @@ function renderVMobs(m){
   const first=st==='coming'?S.date:addDays(S.date,1), days=[...Array(14)].map((_,i)=>addDays(first,i));
   if (!days.includes(ui.planDate)) ui.planDate=first;
   const pd=ui.planDate, p=S.plans[pd]||newPlan(), pq=ui.pdraft, endAt=dayEndAt(S.date), long={weekday:'long',month:'long',day:'numeric'};
+  // the mob picker: her favorites pinned up top, every mob folded below (open if she has none or picked a non-favorite)
+  const favs=all.filter(x=>libOf(x).fav), allOpen=!favs.length||(!!p.mob&&!libOf(p.mob).fav)||!!ui.allMobs;
+  const mobBtn=x=>`<button type="button" class="${libOf(x).fav?'fav':libOf(x).ban?'ban':''}" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}${libOf(x).fav?', favorite':libOf(x).ban?', banned':''}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`;
   // how much later the day can still end: never past the next mob's arrival
   const room=Math.floor((spawnAt(addDays(S.date,1))-endAt)/60000), bm=boonMin(S.date);
   const pdRec=S.recur.filter(r=>recurOn(r,pd)), pdDmg=pdRec.reduce((a,r)=>a+r.dmg,0)+p.quests.reduce((a,q)=>a+q.dmg,0);
@@ -2511,8 +2514,10 @@ function renderVMobs(m){
       <div class="row2"><label class="f">Bounty (V.coins)<input class="inp" id="np-bounty" type="number" min="0" max="999" placeholder="${DEF.bounty}" value="${p.bounty??''}"></label><label class="f">Gold drop<input class="inp" id="np-gold" type="number" min="0" max="999" placeholder="Loot table" value="${p.gold??''}"></label></div>
       <label class="f">Taunt for that day’s mob (optional)<textarea class="inp" id="np-taunt" maxlength="${LIM.taunt}" placeholder="Pops up on ${P.his} field when it arrives">${esc(p.taunt||'')}</textarea></label>
       <label class="f">Note on that day’s decree (optional)<textarea class="inp" id="np-note" maxlength="${LIM.note}" placeholder="Handwritten on ${P.his} receipt when the mob dies">${esc(p.note||'')}</textarea></label>
-      <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span><div class="pick" id="np-pick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${all.map(x=>`<button type="button" class="${libOf(x).fav?'fav':libOf(x).ban?'ban':''}" data-b="${x.b}" data-v="${x.v}" aria-label="${esc(mobName(x))}${libOf(x).fav?', favorite':libOf(x).ban?', banned':''}" aria-pressed="${!!p.mob&&p.mob.b===x.b&&p.mob.v===x.v}"><img alt="" src="${url(mobThumb(x))}" style="object-fit:contain;aspect-ratio:1"></button>`).join('')}</div>
-        <span class="small muted">Random days skip mobs you banned and bring favorites more often (Bestiary). A hand-picked mob always comes.</span></div>
+      <div class="f"><span>Mob: ${p.mob?esc(mobName(p.mob))+' (hand-picked)':'random from your pool'}</span>
+        <div class="pick mobpick"><button type="button" class="rand" data-r="1" aria-pressed="${!p.mob}" aria-label="Random mob">?</button>${favs.map(mobBtn).join('')}</div>
+        <span class="small muted">${favs.length?'★ Your favorites, pinned for quick picks. ':'Star mobs in your Bestiary to pin them here. '}Random days skip banned mobs and bring favorites more often. A hand-picked mob always comes.</span>
+        <details class="cat" id="np-all" ${allOpen?'open':''}><summary>All mobs <span class="muted small">(${all.length})</span></summary><div class="pick mobpick">${all.map(mobBtn).join('')}</div></details></div>
       <label class="f">Alone or a horde${repSel('np-horde',p.horde==null?'any':String(p.horde),[['any','Either (random, about 1 in 3 is a horde)'],['1','Alone'],['3','A horde of 3']])}</label>
       <div class="f"><span>Repeating quests that day</span>${pdRec.length?`<div class="vlist">${pdRec.map(r=>`<div class="vrow"><div class="t"><b>${esc(r.name)}</b><span class="small muted">${r.dmg} damage · ${daysText(r.days)}</span></div></div>`).join('')}</div>`:`<span class="small muted">None on ${esc(pdWd)}s.</span>`}</div>
       <div class="f"><span>Extra quests that day (added at spawn)</span>
@@ -2550,7 +2555,8 @@ function renderVMobs(m){
   $('#np-taunt').onchange=e=>{ sync(); plan().taunt=e.target.value.trim(); tidy(); rerender(); };
   $('#np-horde').onchange=e=>{ sync(); plan().horde=e.target.value==='any'?null:+e.target.value; tidy(); rerender(); };
   $('#go-lib').onclick=()=>{ sync(); ui.mobRoom='lib'; renderMain(); $('#main').scrollTop=0; };
-  $('#np-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{ sync(); plan().mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; tidy(); rerender(); });
+  $('#np-all').ontoggle=e=>{ ui.allMobs=e.target.open; };
+  m.querySelectorAll('.mobpick button').forEach(b=>b.onclick=()=>{ sync(); plan().mob=b.dataset.r?null:{b:+b.dataset.b,v:+b.dataset.v}; tidy(); rerender(); });
   m.querySelectorAll('[data-pq]').forEach(b=>b.onclick=()=>{ sync(); plan().quests.splice(+b.dataset.pq,1); tidy(); rerender(); });
   $('#pq-add').onclick=()=>{ sync(); const name=pq.name.trim(); if(!name){ toast('Name the quest first.'); return; }
     const q={name, dmg:Math.max(1,Math.min(999,parseInt(pq.dmg,10)||1)), taunt:'', ...(pq.proof?{proof:true}:{})}, rep=pq.repeat;
@@ -2592,6 +2598,7 @@ function renderBestiary(m){
   const pool=ALL_MOBS.filter(inPool).length, favs=ALL_MOBS.filter(z=>libOf(z).fav).length, shown=ui.libHorde?hordeName(sel):mobName(sel);
   const next=S.mob.state==='coming'?S.date:addDays(S.date,1), sent=!!S.plans[next]?.mob&&mobId(S.plans[next].mob)===id;
   const when=next===S.date?'today':'on '+dayLabel(next,{weekday:'long'});
+  const cell=z=>{ const l=libOf(z); return `<button type="button" class="${l.fav?'fav':l.ban?'ban':''}" data-lib="${mobId(z)}" aria-pressed="${mobId(z)===id}" aria-label="${esc(mobName(z))}${l.fav?', favorite':l.ban?', banned':''}"><img alt="" src="${url(mobThumb(z))}"><span>${esc(mobName(z))}</span></button>`; };
   m.classList.add('split');
   m.innerHTML=`<div class="stage"><canvas id="libcv" width="480" height="300" aria-label="${esc(shown)}"></canvas>
       <div class="plate hex"><b>${esc(shown)}</b><span>${e.fav?'★ Favorite':e.ban?'Banned':'In your pool'}</span></div>
@@ -2608,8 +2615,8 @@ function renderBestiary(m){
       <button class="btn hex block" id="lb-send" ${sent?'disabled':''}>${sent?'Already coming':'Send it'} ${esc(when)}${ui.libHorde&&!sent?' as a horde':''}</button>
       ${e.name||e.horde||e.lore?'<button class="btn ghost block" id="lb-reset">Back to the default name and lore</button>':''}
       <p class="small muted" style="margin:0">${P.His} record with it: met ${rec.met} · slain ${rec.slain} · fled ${rec.fled}</p></div>
-    ${MOB_BASES.map((B,b)=>`<div><h3>${esc(B.ns)}</h3><div class="dexg">${B.vars.map((_,v)=>{ const z={b,v}, l=libOf(z);
-      return `<button type="button" class="${l.fav?'fav':l.ban?'ban':''}" data-lib="${mobId(z)}" aria-pressed="${mobId(z)===id}" aria-label="${esc(mobName(z))}${l.fav?', favorite':l.ban?', banned':''}"><img alt="" src="${url(mobThumb(z))}"><span>${esc(mobName(z))}</span></button>`; }).join('')}</div></div>`).join('')}
+    ${favs?`<div><h3 style="color:var(--gold)">★ Favorites</h3><div class="dexg">${ALL_MOBS.filter(z=>libOf(z).fav).map(cell).join('')}</div></div>`:''}
+    ${MOB_BASES.map((B,b)=>`<div><h3>${esc(B.ns)}</h3><div class="dexg">${B.vars.map((_,v)=>cell({b,v})).join('')}</div></div>`).join('')}
     </div></div>`;
   stageLoop($('#libcv'), drawLib);
   const set=(k,v)=>{ const L=S.lib[id]??={}; if(v) L[k]=v; else delete L[k]; if(!Object.keys(L).length) delete S.lib[id]; save(); };
