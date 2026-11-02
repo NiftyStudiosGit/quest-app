@@ -1607,7 +1607,8 @@ function endDay(){
   if (S.lost && S.lost.date<=S.date) S.lost=null;
   // a rest request she never answered is approved when the day ends
   if (m.state==='alive' && S.req && S.req.date===S.date && !S.req.no){ restDay(); S.fled={rest:true}; }
-  if (m.state==='alive'){ S.fled={name:dailyName(m), streak:S.streak}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak, got:S.mileGot}:null; S.streak=0; S.mileGot=[]; S.tally.fled++; dexOf(m).fled++; }
+  // away several days: one notice for all of them, keeping the streak that fell on the first one
+  if (m.state==='alive'){ const was=S.fled&&!S.fled.rest?S.fled:null; S.fled={name:dailyName(m), streak:S.streak||(was?was.streak:0), n:(was?was.n||1:0)+1}; S.lost=S.streak?{date:addDays(S.date,1), streak:S.streak, got:S.mileGot}:null; S.streak=0; S.mileGot=[]; S.tally.fled++; dexOf(m).fled++; }
   scout(m);
   S.req=null; S.rev=null; S.endFor=null; S.day++;
   const hers=S.tasks.filter(t=>!t.npc&&!t.rid); if (hers.length) S.past=hers.map(({name,dmg,taunt})=>({name,dmg,taunt}));
@@ -2534,7 +2535,8 @@ function showFled(){
       <button class="btn block" id="fl-ok">Lucky me</button></div>`;
     $('#app').appendChild(o); $('#fl-ok').onclick=()=>o.remove(); return;
   }
-  o.innerHTML=`<div class="paper" role="dialog" aria-label="The mob fled"><div class="hd">It got away!</div><div class="sub">The ${esc(F.name)} fled when the day ended, with yesterday’s bounty.</div>
+  const many=F.n>1;
+  o.innerHTML=`<div class="paper" role="dialog" aria-label="The mob fled"><div class="hd">${many?'They got away!':'It got away!'}</div><div class="sub">${many?`You were away ${F.n} days. ${F.n} mobs fled, each with its day’s bounty. The last was the ${esc(F.name)}.`:`The ${esc(F.name)} fled when the day ended, with yesterday’s bounty.`}</div>
     ${F.streak?`<div class="ln tax"><span>Streak lost</span><span>0 (was ${F.streak})</span></div>`:'<div class="ln"><span>Streak</span><span>none to lose</span></div>'}
     <p class="slain">“Better luck today, hero. Or not.” · ${esc(S.villName)}</p>
     ${S.lost?`<p class="slain">You can still save it today: spend an Inn token, or ask her for a revive. Tap the INN button.</p>`:''}
@@ -3743,10 +3745,14 @@ function renderVRules(m){
 tick();
 if (S.plan){ const p={...newPlan(),...S.plan,quests:[]}; if(planned(p)) S.plans[addDays(S.date,1)]=p; delete S.plan; save(); }
 // keep checking the clock: day end and spawn can happen while the app is open (never mid-hit or over a dialog)
-let dirty=false;
+let dirty=false, waitT=null;
+// redraw once the way is clear: a dialog open when days roll over shouldn't leave the old day on screen after it closes
+function flush(){ waitT=null; if (!dirty) return;
+  if (hit || document.querySelector('.overlay')){ waitT=setTimeout(flush,400); return; }
+  dirty=false; render(); }
 function heartbeat(){
   if (tick()) dirty=true;
-  if (dirty && !hit && !document.querySelector('.overlay')){ dirty=false; render(); }
+  if (dirty && !waitT) flush();
   const el=$('#dayleft'); if(el) el.textContent=dayLeftText();
   document.querySelectorAll('[data-h]').forEach(e=>{ const t=S.tasks.find(x=>x.id===e.dataset.h); if(t&&t.haste) e.textContent=dur(t.haste-clock()); });
 }
